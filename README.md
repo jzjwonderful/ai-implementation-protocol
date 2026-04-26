@@ -14,7 +14,39 @@ This repository contains:
 - the protocol itself
 - project templates
 - local validation scripts
+- a Codex plugin package
 - optional adapters such as Nexus integration
+
+## Install The Codex Plugin
+
+Install from GitHub:
+
+```bash
+git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
+cd ai-implementation-protocol
+python scripts/install_codex_plugin.py
+```
+
+Update an existing local install:
+
+```bash
+git pull
+python scripts/install_codex_plugin.py --force
+```
+
+The installer copies the plugin package to:
+
+```text
+~/plugins/ai-implementation-protocol/
+```
+
+and creates or updates:
+
+```text
+~/.agents/plugins/marketplace.json
+```
+
+Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` skill.
 
 ## Core Ideas
 
@@ -51,8 +83,16 @@ project_docs/
 - `templates/`: reusable project files
 - `scripts/`: local CLI scripts
 - `schemas/`: machine-readable file schemas
+- `plugins/ai-implementation-protocol/`: installable Codex plugin package
+- `.agents/plugins/marketplace.json`: repo-local Codex marketplace entry
 - `adapters/`: optional integrations
 - `examples/`: sample project layouts
+
+## Why The Plugin Directory Duplicates Files
+
+`plugins/ai-implementation-protocol/` is the package Codex installs. It intentionally contains its own `docs/`, `templates/`, `schemas/`, and `scripts/` copies so the installed plugin can run from `~/plugins/ai-implementation-protocol/` without depending on the original cloned repository path.
+
+The top-level directories remain the source project layout for developing AIP itself. The plugin directory is the distributable Codex package.
 
 ## First Commands
 
@@ -80,9 +120,9 @@ Validate handoff completeness:
 python scripts/aip_check.py --repo-root <target-project>
 ```
 
-## Codex Plugin
+## Codex Plugin Internals
 
-This repository can also be installed as a repo-local Codex plugin.
+This repository can also be used as a repo-local Codex plugin during development.
 
 Plugin entry:
 
@@ -96,26 +136,7 @@ Repo-local marketplace:
 .agents/plugins/marketplace.json
 ```
 
-The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, schemas, and CLI scripts. After installing the plugin in Codex, use the `aip` skill to initialize a repository, start a feature package, resume work, or run the handoff completeness check.
-
-### Install From GitHub
-
-Users can install the plugin locally from GitHub:
-
-```bash
-git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
-cd ai-implementation-protocol
-python scripts/install_codex_plugin.py
-```
-
-To update an existing install:
-
-```bash
-git pull
-python scripts/install_codex_plugin.py --force
-```
-
-See `docs/github-distribution.md` for publisher and user installation details.
+The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, schemas, and CLI scripts. See `docs/github-distribution.md` for publisher and user installation details.
 
 ## Nexus Dependency
 
