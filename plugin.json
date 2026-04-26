@@ -2,6 +2,7 @@
   "name": "ai-implementation-protocol",
   "version": "0.1.0",
   "description": "Portable protocol, templates, and scripts for AI task continuity and handoff quality.",
+  "repository": "https://github.com/jzjwonderful/ai-implementation-protocol",
   "entry_docs": [
     "docs/protocol.md",
     "docs/architecture.md"

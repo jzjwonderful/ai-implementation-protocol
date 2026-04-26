@@ -1,0 +1,14 @@
+allowed_paths:
+  - .agents/
+  - plugins/
+  - README.md
+  - project_docs/
+key_entrypoints:
+  - plugins/ai-implementation-protocol/.codex-plugin/plugin.json
+  - plugins/ai-implementation-protocol/skills/aip/SKILL.md
+  - .agents/plugins/marketplace.json
+avoid_paths:
+  - vendor/
+notes:
+  - Keep root AIP scripts available for manual usage.
+  - Keep plugin resources self-contained so installation does not depend on files outside the plugin directory.

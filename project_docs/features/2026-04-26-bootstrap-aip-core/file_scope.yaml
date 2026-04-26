@@ -1,9 +1,16 @@
 allowed_paths:
-  - src/
-  - tests/
+  - docs/
+  - project_docs/
+  - schemas/
+  - scripts/
+  - templates/
 key_entrypoints:
-  - ""
+  - scripts/aip_init.py
+  - scripts/aip_start_feature.py
+  - scripts/aip_resume.py
+  - scripts/aip_check.py
 avoid_paths:
   - vendor/
 notes:
-  - Keep scope tight to the current feature.
+  - Keep scope tight to the bootstrap workflow and its repository artifacts.
+  - Temporary target repositories may be created outside the repo for verification only and must not become part of the committed worktree.

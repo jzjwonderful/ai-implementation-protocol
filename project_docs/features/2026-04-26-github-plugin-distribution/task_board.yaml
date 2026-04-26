@@ -1,0 +1,11 @@
+phase: done
+tasks:
+  - id: T1
+    title: Add GitHub clone installer
+    status: done
+  - id: T2
+    title: Document GitHub publishing and installation
+    status: done
+  - id: T3
+    title: Verify installer and close feature
+    status: done

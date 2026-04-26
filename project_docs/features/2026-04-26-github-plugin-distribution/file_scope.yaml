@@ -1,0 +1,15 @@
+allowed_paths:
+  - docs/
+  - plugins/
+  - project_docs/
+  - scripts/
+  - README.md
+key_entrypoints:
+  - scripts/install_codex_plugin.py
+  - docs/github-distribution.md
+  - plugins/ai-implementation-protocol/.codex-plugin/plugin.json
+avoid_paths:
+  - vendor/
+notes:
+  - Do not modify the real user home plugin directory during verification.
+  - Use temporary home directories for install tests.

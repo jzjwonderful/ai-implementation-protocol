@@ -1,0 +1,37 @@
+{
+  "name": "ai-implementation-protocol",
+  "version": "0.1.0",
+  "description": "A portable protocol and local CLI toolkit for AI task continuity, feature handoffs, and resumable implementation work.",
+  "author": {
+    "name": "AIP Project",
+    "url": "https://github.com/jzjwonderful/ai-implementation-protocol"
+  },
+  "homepage": "https://github.com/jzjwonderful/ai-implementation-protocol",
+  "repository": "https://github.com/jzjwonderful/ai-implementation-protocol",
+  "license": "MIT",
+  "keywords": [
+    "aip",
+    "handoff",
+    "ai-continuity",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AI Implementation Protocol",
+    "shortDescription": "Create resumable AI implementation work packages.",
+    "longDescription": "AI Implementation Protocol packages a local protocol, templates, and Python scripts that help Codex initialize project_docs, create feature work packages, resume active tasks, and validate handoff completeness.",
+    "developerName": "AIP Project",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Initialize AIP in this repository.",
+      "Start a new AIP feature package.",
+      "Resume the current AIP task."
+    ],
+    "websiteURL": "https://github.com/jzjwonderful/ai-implementation-protocol",
+    "brandColor": "#2563EB"
+  }
+}

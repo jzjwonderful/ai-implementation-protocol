@@ -1,0 +1,11 @@
+phase: done
+tasks:
+  - id: T1
+    title: Create Codex plugin manifest and marketplace entry
+    status: done
+  - id: T2
+    title: Package AIP skill and plugin resources
+    status: done
+  - id: T3
+    title: Verify plugin workflow and close feature
+    status: done

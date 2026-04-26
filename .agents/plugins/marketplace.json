@@ -1,0 +1,20 @@
+{
+  "name": "aip-local",
+  "interface": {
+    "displayName": "AIP Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "ai-implementation-protocol",
+      "source": {
+        "source": "local",
+        "path": "./plugins/ai-implementation-protocol"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

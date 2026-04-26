@@ -1,8 +1,11 @@
-phase: spec
+phase: done
 tasks:
   - id: T1
-    title: Write spec
-    status: in_progress
+    title: Define minimal runnable bootstrap scope
+    status: done
   - id: T2
-    title: Write implementation plan
-    status: pending
+    title: Verify end-to-end bootstrap workflow
+    status: done
+  - id: T3
+    title: Finalize handoff and mark feature done
+    status: done

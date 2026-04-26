@@ -80,6 +80,43 @@ Validate handoff completeness:
 python scripts/aip_check.py --repo-root <target-project>
 ```
 
+## Codex Plugin
+
+This repository can also be installed as a repo-local Codex plugin.
+
+Plugin entry:
+
+```text
+plugins/ai-implementation-protocol/.codex-plugin/plugin.json
+```
+
+Repo-local marketplace:
+
+```text
+.agents/plugins/marketplace.json
+```
+
+The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, schemas, and CLI scripts. After installing the plugin in Codex, use the `aip` skill to initialize a repository, start a feature package, resume work, or run the handoff completeness check.
+
+### Install From GitHub
+
+Users can install the plugin locally from GitHub:
+
+```bash
+git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
+cd ai-implementation-protocol
+python scripts/install_codex_plugin.py
+```
+
+To update an existing install:
+
+```bash
+git pull
+python scripts/install_codex_plugin.py --force
+```
+
+See `docs/github-distribution.md` for publisher and user installation details.
+
 ## Nexus Dependency
 
 AIP does not require Nexus.
