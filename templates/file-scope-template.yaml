@@ -1,0 +1,9 @@
+allowed_paths:
+  - src/
+  - tests/
+key_entrypoints:
+  - ""
+avoid_paths:
+  - vendor/
+notes:
+  - Keep scope tight to the current feature.

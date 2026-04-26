@@ -1,0 +1,20 @@
+{
+  "name": "ai-implementation-protocol",
+  "version": "0.1.0",
+  "description": "Portable protocol, templates, and scripts for AI task continuity and handoff quality.",
+  "entry_docs": [
+    "docs/protocol.md",
+    "docs/architecture.md"
+  ],
+  "scripts": [
+    "scripts/aip_init.py",
+    "scripts/aip_start_feature.py",
+    "scripts/aip_resume.py",
+    "scripts/aip_check.py"
+  ],
+  "optional_adapters": [
+    "adapters/nexus_adapter.py",
+    "adapters/git_adapter.py",
+    "adapters/ci_adapter.py"
+  ]
+}

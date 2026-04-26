@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIP Current Task",
+  "type": "object",
+  "required": [
+    "feature_id",
+    "status",
+    "current_phase",
+    "current_task",
+    "next_action",
+    "last_updated",
+    "owner",
+    "blocking",
+    "must_read"
+  ],
+  "properties": {
+    "feature_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "in_progress", "blocked", "done"]
+    },
+    "current_phase": { "type": "string", "minLength": 1 },
+    "current_task": { "type": "string", "minLength": 1 },
+    "next_action": { "type": "string", "minLength": 1 },
+    "last_updated": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "blocking": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "must_read": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
