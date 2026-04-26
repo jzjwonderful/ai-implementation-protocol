@@ -60,6 +60,14 @@ and updates:
 ~/.agents/plugins/marketplace.json
 ```
 
+It also installs:
+
+```text
+~/.agents/skills/aip/SKILL.md
+```
+
+for Codex versions that discover user skills from `.agents/skills`.
+
 with a local marketplace entry for the plugin.
 
 ## Updating An Existing Install
@@ -77,6 +85,7 @@ After installation, confirm these files exist:
 
 ```text
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
+~/.agents/skills/aip/SKILL.md
 ~/.agents/plugins/marketplace.json
 ```
 

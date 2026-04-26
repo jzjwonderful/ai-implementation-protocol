@@ -36,6 +36,24 @@ def copy_plugin(source: Path, destination: Path, force: bool) -> None:
     )
 
 
+def install_skill(source_plugin: Path, home: Path, force: bool) -> Path:
+    source_skill = source_plugin / "skills" / "aip" / "SKILL.md"
+    destination_skill_dir = home / ".agents" / "skills" / "aip"
+    destination_skill = destination_skill_dir / "SKILL.md"
+
+    if not source_skill.exists():
+        raise SystemExit(f"AIP skill not found: {source_skill}")
+
+    if destination_skill_dir.exists():
+        if not force:
+            raise SystemExit(f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it.")
+        shutil.rmtree(destination_skill_dir)
+
+    destination_skill_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_skill, destination_skill)
+    return destination_skill
+
+
 def load_marketplace(path: Path) -> dict[str, Any]:
     if path.exists():
         return read_json(path)
@@ -96,12 +114,14 @@ def main() -> int:
     marketplace_path = home / ".agents" / "plugins" / "marketplace.json"
 
     copy_plugin(source_plugin, destination_plugin, args.force)
+    destination_skill = install_skill(destination_plugin, home, args.force)
 
     marketplace = load_marketplace(marketplace_path)
     upsert_marketplace_entry(marketplace, f"./plugins/{PLUGIN_NAME}")
     write_json(marketplace_path, marketplace)
 
     print(f"Installed Codex plugin: {destination_plugin}")
+    print(f"Installed AIP skill: {destination_skill}")
     print(f"Updated marketplace: {marketplace_path}")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0

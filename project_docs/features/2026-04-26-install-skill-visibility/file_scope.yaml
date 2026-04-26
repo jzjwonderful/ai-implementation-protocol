@@ -1,0 +1,14 @@
+allowed_paths:
+  - docs/
+  - plugins/
+  - project_docs/
+  - scripts/
+  - README.md
+key_entrypoints:
+  - scripts/install_codex_plugin.py
+  - plugins/ai-implementation-protocol/skills/aip/SKILL.md
+avoid_paths:
+  - vendor/
+notes:
+  - Do not write to Codex private cache directories.
+  - Use `.agents/skills/aip` for direct user skill discovery.

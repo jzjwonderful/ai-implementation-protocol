@@ -33,10 +33,24 @@ If arguments are missing, ask for only the missing required argument. For exampl
 
 ## Plugin Root
 
-Resolve the plugin root as two directories above this file:
+Resolve the plugin root based on where this skill is loaded from.
+
+If this file is loaded from the plugin package, the plugin root is two directories above this file:
 
 ```text
 <plugin-root>/skills/aip/SKILL.md
+```
+
+If this file is loaded from a home-local skill install such as:
+
+```text
+~/.agents/skills/aip/SKILL.md
+```
+
+then use the installed plugin package at:
+
+```text
+~/plugins/ai-implementation-protocol/
 ```
 
 The plugin root contains:

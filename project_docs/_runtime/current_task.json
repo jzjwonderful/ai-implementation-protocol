@@ -1,17 +1,17 @@
 {
-  "feature_id": "2026-04-26-aip-skill-command-router",
+  "feature_id": "2026-04-26-install-skill-visibility",
   "status": "done",
   "current_phase": "done",
-  "current_task": "Add parameterized aip skill commands completed.",
-  "next_action": "Pull the latest repository and reinstall with python scripts/install_codex_plugin.py --force to use $aip command routing.",
-  "last_updated": "2026-04-26T22:53:11+08:00",
+  "current_task": "Install aip skill into Codex skill directory completed.",
+  "next_action": "Restart Codex and confirm the aip skill appears.",
+  "last_updated": "2026-04-26T23:01:00+08:00",
   "owner": "ai",
   "blocking": [],
   "must_read": [
     "project_docs/protocols/ai-implementation-protocol.md",
-    "project_docs/features/2026-04-26-aip-skill-command-router/spec.md",
-    "project_docs/features/2026-04-26-aip-skill-command-router/plan.md",
-    "project_docs/features/2026-04-26-aip-skill-command-router/handoff.md",
-    "project_docs/features/2026-04-26-aip-skill-command-router/verification.md"
+    "project_docs/features/2026-04-26-install-skill-visibility/spec.md",
+    "project_docs/features/2026-04-26-install-skill-visibility/plan.md",
+    "project_docs/features/2026-04-26-install-skill-visibility/handoff.md",
+    "project_docs/features/2026-04-26-install-skill-visibility/verification.md"
   ]
 }

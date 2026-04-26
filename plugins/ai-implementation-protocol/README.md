@@ -15,6 +15,14 @@ The repository marketplace entry lives at:
 .agents/plugins/marketplace.json
 ```
 
+The installer also writes a compatibility skill entry to:
+
+```text
+~/.agents/skills/aip/SKILL.md
+```
+
+This makes the `aip` skill visible in Codex versions that load user skills directly from `.agents/skills`.
+
 After installation, use the `aip` skill to initialize a repository, start a feature package, resume work, or validate handoff completeness.
 
 Codex skill examples:

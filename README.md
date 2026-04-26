@@ -46,6 +46,12 @@ and creates or updates:
 ~/.agents/plugins/marketplace.json
 ```
 
+It also installs the `aip` skill entry to:
+
+```text
+~/.agents/skills/aip/SKILL.md
+```
+
 Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` skill.
 
 Use it from Codex with command-like skill prompts:
