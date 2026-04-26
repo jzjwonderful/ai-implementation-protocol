@@ -1,0 +1,15 @@
+allowed_paths:
+  - plugins/
+  - project_docs/
+  - scripts/
+  - README.md
+  - plugin.json
+key_entrypoints:
+  - scripts/aip.py
+  - plugins/ai-implementation-protocol/scripts/aip.py
+  - plugins/ai-implementation-protocol/skills/aip/SKILL.md
+avoid_paths:
+  - vendor/
+notes:
+  - Keep individual AIP scripts available; `aip.py` is a router over them.
+  - Keep root and plugin router behavior aligned.

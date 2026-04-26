@@ -1,0 +1,11 @@
+phase: done
+tasks:
+  - id: T1
+    title: Add aip.py command router
+    status: done
+  - id: T2
+    title: Update aip skill command routing docs
+    status: done
+  - id: T3
+    title: Verify router and close feature
+    status: done

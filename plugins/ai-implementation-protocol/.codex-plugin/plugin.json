@@ -27,9 +27,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Initialize AIP in this repository.",
-      "Start a new AIP feature package.",
-      "Resume the current AIP task."
+      "$aip init",
+      "$aip start 2026-04-26-my-feature",
+      "$aip resume"
     ],
     "websiteURL": "https://github.com/jzjwonderful/ai-implementation-protocol",
     "brandColor": "#2563EB"

@@ -8,6 +8,7 @@
     "docs/architecture.md"
   ],
   "scripts": [
+    "scripts/aip.py",
     "scripts/aip_init.py",
     "scripts/aip_start_feature.py",
     "scripts/aip_resume.py",

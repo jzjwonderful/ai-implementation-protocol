@@ -1,17 +1,17 @@
 {
-  "feature_id": "2026-04-26-github-plugin-distribution",
+  "feature_id": "2026-04-26-aip-skill-command-router",
   "status": "done",
   "current_phase": "done",
-  "current_task": "Prepare AIP Codex plugin for GitHub distribution completed.",
-  "next_action": "Create a GitHub repository, add it as origin, push this repository, and update placeholder docs with the real URL if desired.",
-  "last_updated": "2026-04-26T22:37:07+08:00",
+  "current_task": "Add parameterized aip skill commands completed.",
+  "next_action": "Pull the latest repository and reinstall with python scripts/install_codex_plugin.py --force to use $aip command routing.",
+  "last_updated": "2026-04-26T22:53:11+08:00",
   "owner": "ai",
   "blocking": [],
   "must_read": [
     "project_docs/protocols/ai-implementation-protocol.md",
-    "project_docs/features/2026-04-26-github-plugin-distribution/spec.md",
-    "project_docs/features/2026-04-26-github-plugin-distribution/plan.md",
-    "project_docs/features/2026-04-26-github-plugin-distribution/handoff.md",
-    "project_docs/features/2026-04-26-github-plugin-distribution/verification.md"
+    "project_docs/features/2026-04-26-aip-skill-command-router/spec.md",
+    "project_docs/features/2026-04-26-aip-skill-command-router/plan.md",
+    "project_docs/features/2026-04-26-aip-skill-command-router/handoff.md",
+    "project_docs/features/2026-04-26-aip-skill-command-router/verification.md"
   ]
 }

@@ -17,6 +17,17 @@ The repository marketplace entry lives at:
 
 After installation, use the `aip` skill to initialize a repository, start a feature package, resume work, or validate handoff completeness.
 
+Codex skill examples:
+
+```text
+$aip init
+$aip start 2026-04-26-my-feature --title "My feature"
+$aip resume
+$aip check
+```
+
+The skill routes these invocations to `scripts/aip.py` inside the installed plugin package.
+
 For GitHub distribution, publish the repository and ask users to run:
 
 ```bash

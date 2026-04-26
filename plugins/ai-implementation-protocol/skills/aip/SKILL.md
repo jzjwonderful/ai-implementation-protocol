@@ -1,11 +1,35 @@
 ---
 name: aip
-description: Use when a repository should follow AI Implementation Protocol, including initializing project_docs, starting a feature package, resuming current task state, validating handoff completeness, or closing a feature according to AIP.
+description: Use when the user invokes `$aip` or asks to apply AI Implementation Protocol, including `$aip init`, `$aip start`, `$aip resume`, `$aip check`, initializing project_docs, starting a feature package, resuming current task state, validating handoff completeness, or closing a feature according to AIP.
 ---
 
 # AI Implementation Protocol
 
 Use this skill to apply AIP from the installed Codex plugin.
+
+## Command Invocation
+
+When the user invokes this skill with a command-like prompt, treat the text after `$aip` as arguments and execute the matching AIP action.
+
+Supported forms:
+
+```text
+$aip init
+$aip start 2026-04-26-my-feature --title "My feature"
+$aip resume
+$aip check
+$aip help
+```
+
+Aliases:
+
+- `$aip create <feature-id>` means `$aip start <feature-id>`.
+- `$aip validate` means `$aip check`.
+- `$aip status` means `$aip resume`.
+
+If no command is provided, run the resume flow when AIP is already initialized. If AIP is not initialized, explain that `$aip init` is the first command.
+
+If arguments are missing, ask for only the missing required argument. For example, `$aip start` requires a feature id.
 
 ## Plugin Root
 
@@ -41,25 +65,69 @@ Run commands from the target repository root. Use the plugin copy of the scripts
 Initialize AIP:
 
 ```bash
-python <plugin-root>/scripts/aip_init.py --repo-root . --template-root <plugin-root>
+python <plugin-root>/scripts/aip.py init --repo-root .
 ```
 
 Start a feature:
 
 ```bash
-python <plugin-root>/scripts/aip_start_feature.py --repo-root . --feature-id YYYY-MM-DD-short-feature-id --title "Human readable title" --template-root <plugin-root>
+python <plugin-root>/scripts/aip.py start YYYY-MM-DD-short-feature-id --title "Human readable title" --repo-root .
 ```
 
 Resume current work:
 
 ```bash
-python <plugin-root>/scripts/aip_resume.py --repo-root .
+python <plugin-root>/scripts/aip.py resume --repo-root .
 ```
 
 Validate handoff completeness:
 
 ```bash
-python <plugin-root>/scripts/aip_check.py --repo-root .
+python <plugin-root>/scripts/aip.py check --repo-root .
+```
+
+Show command help:
+
+```bash
+python <plugin-root>/scripts/aip.py --help
+```
+
+## Routing Rules
+
+- `$aip init`: run `python <plugin-root>/scripts/aip.py init --repo-root .`.
+- `$aip start <feature-id> [--title "..."]`: run `python <plugin-root>/scripts/aip.py start <feature-id> --title "..." --repo-root .`.
+- `$aip resume`: run `python <plugin-root>/scripts/aip.py resume --repo-root .`.
+- `$aip check`: run `python <plugin-root>/scripts/aip.py check --repo-root .`.
+- `$aip help`: summarize these commands and do not edit files.
+
+Preserve explicit `--repo-root <path>` if the user provides it. Otherwise use the current workspace root.
+
+After running a command, report the command outcome and the next AIP action from the output or `current_task.json`.
+
+## Examples
+
+Initialize the current repository:
+
+```text
+$aip init
+```
+
+Create a new feature package:
+
+```text
+$aip start 2026-04-26-add-billing --title "Add billing"
+```
+
+Resume the active feature:
+
+```text
+$aip resume
+```
+
+Run the handoff completeness gate:
+
+```text
+$aip check
 ```
 
 ## Working Rules
@@ -78,4 +146,4 @@ Do not call an AIP feature complete until:
 - The active feature directory contains all required files.
 - `handoff.md` contains all required sections.
 - `task_board.yaml` has no more than one `in_progress` task.
-- `python <plugin-root>/scripts/aip_check.py --repo-root .` passes.
+- `python <plugin-root>/scripts/aip.py check --repo-root .` passes.

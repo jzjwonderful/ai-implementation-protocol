@@ -48,6 +48,15 @@ and creates or updates:
 
 Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` skill.
 
+Use it from Codex with command-like skill prompts:
+
+```text
+$aip init
+$aip start 2026-04-26-my-feature --title "My feature"
+$aip resume
+$aip check
+```
+
 ## Core Ideas
 
 AIP separates project knowledge into four layers:
@@ -99,25 +108,25 @@ The top-level directories remain the source project layout for developing AIP it
 Initialize a target repository:
 
 ```bash
-python scripts/aip_init.py --repo-root <target-project>
+python scripts/aip.py init --repo-root <target-project>
 ```
 
 Start a feature:
 
 ```bash
-python scripts/aip_start_feature.py --repo-root <target-project> --feature-id 2026-04-26-sample-feature
+python scripts/aip.py start 2026-04-26-sample-feature --repo-root <target-project>
 ```
 
 Resume work:
 
 ```bash
-python scripts/aip_resume.py --repo-root <target-project>
+python scripts/aip.py resume --repo-root <target-project>
 ```
 
 Validate handoff completeness:
 
 ```bash
-python scripts/aip_check.py --repo-root <target-project>
+python scripts/aip.py check --repo-root <target-project>
 ```
 
 ## Codex Plugin Internals
