@@ -14,8 +14,46 @@ This repository contains:
 - the protocol itself
 - project templates
 - local validation scripts
-- a Codex plugin package
+- a Codex plugin package (also usable as a Claude Code skill)
 - optional adapters such as Nexus integration
+
+## Install For Claude Code
+
+Install from GitHub:
+
+```bash
+git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
+cd ai-implementation-protocol
+python scripts/install_claude_plugin.py
+```
+
+Update an existing local install:
+
+```bash
+git pull
+python scripts/install_claude_plugin.py --force
+```
+
+The installer copies the plugin package to:
+
+```text
+~/plugins/ai-implementation-protocol/
+```
+
+and installs the `aip` skill entry to:
+
+```text
+~/.claude/skills/aip/SKILL.md
+```
+
+Open a new Claude Code session after installation. The `aip` skill will auto-trigger when you invoke `$aip`:
+
+```text
+$aip init
+$aip start 2026-04-26-my-feature --title "My feature"
+$aip resume
+$aip check
+```
 
 ## Install The Codex Plugin
 
