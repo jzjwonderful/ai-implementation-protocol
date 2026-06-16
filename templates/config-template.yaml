@@ -50,3 +50,8 @@ iron_rules:
 
 # 验证规范：真机/真浏览器要求等（自由文本指针）。
 # verification_notes: ""
+
+# 方法层（可选）：声明本项目用哪个 process-skill 框架当"怎么做"的技法层。
+# 设为 superpowers 则各阶段把方法让位给对应 superpowers 技能（映射见 aip 技能）；
+# 槽/状态/resume 仍归 AIP。缺失或留空则 AIP 裸跑、只少了技法加持。
+process_skills: ""   # 例：superpowers

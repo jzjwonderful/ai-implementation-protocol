@@ -28,6 +28,21 @@ PROJECT_LIVING_FILES = [
     "config.yaml",
 ]
 
+# AIP 的"槽位"文件名。这些只允许出现在 .aip/ 内；出现在别处 = 状态漂移/并行产物。
+AIP_SLOT_FILENAMES = [
+    "current_task.json",
+    "task_board.yaml",
+    "handoff.md",
+    "verification.md",
+    "session_log.md",
+]
+
+# 扫描"无并行产物"时跳过的重目录。
+SCAN_PRUNE_DIRS = {
+    ".git", ".aip", "node_modules", ".venv", "venv", "dist", "build",
+    "__pycache__", ".pytest_cache", "bin", "obj", "packages", ".idea", ".vscode",
+}
+
 
 def iso_now() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")

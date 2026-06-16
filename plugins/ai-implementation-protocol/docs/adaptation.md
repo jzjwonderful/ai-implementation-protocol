@@ -36,6 +36,18 @@ protocol or script changes.
 
 Both drive the same tool-agnostic CLI under `scripts/`.
 
+### Enforcement hooks (make `aip check` automatic)
+
+```bash
+python scripts/install_hooks.py --repo-root <target>            # git pre-commit gate
+python scripts/install_hooks.py --repo-root <target> --claude-stop  # + non-blocking Claude Stop hook
+```
+
+The git pre-commit hook blocks commits when `aip check` fails (bypass once with `git commit --no-verify`).
+This is the level that turns "the AI should" into "the commit is blocked unless." Load-bearing rules are
+enforced by the deterministic check; method *quality* stays best-effort (gates check only the residue a
+method must leave). See `docs/protocol.md` → Enforcement.
+
 ## Project-Specific Customization
 
 Projects may customize:

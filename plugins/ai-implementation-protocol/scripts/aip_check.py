@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from _aip_common import (
+    AIP_DIR,
+    AIP_SLOT_FILENAMES,
     PROJECT_LIVING_FILES,
     REQUIRED_FEATURE_FILES,
+    SCAN_PRUNE_DIRS,
     aip_root,
     current_task_path,
     feature_dir,
@@ -14,81 +18,108 @@ from _aip_common import (
     read_text,
 )
 
+SPEC_REQUIRED_HEADINGS = ["## Goal", "## Scope", "## Acceptance Criteria"]
+HANDOFF_REQUIRED = [
+    "## Current Phase", "## Current Task", "## Completed Work", "## Remaining Work",
+    "## Blockers", "## Next Action", "## Files Touched", "## Verification Status",
+]
+
 
 def count_in_progress(task_board_text: str) -> int:
-    count = 0
-    for line in task_board_text.splitlines():
-        if line.strip().startswith("status:") and "in_progress" in line:
-            count += 1
-    return count
+    return sum(
+        1 for line in task_board_text.splitlines()
+        if line.strip().startswith("status:") and "in_progress" in line
+    )
 
 
-def contains_required_handoff_sections(handoff_text: str) -> list[str]:
-    required = [
-        "## Current Phase",
-        "## Current Task",
-        "## Completed Work",
-        "## Remaining Work",
-        "## Blockers",
-        "## Next Action",
-        "## Files Touched",
-        "## Verification Status",
-    ]
-    return [item for item in required if item not in handoff_text]
+def missing(items: list[str], text: str) -> list[str]:
+    return [i for i in items if i not in text]
+
+
+def section_body(text: str, heading: str) -> str:
+    """返回某 '## 标题' 与下一个 '## ' 之间的正文（判断是否被填）。"""
+    lines = text.splitlines()
+    out: list[str] = []
+    capturing = False
+    for line in lines:
+        if line.strip() == heading:
+            capturing = True
+            continue
+        if capturing and line.startswith("## "):
+            break
+        if capturing:
+            out.append(line)
+    return "\n".join(out).strip()
 
 
 def unclassified_findings(findings_text: str) -> int:
-    """统计未分类的侧发现条目。真实条目状态行含 '待分类' 且不含 '|'（'|' 是模板里的菜单行）。"""
-    count = 0
-    for line in findings_text.splitlines():
-        s = line.strip()
-        if s.startswith("- 发现") and "待分类" in s and "|" not in s:
-            count += 1
-    return count
+    """真实条目状态行含 '待分类' 且不含 '|'（'|' 是模板菜单行）。"""
+    return sum(
+        1 for line in findings_text.splitlines()
+        if line.strip().startswith("- 发现") and "待分类" in line and "|" not in line
+    )
 
 
-def gate_problems(verification_text: str) -> list[str]:
-    """验收完成时，机器闸门必须有真实证据：有 Machine Gates 段、无 fail 行。"""
+def competing_artifacts(target_repo: Path) -> list[str]:
+    """扫 .aip 之外是否漏出 AIP 槽位文件（current_task/handoff/task_board/...）= 并行产物/漂移。"""
+    hits: list[str] = []
+    slots = set(AIP_SLOT_FILENAMES)
+    for root, dirs, files in os.walk(target_repo):
+        dirs[:] = [d for d in dirs if d not in SCAN_PRUNE_DIRS]
+        for name in files:
+            if name in slots:
+                hits.append(str(Path(root) / name))
+    return hits
+
+
+def done_gate_problems(verification_text: str, spec_text: str) -> list[str]:
+    """status==done 时的残渣校验：闸门绑真证据、spec/verification 真被填。"""
     problems: list[str] = []
     if "## Machine Gates" not in verification_text:
         problems.append("verification.md missing '## Machine Gates' section")
     if "| fail |" in verification_text:
         problems.append("verification.md has a gate with result 'fail'")
+    if "| <" in verification_text:
+        problems.append("verification.md still has unfilled placeholder gate rows ('| <...')")
+    if "## Independent Review" not in verification_text:
+        problems.append("verification.md missing '## Independent Review' (fresh-eyes) section")
+    if not section_body(spec_text, "## Acceptance Criteria"):
+        problems.append("spec.md '## Acceptance Criteria' is empty")
     return problems
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate AIP handoff completeness and real-evidence gates.")
+    parser = argparse.ArgumentParser(description="Validate AIP: living docs, slots, gates, anti-drift.")
     parser.add_argument("--repo-root", required=True, help="Target project root.")
     args = parser.parse_args()
 
     target_repo = Path(args.repo_root).resolve()
     errors: list[str] = []
 
-    # 项目级活文档（始终校验存在；init 应已生成）。
+    # --- 始终校验：AIP 目录与项目级活文档 ---
     if not aip_root(target_repo).exists():
-        errors.append(f"Missing AIP directory: {aip_root(target_repo)} (run `aip init`)")
-    else:
-        for name in PROJECT_LIVING_FILES:
-            if not project_living_path(target_repo, name).exists():
-                errors.append(f"Missing project living doc: {project_living_path(target_repo, name)}")
+        print(f"AIP check failed:\n- Missing AIP directory: {aip_root(target_repo)} (run `aip init`)")
+        return 1
 
-        # 侧发现闸门：findings.md 不得留未分类条目。
-        findings = project_living_path(target_repo, "findings.md")
-        if findings.exists():
-            n = unclassified_findings(read_text(findings))
-            if n:
-                errors.append(f"findings.md has {n} unclassified (待分类) side-finding(s) — classify before completion")
+    for name in PROJECT_LIVING_FILES:
+        if not project_living_path(target_repo, name).exists():
+            errors.append(f"Missing project living doc: {project_living_path(target_repo, name)}")
 
+    findings = project_living_path(target_repo, "findings.md")
+    if findings.exists():
+        n = unclassified_findings(read_text(findings))
+        if n:
+            errors.append(f"findings.md has {n} unclassified (待分类) side-finding(s) — classify before completion")
+
+    # --- 始终校验：无并行产物（AIP 槽位文件漏出 .aip 之外）---
+    for hit in competing_artifacts(target_repo):
+        errors.append(f"Competing AIP artifact outside {AIP_DIR}/: {hit} (AIP state must live only under {AIP_DIR}/)")
+
+    # --- 活动 feature 校验（无 active feature 则跳过，使其可当提交闸门）---
     task_path = current_task_path(target_repo)
-    if not task_path.exists():
-        errors.append(f"Missing runtime pointer: {task_path}")
-    else:
+    if task_path.exists():
         current_task = read_json(task_path)
         fid = current_task.get("feature_id", "")
-        if not fid:
-            errors.append("current_task.json has empty feature_id")
-            fid = ""
         if fid:
             fd = feature_dir(target_repo, fid)
             if not fd.exists():
@@ -100,22 +131,31 @@ def main() -> int:
 
                 handoff = fd / "handoff.md"
                 if handoff.exists():
-                    missing_sections = contains_required_handoff_sections(read_text(handoff))
-                    for section in missing_sections:
-                        errors.append(f"handoff.md missing section: {section}")
+                    for sec in missing(HANDOFF_REQUIRED, read_text(handoff)):
+                        errors.append(f"handoff.md missing section: {sec}")
 
-                task_board = fd / "task_board.yaml"
-                if task_board.exists():
-                    in_progress_count = count_in_progress(read_text(task_board))
-                    if in_progress_count > 1:
-                        errors.append("task_board.yaml has more than one in_progress task")
+                spec = fd / "spec.md"
+                if spec.exists():
+                    for sec in missing(SPEC_REQUIRED_HEADINGS, read_text(spec)):
+                        errors.append(f"spec.md missing section: {sec}")
 
-                verification = fd / "verification.md"
+                plan = fd / "plan.md"
+                if plan.exists() and "## Tasks" not in read_text(plan):
+                    errors.append("plan.md missing '## Tasks' section")
+
+                tb = fd / "task_board.yaml"
+                if tb.exists() and count_in_progress(read_text(tb)) > 1:
+                    errors.append("task_board.yaml has more than one in_progress task")
+
+                # --- 完成闸门：残渣校验只在 status==done ---
                 if current_task.get("status") == "done":
+                    verification = fd / "verification.md"
                     if not verification.exists():
                         errors.append("feature marked done but verification.md is missing")
                     else:
-                        errors.extend(gate_problems(read_text(verification)))
+                        vt = read_text(verification)
+                        st = read_text(spec) if spec.exists() else ""
+                        errors.extend(done_gate_problems(vt, st))
 
     if errors:
         print("AIP check failed:")

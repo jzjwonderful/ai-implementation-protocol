@@ -41,6 +41,26 @@ If `.aip/_runtime/current_task.json` does not exist, run `init` first.
 - **Doc same-change**: behavior/architecture change → update `.aip/STATUS.md` (and the relevant truth source) in the same change; record architectural decisions in `.aip/decisions.md`.
 - **Respect project config**: honor `.aip/config.yaml` iron_rules / lenses / gates; when a change touches a `lenses` domain, mount that checklist during design and review.
 
+## Process-skill integration (superpowers — optional)
+
+If a process-skill framework (e.g. **superpowers**) is available, defer the *method* per phase to it.
+**This table is the single source for the mapping — do not restate it elsewhere (CLAUDE.md should point here, not copy).**
+
+| AIP phase | AIP slot (you own) | superpowers skill (method) |
+|-----------|--------------------|----------------------------|
+| spec | `features/<id>/spec.md` | brainstorming |
+| plan | `features/<id>/plan.md` + `task_board.yaml` | writing-plans |
+| implement | task_board + `session_log.md` | subagent-driven-development / executing-plans + test-driven-development |
+| debug | (when stuck) | systematic-debugging |
+| verify | `verification.md` machine-gate table | verification-before-completion |
+| review | `verification.md` Independent Review section | requesting-code-review / receiving-code-review |
+| finish | `handoff.md` closeout | finishing-a-development-branch |
+
+Rules that keep them from drifting/conflicting:
+- **Slots belong to AIP, methods belong to superpowers.** A method's output lands in the AIP slot above — never a parallel location (no `docs/plans/...` second plan).
+- **Resume is AIP-only.** `.aip/_runtime/current_task.json` + `handoff.md` is the single resumable-state source. `executing-plans` checkpoints map onto `task_board.yaml`; do not keep a separate progress/plan file.
+- If superpowers is absent (e.g. Codex), AIP still runs standalone — you just lose the method layer.
+
 ## Completion Gate (do not call a feature done until)
 - `verification.md` has a **machine-gate table bound to real evidence** — every gate in `config.yaml` actually run, result pass + evidence (run them via Bash; nothing skipped silently).
 - An **independent fresh-eyes review** is recorded (reviewer mindset ≠ author; try to falsify).

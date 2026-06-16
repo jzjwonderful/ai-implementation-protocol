@@ -131,6 +131,29 @@ project binds them via `config.yaml`.
 - **Conditional domain lenses** — when a change touches a domain declared in `config.yaml`
   `lenses` (e.g. frontend, industrial client), mount that expert checklist during design and review.
 
+### Process-skill integration (optional method layer)
+AIP owns the **slots** (artifacts, state, gates); an external process-skill framework, when present,
+owns the **methods** (how to fill each slot well). They compose:
+- Slots belong to AIP; methods' output lands in the AIP slot, never a parallel location.
+- **Resume is AIP-only**: `_runtime/current_task.json` + `handoff.md` is the single resumable-state
+  source. Any external "execute plan in a separate session" checkpointing maps onto `task_board.yaml`;
+  no second progress/plan file.
+- AIP runs standalone if no method layer is present.
+- The concrete phase→skill mapping is single-sourced in the installed `aip` skill, not duplicated here
+  or in project docs (drift prevention).
+
+### Enforcement (how this is 100% vs advisory)
+What is load-bearing is enforced by **deterministic gates that block**, not prose:
+- **Scaffold** (`aip start`) creates slots in the one correct place — no location drift.
+- **`aip check`** is a blocking gate: living docs present, ≤1 in-progress, findings classified,
+  required slot shape, machine-gate evidence (no `fail`, no unfilled `| <...>` placeholders) on done,
+  and **no competing AIP artifacts outside `.aip/`** (drift/dup detector).
+- **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` automatically
+  so it can't be forgotten.
+Method *quality* (was the brainstorming deep, the TDD real) cannot be machine-forced — gates check the
+*residue* a method must leave (sources cited, real command output, reviewer≠author note). Beyond residue
+it is best-effort by design: a poorly executed method yields an incomplete slot the gate rejects.
+
 ## Optional Knowledge Sources
 
 If present, these may be consumed as enhancement inputs:
