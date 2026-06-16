@@ -60,17 +60,19 @@ The plugin root contains:
 - `schemas/`: machine-readable schema references
 - `scripts/`: local CLI tools
 
+All AIP outputs live under the hidden `.aip/` directory in the target repo.
+
 ## Required Resume Flow
 
 Before editing an AIP-enabled repository:
 
-1. Read `project_docs/_runtime/current_task.json`.
-2. Read every path listed in `must_read`.
+1. Read `.aip/_runtime/current_task.json`.
+2. Read every path listed in `must_read` (includes `.aip/STATUS.md` and the project's truth sources from `.aip/config.yaml`).
 3. Inspect the active feature's `task_board.yaml`.
 4. Read the active feature's `handoff.md`.
 5. Only then plan or edit.
 
-If `project_docs/_runtime/current_task.json` does not exist, initialize AIP first.
+If `.aip/_runtime/current_task.json` does not exist, initialize AIP first.
 
 ## CLI Commands
 
@@ -146,18 +148,23 @@ $aip check
 
 ## Working Rules
 
-- Keep one active feature pointer in `project_docs/_runtime/current_task.json`.
+- Keep one active feature pointer in `.aip/_runtime/current_task.json`.
 - After meaningful changes, update `task_board.yaml`, append `session_log.md`, and refresh `handoff.md`.
-- Before claiming completion, update `verification.md`, update `handoff.md`, update `current_task.json`, and run `aip_check.py`.
+- **Stop-and-ask** on uncertainty/spec gap; never guess and continue.
+- **Reuse-first / anti-accretion**: before creating new tools/scaffolds, refresh the index and check `.aip/canonical-assets.md`; creating new needs written justification; replace old via Strangler (migrate + delete same change).
+- **Side-finding protocol**: unrelated problems found mid-task → triage and log to `.aip/findings.md` (capture, don't chase); never silently drop or derail.
+- **Comment hygiene**: no drift-prone external ids in comments; only `ADR-N`.
+- Behavior/architecture change → update `.aip/STATUS.md` (and the truth source) in the same change; decisions → `.aip/decisions.md`.
 - Keep adapters optional. A repository without `.nexus-map/`, CI records, or Git metadata must still work.
-- Use existing project-specific constraints when they are stricter than the default protocol.
+- Use existing project-specific constraints (`.aip/config.yaml` iron_rules) when stricter than the default protocol.
 
 ## Completion Gate
 
 Do not call an AIP feature complete until:
 
 - `current_task.json` has the intended final status.
-- The active feature directory contains all required files.
-- `handoff.md` contains all required sections.
-- `task_board.yaml` has no more than one `in_progress` task.
+- `verification.md` has a **machine-gate table bound to real evidence** (every `config.yaml` gate run, result pass + evidence; nothing skipped silently) and a recorded **fresh-eyes review** (reviewer ≠ author).
+- Every `.aip/findings.md` entry added this round is **classified** (no `待分类`).
+- The active feature directory contains all required files; `handoff.md` has all required sections; `task_board.yaml` has ≤1 `in_progress` task.
 - `python <plugin-root>/scripts/aip.py check --repo-root .` passes.
+- Commits require explicit user authorization.

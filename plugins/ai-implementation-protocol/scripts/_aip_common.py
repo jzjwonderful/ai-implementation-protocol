@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+# 业务仓库里 AIP 的全部产出都落在这个隐藏目录下（像 .git/.nexus-map），不污染项目根。
+AIP_DIR = ".aip"
+
 REQUIRED_FEATURE_FILES = [
     "spec.md",
     "plan.md",
@@ -14,6 +17,15 @@ REQUIRED_FEATURE_FILES = [
     "handoff.md",
     "verification.md",
     "session_log.md",
+]
+
+# 项目级活文档（跨 feature，长期存在）。init 生成、check 校验存在。
+PROJECT_LIVING_FILES = [
+    "STATUS.md",
+    "canonical-assets.md",
+    "decisions.md",
+    "findings.md",
+    "config.yaml",
 ]
 
 
@@ -51,20 +63,29 @@ def load_template(repo_root: Path, name: str) -> str:
     return read_text(template_path)
 
 
+def aip_root(target_repo: Path) -> Path:
+    return target_repo / AIP_DIR
+
+
 def feature_dir(target_repo: Path, feature_id: str) -> Path:
-    return target_repo / "project_docs" / "features" / feature_id
+    return aip_root(target_repo) / "features" / feature_id
 
 
 def current_task_path(target_repo: Path) -> Path:
-    return target_repo / "project_docs" / "_runtime" / "current_task.json"
+    return aip_root(target_repo) / "_runtime" / "current_task.json"
 
 
 def protocol_path(target_repo: Path) -> Path:
-    return target_repo / "project_docs" / "protocols" / "ai-implementation-protocol.md"
+    return aip_root(target_repo) / "protocols" / "ai-implementation-protocol.md"
 
 
+def project_living_path(target_repo: Path, name: str) -> Path:
+    return aip_root(target_repo) / name
+
+
+# 向后兼容旧调用名（现在指向 .aip 根）。
 def project_docs_root(target_repo: Path) -> Path:
-    return target_repo / "project_docs"
+    return aip_root(target_repo)
 
 
 def list_missing(paths: Iterable[Path]) -> list[str]:

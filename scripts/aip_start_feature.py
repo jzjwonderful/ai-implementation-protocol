@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from _aip_common import current_task_path, feature_dir, iso_now, write_json, write_text
+from _aip_common import AIP_DIR, current_task_path, feature_dir, iso_now, write_json, write_text
 
 
 def main() -> int:
@@ -49,9 +49,11 @@ def main() -> int:
         "owner": "ai",
         "blocking": [],
         "must_read": [
-            "project_docs/protocols/ai-implementation-protocol.md",
-            f"project_docs/features/{args.feature_id}/spec.md",
-            f"project_docs/features/{args.feature_id}/handoff.md"
+            f"{AIP_DIR}/protocols/ai-implementation-protocol.md",
+            f"{AIP_DIR}/STATUS.md",
+            f"{AIP_DIR}/canonical-assets.md",
+            f"{AIP_DIR}/features/{args.feature_id}/spec.md",
+            f"{AIP_DIR}/features/{args.feature_id}/handoff.md",
         ]
     }
     write_json(current_task_path(target_repo), current_task)

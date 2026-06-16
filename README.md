@@ -63,6 +63,20 @@ $aip resume
 $aip check
 ```
 
+## Install For Claude Code
+
+AIP also installs as a Claude Code skill (project-level by default):
+
+```bash
+python scripts/install_claude_code.py --repo-root <target-project>
+# or user-level for all projects:
+python scripts/install_claude_code.py --user
+```
+
+This writes an `aip` skill into the target's `.claude/skills/aip/SKILL.md` (or `~/.claude/skills/`)
+that drives the same CLI. Then in the target repo: `aip init`, fill `.aip/config.yaml`, `aip start`,
+`aip check`. All AIP outputs live under the target's `.aip/` directory.
+
 ## Core Ideas
 
 AIP separates project knowledge into four layers:
@@ -72,10 +86,15 @@ AIP separates project knowledge into four layers:
 3. machine-readable runtime state
 4. local validation tools
 
-Recommended structure inside a target project:
+All AIP outputs inside a target project live under a single hidden `.aip/` directory (like `.git`):
 
 ```text
-project_docs/
+.aip/
+├── STATUS.md                 # current-state source of truth (read first)
+├── canonical-assets.md       # registry of assets to reuse (anti-accretion)
+├── decisions.md              # ADR-lite decision log (append-only)
+├── findings.md               # side-finding inbox (capture, don't chase)
+├── config.yaml               # project adaptation (truth sources / gates / lenses)
 ├── _runtime/
 │   └── current_task.json
 ├── features/
