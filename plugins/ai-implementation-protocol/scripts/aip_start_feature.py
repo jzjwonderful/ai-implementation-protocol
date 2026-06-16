@@ -52,6 +52,7 @@ def main() -> int:
             f"{AIP_DIR}/protocols/ai-implementation-protocol.md",
             f"{AIP_DIR}/STATUS.md",
             f"{AIP_DIR}/canonical-assets.md",
+            f"{AIP_DIR}/knowledge_index.md",
             f"{AIP_DIR}/features/{args.feature_id}/spec.md",
             f"{AIP_DIR}/features/{args.feature_id}/handoff.md",
         ]

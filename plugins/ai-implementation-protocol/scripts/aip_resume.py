@@ -12,7 +12,11 @@ def main() -> int:
     args = parser.parse_args()
 
     target_repo = Path(args.repo_root).resolve()
-    current_task = read_json(current_task_path(target_repo))
+    ct_path = current_task_path(target_repo)
+    if not ct_path.exists():
+        print("AIP 未初始化（缺 .aip/_runtime/current_task.json）。请先运行 `$aip init`。")
+        return 1
+    current_task = read_json(ct_path)
     fid = current_task.get("feature_id", "")
 
     print(f"当前功能: {fid or '(none)'}")
