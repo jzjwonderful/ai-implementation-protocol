@@ -30,11 +30,11 @@ protocol or script changes.
 
 ## Install Targets
 
-- **Codex**: `python scripts/install_codex_plugin.py` (installs the `aip` plugin + skill).
-- **Claude Code**: `python scripts/install_claude_code.py --repo-root <target>` (installs an `aip`
-  skill into the target's `.claude/skills/`; add `--user` for `~/.claude/skills/`).
+- **Codex**: `python scripts/install_codex_plugin.py` (installs the `aip` plugin + skill to `~/.agents/`).
+- **Claude Code**: `python scripts/install_claude_plugin.py` (installs the `aip` skill to `~/.claude/skills/aip/`
+  and the plugin package to `~/plugins/`).
 
-Both drive the same tool-agnostic CLI under `scripts/`.
+The same plugin package serves both runtimes; both drive the same tool-agnostic CLI under `scripts/`.
 
 ### Enforcement hooks (make `aip check` automatic)
 

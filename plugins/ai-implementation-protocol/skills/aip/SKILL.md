@@ -159,6 +159,33 @@ $aip check
 - Keep adapters optional. A repository without `.nexus-map/`, CI records, or Git metadata must still work.
 - Use existing project-specific constraints (`.aip/config.yaml` iron_rules) when stricter than the default protocol.
 
+## Process-skill integration (optional method layer — Claude Code + superpowers)
+
+If a process-skill framework (e.g. **superpowers**, when `.aip/config.yaml` `process_skills: superpowers`)
+is available, defer the *method* per phase to it. **This table is the single source for the mapping — do
+not restate it in project docs; point here.**
+
+| AIP phase | AIP slot (you own) | superpowers skill (method) |
+|-----------|--------------------|----------------------------|
+| spec | `features/<id>/spec.md` | brainstorming |
+| plan | `features/<id>/plan.md` + `task_board.yaml` | writing-plans |
+| implement | task_board + `session_log.md` | subagent-driven-development / executing-plans + test-driven-development |
+| debug | (when stuck) | systematic-debugging |
+| verify | `verification.md` machine-gate table | verification-before-completion |
+| review | `verification.md` Independent Review section | requesting-code-review / receiving-code-review |
+| finish | `handoff.md` closeout | finishing-a-development-branch |
+
+- **Slots belong to AIP, methods belong to superpowers**: a method's output lands in the AIP slot above, never a parallel location (no second plan under `docs/plans/...`).
+- **Resume is AIP-only**: `.aip/_runtime/current_task.json` + `handoff.md` is the single resumable-state source; `executing-plans` checkpoints map onto `task_board.yaml`.
+- Absent (e.g. Codex), AIP runs standalone — you just lose the method layer.
+
+## Enforcement (make the gate automatic)
+
+`aip check` is a blocking gate (living docs present, ≤1 in_progress, findings classified, slot shape,
+machine-gate evidence on done, and no competing AIP artifacts outside `.aip/`). To make it run without
+relying on memory: `python <plugin-root>/scripts/install_hooks.py --repo-root .` installs a git pre-commit
+gate (bypass once with `git commit --no-verify`).
+
 ## Completion Gate
 
 Do not call an AIP feature complete until:

@@ -101,20 +101,6 @@ $aip resume
 $aip check
 ```
 
-## Install For Claude Code
-
-AIP also installs as a Claude Code skill (project-level by default):
-
-```bash
-python scripts/install_claude_code.py --repo-root <target-project>
-# or user-level for all projects:
-python scripts/install_claude_code.py --user
-```
-
-This writes an `aip` skill into the target's `.claude/skills/aip/SKILL.md` (or `~/.claude/skills/`)
-that drives the same CLI. Then in the target repo: `aip init`, fill `.aip/config.yaml`, `aip start`,
-`aip check`. All AIP outputs live under the target's `.aip/` directory.
-
 ## Core Ideas
 
 AIP separates project knowledge into four layers:
