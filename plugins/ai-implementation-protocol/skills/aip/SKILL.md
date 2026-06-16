@@ -170,7 +170,7 @@ not restate it in project docs; point here.**
 | spec | `features/<id>/spec.md` | brainstorming |
 | plan | `features/<id>/plan.md` + `task_board.yaml` | writing-plans |
 | implement | task_board + `session_log.md` | subagent-driven-development / executing-plans + test-driven-development |
-| debug | (when stuck) | systematic-debugging |
+| debug | `.aip/knowledge.md`（根因沉淀）+ 索引 | root-cause（AIP-native，先查后挖+证伪）；superpowers 在场时方法让位 systematic-debugging |
 | verify | `verification.md` machine-gate table | verification-before-completion |
 | review | `verification.md` Independent Review section | requesting-code-review / receiving-code-review |
 | finish | `handoff.md` closeout | finishing-a-development-branch |

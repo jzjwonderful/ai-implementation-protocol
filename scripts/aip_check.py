@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import date, datetime
 from pathlib import Path
 
 from _aip_common import (
@@ -17,6 +18,9 @@ from _aip_common import (
     read_json,
     read_text,
 )
+from aip_knowledge import expected_index_text, parse_categories, parse_entries
+
+STALE_DAYS = 180
 
 SPEC_REQUIRED_HEADINGS = ["## Goal", "## Scope", "## Acceptance Criteria"]
 HANDOFF_REQUIRED = [
@@ -88,6 +92,50 @@ def done_gate_problems(verification_text: str, spec_text: str) -> list[str]:
     return problems
 
 
+def knowledge_problems(target_repo: Path, status_done: bool) -> tuple[list[str], list[str]]:
+    """知识库校验：索引一致性(恒/错误)、条目完整性+类目合法(done/错误)、过期(恒/告警)。"""
+    errors: list[str] = []
+    warnings: list[str] = []
+    kn = project_living_path(target_repo, "knowledge.md")
+    if not kn.exists():
+        return errors, warnings
+
+    text = read_text(kn)
+    cats = set(parse_categories(text))
+    for e in parse_entries(text):
+        f = e["fields"]
+        eid = e["id"]
+        cat = f.get("分类", "")
+        status = f.get("状态", "")
+        last = f.get("最后复核", "")
+
+        if status_done:
+            if not cat:
+                errors.append(f"knowledge.md {eid} missing 分类")
+            elif cat not in cats:
+                errors.append(f'knowledge.md {eid} 分类 "{cat}" not in declared ## 类目')
+            for fld in ("状态", "症状", "根因", "最后复核"):
+                if not f.get(fld):
+                    errors.append(f"knowledge.md {eid} missing {fld}")
+
+        if last:
+            try:
+                d = datetime.strptime(last, "%Y-%m-%d").date()
+            except ValueError:
+                warnings.append(f'knowledge.md {eid} 最后复核 "{last}" not YYYY-MM-DD')
+            else:
+                if status.startswith("active") and (date.today() - d).days > STALE_DAYS:
+                    warnings.append(f"knowledge.md {eid} active but last verified {last} (>{STALE_DAYS}d) — review")
+
+    idx = project_living_path(target_repo, "knowledge_index.md")
+    if not idx.exists():
+        errors.append("knowledge_index.md missing — run `aip knowledge`")
+    elif read_text(idx).strip() != expected_index_text(target_repo).strip():
+        errors.append("knowledge_index.md is stale — run `aip knowledge` to rebuild")
+
+    return errors, warnings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate AIP: living docs, slots, gates, anti-drift.")
     parser.add_argument("--repo-root", required=True, help="Target project root.")
@@ -114,6 +162,19 @@ def main() -> int:
     # --- 始终校验：无并行产物（AIP 槽位文件漏出 .aip 之外）---
     for hit in competing_artifacts(target_repo):
         errors.append(f"Competing AIP artifact outside {AIP_DIR}/: {hit} (AIP state must live only under {AIP_DIR}/)")
+
+    # --- 知识库校验：索引一致性(恒)、条目完整性(done)、过期(软告警) ---
+    warnings: list[str] = []
+    done_flag = False
+    ct_path = current_task_path(target_repo)
+    if ct_path.exists():
+        try:
+            done_flag = read_json(ct_path).get("status") == "done"
+        except Exception:
+            done_flag = False
+    k_err, k_warn = knowledge_problems(target_repo, done_flag)
+    errors.extend(k_err)
+    warnings.extend(k_warn)
 
     # --- 活动 feature 校验（无 active feature 则跳过，使其可当提交闸门）---
     task_path = current_task_path(target_repo)
@@ -156,6 +217,9 @@ def main() -> int:
                         vt = read_text(verification)
                         st = read_text(spec) if spec.exists() else ""
                         errors.extend(done_gate_problems(vt, st))
+
+    for w in warnings:
+        print(f"warning: {w}")
 
     if errors:
         print("AIP check failed:")
