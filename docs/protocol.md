@@ -162,6 +162,12 @@ Method *quality* (was the brainstorming deep, the TDD real) cannot be machine-fo
 *residue* a method must leave (sources cited, real command output, reviewer≠author note). Beyond residue
 it is best-effort by design: a poorly executed method yields an incomplete slot the gate rejects.
 
+## Schemas Are Reference-Only
+
+`schemas/*.json` document the shape of `current_task.json` / `task_board.yaml` for humans
+and tooling. `aip check` does **not** validate against them (no third-party dependency);
+they are guidance, not an enforced gate.
+
 ## Optional Knowledge Sources
 
 If present, these may be consumed as enhancement inputs:

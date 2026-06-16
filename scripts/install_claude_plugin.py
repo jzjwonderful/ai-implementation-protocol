@@ -42,6 +42,22 @@ def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
     return installed
 
 
+def install_commands(source_plugin: Path, home: Path, force: bool) -> list[Path]:
+    src_root = source_plugin / "commands"
+    if not src_root.exists():
+        return []
+    installed: list[Path] = []
+    for src in sorted(src_root.rglob("*.md")):
+        rel = src.relative_to(src_root)
+        dest = home / ".claude" / "commands" / rel
+        if dest.exists() and not force:
+            raise SystemExit(f"Command exists: {dest}. Re-run with --force to replace it.")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        installed.append(dest)
+    return installed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the AIP plugin for Claude Code.")
     parser.add_argument(
@@ -66,10 +82,13 @@ def main() -> int:
 
     copy_plugin(source_plugin, destination_plugin, args.force)
     installed = install_skills(destination_plugin, home, args.force)
+    installed_cmds = install_commands(destination_plugin, home, args.force)
 
     print(f"Installed Claude Code plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
+    for path in installed_cmds:
+        print(f"Installed command: {path}")
     print("Restart Claude Code or open a new session for the skills to be picked up.")
     return 0
 

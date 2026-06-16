@@ -64,15 +64,33 @@ def unclassified_findings(findings_text: str) -> int:
     )
 
 
+# AIP 槽位文件的内容指纹：命中文件名后还需含对应标记，才判为真槽位（降误报）。
+SLOT_MARKERS = {
+    "current_task.json": '"must_read"',
+    "handoff.md": "## Next Action",
+    "verification.md": "## Machine Gates",
+    "session_log.md": "# Session Log",
+    "task_board.yaml": "status:",
+}
+
+
 def competing_artifacts(target_repo: Path) -> list[str]:
-    """扫 .aip 之外是否漏出 AIP 槽位文件（current_task/handoff/task_board/...）= 并行产物/漂移。"""
+    """扫 .aip 之外是否漏出真正的 AIP 槽位文件（文件名命中 + 内容指纹命中）= 并行产物/漂移。"""
     hits: list[str] = []
     slots = set(AIP_SLOT_FILENAMES)
     for root, dirs, files in os.walk(target_repo):
         dirs[:] = [d for d in dirs if d not in SCAN_PRUNE_DIRS]
         for name in files:
-            if name in slots:
-                hits.append(str(Path(root) / name))
+            if name not in slots:
+                continue
+            marker = SLOT_MARKERS.get(name)
+            try:
+                text = (Path(root) / name).read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if marker and marker not in text:
+                continue
+            hits.append(str(Path(root) / name))
     return hits
 
 
@@ -136,6 +154,47 @@ def knowledge_problems(target_repo: Path, status_done: bool) -> tuple[list[str],
     return errors, warnings
 
 
+def parse_declared_gates(config_text: str) -> list[str]:
+    """从 config.yaml 的 gates: 块取出声明了非空 cmd 的闸门名（标准库轻量解析）。"""
+    in_gates = False
+    current_gate = None
+    declared: list[str] = []
+    for raw in config_text.splitlines():
+        if raw.strip().startswith("#") or not raw.strip():
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        stripped = raw.strip()
+        if indent == 0:
+            in_gates = stripped.startswith("gates:")
+            current_gate = None
+            continue
+        if not in_gates:
+            continue
+        if indent == 2 and stripped.endswith(":"):
+            current_gate = stripped[:-1].strip()
+        elif indent >= 4 and stripped.startswith("cmd:") and current_gate:
+            val = stripped[len("cmd:"):].strip().strip('"').strip("'")
+            if val:
+                declared.append(current_gate)
+                current_gate = None
+    return declared
+
+
+def gate_coverage_problems(target_repo: Path, verification_text: str, status_done: bool) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    cfg = project_living_path(target_repo, "config.yaml")
+    declared = parse_declared_gates(read_text(cfg)) if cfg.exists() else []
+    if not declared:
+        warnings.append("config.yaml 未声明任何机器闸门（gates.*.cmd 全空）——证据绑定弱")
+        return errors, warnings
+    if status_done:
+        for name in declared:
+            if name not in verification_text:
+                errors.append(f"verification.md 未覆盖 config 声明的 gate: {name}")
+    return errors, warnings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate AIP: living docs, slots, gates, anti-drift.")
     parser.add_argument("--repo-root", required=True, help="Target project root.")
@@ -175,6 +234,11 @@ def main() -> int:
     k_err, k_warn = knowledge_problems(target_repo, done_flag)
     errors.extend(k_err)
     warnings.extend(k_warn)
+
+    # --- 机器闸门覆盖：非 done 时给"未声明闸门"软告警（done 时在下方带 verification 核对）---
+    if not done_flag:
+        _, g_warn = gate_coverage_problems(target_repo, "", False)
+        warnings.extend(g_warn)
 
     # --- 活动 feature 校验（无 active feature 则跳过，使其可当提交闸门）---
     task_path = current_task_path(target_repo)
@@ -217,6 +281,9 @@ def main() -> int:
                         vt = read_text(verification)
                         st = read_text(spec) if spec.exists() else ""
                         errors.extend(done_gate_problems(vt, st))
+                        g_err, g_warn = gate_coverage_problems(target_repo, vt, True)
+                        errors.extend(g_err)
+                        warnings.extend(g_warn)
 
     for w in warnings:
         print(f"warning: {w}")

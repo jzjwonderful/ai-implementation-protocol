@@ -1,6 +1,6 @@
 ---
 name: aip
-description: Use when the user invokes `$aip` or asks to apply AI Implementation Protocol, including `$aip init`, `$aip start`, `$aip resume`, `$aip check`, initializing project_docs, starting a feature package, resuming current task state, validating handoff completeness, or closing a feature according to AIP.
+description: Use when the user invokes `$aip` or asks to apply AI Implementation Protocol, including `$aip init`, `$aip start`, `$aip resume`, `$aip check`, `$aip knowledge`, `$aip done`, initializing project_docs, starting a feature package, resuming current task state, rebuilding the knowledge index, validating handoff completeness, or closing a feature according to AIP.
 ---
 
 # AI Implementation Protocol
@@ -18,6 +18,8 @@ $aip init
 $aip start 2026-04-26-my-feature --title "My feature"
 $aip resume
 $aip check
+$aip knowledge
+$aip done
 $aip help
 ```
 
@@ -115,6 +117,8 @@ python <plugin-root>/scripts/aip.py --help
 - `$aip start <feature-id> [--title "..."]`: run `python <plugin-root>/scripts/aip.py start <feature-id> --title "..." --repo-root .`.
 - `$aip resume`: run `python <plugin-root>/scripts/aip.py resume --repo-root .`.
 - `$aip check`: run `python <plugin-root>/scripts/aip.py check --repo-root .`.
+- `$aip knowledge`: run `python <plugin-root>/scripts/aip.py knowledge --repo-root .`.
+- `$aip done`: run `python <plugin-root>/scripts/aip.py done --repo-root .`.
 - `$aip help`: summarize these commands and do not edit files.
 
 Preserve explicit `--repo-root <path>` if the user provides it. Otherwise use the current workspace root.
@@ -146,6 +150,28 @@ Run the handoff completeness gate:
 ```text
 $aip check
 ```
+
+## Guided Init (after `$aip init` scaffolds files)
+
+`aip init` 只负责脚手架。脚手架后**由你引导用户填 `.aip/config.yaml`**，逐项 Stop-and-ask，不替用户臆断：
+
+1. **truth_sources**：扫描仓库（README/docs/约定文件）提候选，请用户确认权威文档。
+2. **gates**：探测技术栈（package.json / pyproject.toml / *.sln / go.mod 等），为 tests/build/lint_or_drift/e2e 建议真实命令，逐条确认后写入 `cmd`。
+3. **lenses**：按改动域（前端/客户端等）建议，可选。
+4. **iron_rules**：问项目硬约束（编码要求、契约重生成、未授权不提交等）。
+5. **process_skills**：检测到 superpowers 则建议设 `superpowers`，否则留空。
+
+每写一项就更新 `.aip/config.yaml`。完成后跑 `$aip check` 自检。
+
+## Conversational Start (user just describes a need)
+
+用户**口述需求**即可，不要求其先给 id/title：
+
+1. **方法层**：若 `.aip/config.yaml` `process_skills: superpowers`，让位 superpowers **brainstorming** 把需求探清并形成设计；否则走 AIP 原生轻量访谈（目的/范围/验收/约束几问）。
+2. **生成**：从对话收敛出 `feature_id = <今天日期>-<标题派生的 kebab slug>`、`title`、以及 `spec.md` 初稿（Goal/Scope/Acceptance Criteria 用对话内容预填）。
+3. **脚手架**：调用 `python <plugin-root>/scripts/aip.py start <feature_id> --title "<title>" --repo-root .`，随后把 spec 初稿写入该 feature 的 `spec.md`。
+
+用户全程不手敲 id/`--title`。
 
 ## Working Rules
 

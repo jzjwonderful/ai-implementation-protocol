@@ -14,6 +14,7 @@ from _aip_common import (
     write_text,
 )
 from aip_knowledge import rebuild_index
+from aip_discovery import upsert_managed_block
 
 
 # 项目级活文档 → 生成它用哪个模板。无模板项（knowledge_index.md）由生成器产出。
@@ -94,6 +95,10 @@ def main() -> int:
         "- `protocols/`：项目内协议副本\n"
     )
     write_text(root / "README.md", readme)
+
+    # 发现机制：向仓库根写幂等托管引导块，让后续 AI（Claude 读 CLAUDE.md / Codex 读 AGENTS.md）自动看到 AIP。
+    upsert_managed_block(target_repo / "CLAUDE.md")
+    upsert_managed_block(target_repo / "AGENTS.md")
 
     print(f"AIP initialized in: {target_repo / AIP_DIR}")
     return 0
