@@ -40,6 +40,12 @@ def main() -> int:
     check_parser = subparsers.add_parser("check", help="Validate AIP handoff completeness.")
     add_repo_root(check_parser)
 
+    knowledge_parser = subparsers.add_parser("knowledge", help="Rebuild the knowledge index from knowledge.md.")
+    add_repo_root(knowledge_parser)
+
+    done_parser = subparsers.add_parser("done", help="Mark the active feature done (runs aip check; rolls back on fail).")
+    add_repo_root(done_parser)
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -66,6 +72,12 @@ def main() -> int:
 
     if args.command == "check":
         return run_script("aip_check.py", ["--repo-root", args.repo_root])
+
+    if args.command == "knowledge":
+        return run_script("aip_knowledge.py", ["--repo-root", args.repo_root])
+
+    if args.command == "done":
+        return run_script("aip_done.py", ["--repo-root", args.repo_root])
 
     parser.error(f"Unknown command: {args.command}")
     return 2

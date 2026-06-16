@@ -122,6 +122,14 @@ project binds them via `config.yaml`.
 8. **Side-finding protocol** — unrelated problems found while doing task A are captured in
    `findings.md` (capture, don't chase) with a 3-second triage, never silently dropped and
    never allowed to derail the current task.
+9. **Root-cause-first investigation & knowledge sedimentation** — on any bug/unexpected
+   behavior, don't patch the symptom: recall known causes from `.aip/knowledge_index.md`
+   (a hit is a prior hypothesis to re-verify, not an answer), enumerate competing
+   hypotheses, dig to a cause you can point at in code/config/environment, then hand the
+   cause + evidence + options to the user. Verified causes are deposited (append-only) in
+   `.aip/knowledge.md` under a declared `## 类目`; the derived `.aip/knowledge_index.md` is
+   rebuilt via `aip knowledge`. `aip check` validates index consistency (always), entry
+   completeness + legal category (done gate), and flags entries unverified for >180 days.
 
 ### Cross-cutting disciplines
 - **Comment hygiene** — code comments must not reference drift-prone external ids
@@ -153,6 +161,12 @@ What is load-bearing is enforced by **deterministic gates that block**, not pros
 Method *quality* (was the brainstorming deep, the TDD real) cannot be machine-forced — gates check the
 *residue* a method must leave (sources cited, real command output, reviewer≠author note). Beyond residue
 it is best-effort by design: a poorly executed method yields an incomplete slot the gate rejects.
+
+## Schemas Are Reference-Only
+
+`schemas/*.json` document the shape of `current_task.json` / `task_board.yaml` for humans
+and tooling. `aip check` does **not** validate against them (no third-party dependency);
+they are guidance, not an enforced gate.
 
 ## Optional Knowledge Sources
 

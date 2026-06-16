@@ -34,17 +34,22 @@ git pull
 python scripts/install_claude_plugin.py --force
 ```
 
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip.py init --repo-root <target>`) once in each AIP-enabled repository to scaffold the new `knowledge.md` / `knowledge_index.md` living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+
 The installer copies the plugin package to:
 
 ```text
 ~/plugins/ai-implementation-protocol/
 ```
 
-and installs the `aip` skill entry to:
+and installs the bundled skills to:
 
 ```text
 ~/.claude/skills/aip/SKILL.md
+~/.claude/skills/root-cause/SKILL.md
 ```
+
+`aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks to drive root-cause investigation and deposit verified causes into `.aip/knowledge.md`.
 
 Open a new Claude Code session after installation. The `aip` skill will auto-trigger when you invoke `$aip`:
 
@@ -72,6 +77,8 @@ git pull
 python scripts/install_codex_plugin.py --force
 ```
 
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip.py init --repo-root <target>`) once in each AIP-enabled repository to scaffold the new `knowledge.md` / `knowledge_index.md` living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+
 The installer copies the plugin package to:
 
 ```text
@@ -84,13 +91,14 @@ and creates or updates:
 ~/.agents/plugins/marketplace.json
 ```
 
-It also installs the `aip` skill entry to:
+It also installs the bundled skill entries to:
 
 ```text
 ~/.agents/skills/aip/SKILL.md
+~/.agents/skills/root-cause/SKILL.md
 ```
 
-Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` skill.
+Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` and `root-cause` skills.
 
 Use it from Codex with command-like skill prompts:
 
@@ -118,6 +126,8 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 ├── canonical-assets.md       # registry of assets to reuse (anti-accretion)
 ├── decisions.md              # ADR-lite decision log (append-only)
 ├── findings.md               # side-finding inbox (capture, don't chase)
+├── knowledge.md              # verified root causes / gotchas (append-only, recall-first)
+├── knowledge_index.md        # generated catalog of knowledge.md (rebuilt via `aip knowledge`)
 ├── config.yaml               # project adaptation (truth sources / gates / lenses)
 ├── _runtime/
 │   └── current_task.json
@@ -176,6 +186,12 @@ Validate handoff completeness:
 
 ```bash
 python scripts/aip.py check --repo-root <target-project>
+```
+
+Rebuild the knowledge index after editing `knowledge.md`:
+
+```bash
+python scripts/aip.py knowledge --repo-root <target-project>
 ```
 
 ## Codex Plugin Internals

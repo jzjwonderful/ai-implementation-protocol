@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import date, datetime
 from pathlib import Path
 
 from _aip_common import (
@@ -17,6 +18,9 @@ from _aip_common import (
     read_json,
     read_text,
 )
+from aip_knowledge import expected_index_text, parse_categories, parse_entries
+
+STALE_DAYS = 180
 
 SPEC_REQUIRED_HEADINGS = ["## Goal", "## Scope", "## Acceptance Criteria"]
 HANDOFF_REQUIRED = [
@@ -60,15 +64,33 @@ def unclassified_findings(findings_text: str) -> int:
     )
 
 
+# AIP 槽位文件的内容指纹：命中文件名后还需含对应标记，才判为真槽位（降误报）。
+SLOT_MARKERS = {
+    "current_task.json": '"must_read"',
+    "handoff.md": "## Next Action",
+    "verification.md": "## Machine Gates",
+    "session_log.md": "# Session Log",
+    "task_board.yaml": "status:",
+}
+
+
 def competing_artifacts(target_repo: Path) -> list[str]:
-    """扫 .aip 之外是否漏出 AIP 槽位文件（current_task/handoff/task_board/...）= 并行产物/漂移。"""
+    """扫 .aip 之外是否漏出真正的 AIP 槽位文件（文件名命中 + 内容指纹命中）= 并行产物/漂移。"""
     hits: list[str] = []
     slots = set(AIP_SLOT_FILENAMES)
     for root, dirs, files in os.walk(target_repo):
         dirs[:] = [d for d in dirs if d not in SCAN_PRUNE_DIRS]
         for name in files:
-            if name in slots:
-                hits.append(str(Path(root) / name))
+            if name not in slots:
+                continue
+            marker = SLOT_MARKERS.get(name)
+            try:
+                text = (Path(root) / name).read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if marker and marker not in text:
+                continue
+            hits.append(str(Path(root) / name))
     return hits
 
 
@@ -86,6 +108,91 @@ def done_gate_problems(verification_text: str, spec_text: str) -> list[str]:
     if not section_body(spec_text, "## Acceptance Criteria"):
         problems.append("spec.md '## Acceptance Criteria' is empty")
     return problems
+
+
+def knowledge_problems(target_repo: Path, status_done: bool) -> tuple[list[str], list[str]]:
+    """知识库校验：索引一致性(恒/错误)、条目完整性+类目合法(done/错误)、过期(恒/告警)。"""
+    errors: list[str] = []
+    warnings: list[str] = []
+    kn = project_living_path(target_repo, "knowledge.md")
+    if not kn.exists():
+        return errors, warnings
+
+    text = read_text(kn)
+    cats = set(parse_categories(text))
+    for e in parse_entries(text):
+        f = e["fields"]
+        eid = e["id"]
+        cat = f.get("分类", "")
+        status = f.get("状态", "")
+        last = f.get("最后复核", "")
+
+        if status_done:
+            if not cat:
+                errors.append(f"knowledge.md {eid} missing 分类")
+            elif cat not in cats:
+                errors.append(f'knowledge.md {eid} 分类 "{cat}" not in declared ## 类目')
+            for fld in ("状态", "症状", "根因", "最后复核"):
+                if not f.get(fld):
+                    errors.append(f"knowledge.md {eid} missing {fld}")
+
+        if last:
+            try:
+                d = datetime.strptime(last, "%Y-%m-%d").date()
+            except ValueError:
+                warnings.append(f'knowledge.md {eid} 最后复核 "{last}" not YYYY-MM-DD')
+            else:
+                if status.startswith("active") and (date.today() - d).days > STALE_DAYS:
+                    warnings.append(f"knowledge.md {eid} active but last verified {last} (>{STALE_DAYS}d) — review")
+
+    idx = project_living_path(target_repo, "knowledge_index.md")
+    if not idx.exists():
+        errors.append("knowledge_index.md missing — run `aip knowledge`")
+    elif read_text(idx).strip() != expected_index_text(target_repo).strip():
+        errors.append("knowledge_index.md is stale — run `aip knowledge` to rebuild")
+
+    return errors, warnings
+
+
+def parse_declared_gates(config_text: str) -> list[str]:
+    """从 config.yaml 的 gates: 块取出声明了非空 cmd 的闸门名（标准库轻量解析）。"""
+    in_gates = False
+    current_gate = None
+    declared: list[str] = []
+    for raw in config_text.splitlines():
+        if raw.strip().startswith("#") or not raw.strip():
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        stripped = raw.strip()
+        if indent == 0:
+            in_gates = stripped.startswith("gates:")
+            current_gate = None
+            continue
+        if not in_gates:
+            continue
+        if indent == 2 and stripped.endswith(":"):
+            current_gate = stripped[:-1].strip()
+        elif indent >= 4 and stripped.startswith("cmd:") and current_gate:
+            val = stripped[len("cmd:"):].strip().strip('"').strip("'")
+            if val:
+                declared.append(current_gate)
+                current_gate = None
+    return declared
+
+
+def gate_coverage_problems(target_repo: Path, verification_text: str, status_done: bool) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    cfg = project_living_path(target_repo, "config.yaml")
+    declared = parse_declared_gates(read_text(cfg)) if cfg.exists() else []
+    if not declared:
+        warnings.append("config.yaml 未声明任何机器闸门（gates.*.cmd 全空）——证据绑定弱")
+        return errors, warnings
+    if status_done:
+        for name in declared:
+            if name not in verification_text:
+                errors.append(f"verification.md 未覆盖 config 声明的 gate: {name}")
+    return errors, warnings
 
 
 def main() -> int:
@@ -114,6 +221,24 @@ def main() -> int:
     # --- 始终校验：无并行产物（AIP 槽位文件漏出 .aip 之外）---
     for hit in competing_artifacts(target_repo):
         errors.append(f"Competing AIP artifact outside {AIP_DIR}/: {hit} (AIP state must live only under {AIP_DIR}/)")
+
+    # --- 知识库校验：索引一致性(恒)、条目完整性(done)、过期(软告警) ---
+    warnings: list[str] = []
+    done_flag = False
+    ct_path = current_task_path(target_repo)
+    if ct_path.exists():
+        try:
+            done_flag = read_json(ct_path).get("status") == "done"
+        except Exception:
+            done_flag = False
+    k_err, k_warn = knowledge_problems(target_repo, done_flag)
+    errors.extend(k_err)
+    warnings.extend(k_warn)
+
+    # --- 机器闸门覆盖：非 done 时给"未声明闸门"软告警（done 时在下方带 verification 核对）---
+    if not done_flag:
+        _, g_warn = gate_coverage_problems(target_repo, "", False)
+        warnings.extend(g_warn)
 
     # --- 活动 feature 校验（无 active feature 则跳过，使其可当提交闸门）---
     task_path = current_task_path(target_repo)
@@ -156,6 +281,12 @@ def main() -> int:
                         vt = read_text(verification)
                         st = read_text(spec) if spec.exists() else ""
                         errors.extend(done_gate_problems(vt, st))
+                        g_err, g_warn = gate_coverage_problems(target_repo, vt, True)
+                        errors.extend(g_err)
+                        warnings.extend(g_warn)
+
+    for w in warnings:
+        print(f"warning: {w}")
 
     if errors:
         print("AIP check failed:")

@@ -25,6 +25,8 @@ PROJECT_LIVING_FILES = [
     "canonical-assets.md",
     "decisions.md",
     "findings.md",
+    "knowledge.md",
+    "knowledge_index.md",
     "config.yaml",
 ]
 

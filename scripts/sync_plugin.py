@@ -14,7 +14,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "plugins" / "ai-implementation-protocol"
 SYNCED_DIRS = ["scripts", "docs", "templates", "schemas"]
-IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
+# superpowers/ 是开发期产物（spec/plan），不进可分发插件包。
+IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "superpowers")
 
 
 def main() -> int:
