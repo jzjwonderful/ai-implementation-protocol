@@ -24,22 +24,22 @@ def copy_plugin(source: Path, destination: Path, force: bool) -> None:
     )
 
 
-def install_skill(source_plugin: Path, home: Path, force: bool) -> Path:
-    source_skill = source_plugin / "skills" / "aip" / "SKILL.md"
-    destination_skill_dir = home / ".claude" / "skills" / "aip"
-    destination_skill = destination_skill_dir / "SKILL.md"
+def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
+    skills_root = source_plugin / "skills"
+    if not skills_root.exists():
+        raise SystemExit(f"Plugin skills dir not found: {skills_root}")
 
-    if not source_skill.exists():
-        raise SystemExit(f"AIP skill not found: {source_skill}")
-
-    if destination_skill_dir.exists():
-        if not force:
-            raise SystemExit(f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it.")
-        shutil.rmtree(destination_skill_dir)
-
-    destination_skill_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_skill, destination_skill)
-    return destination_skill
+    installed: list[Path] = []
+    for src in sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists()):
+        destination_skill_dir = home / ".claude" / "skills" / src.name
+        if destination_skill_dir.exists():
+            if not force:
+                raise SystemExit(f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it.")
+            shutil.rmtree(destination_skill_dir)
+        destination_skill_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
+        installed.append(destination_skill_dir / "SKILL.md")
+    return installed
 
 
 def main() -> int:
@@ -65,11 +65,12 @@ def main() -> int:
     destination_plugin = home / "plugins" / PLUGIN_NAME
 
     copy_plugin(source_plugin, destination_plugin, args.force)
-    destination_skill = install_skill(destination_plugin, home, args.force)
+    installed = install_skills(destination_plugin, home, args.force)
 
     print(f"Installed Claude Code plugin: {destination_plugin}")
-    print(f"Installed AIP skill: {destination_skill}")
-    print("Restart Claude Code or open a new session for the skill to be picked up.")
+    for path in installed:
+        print(f"Installed skill: {path}")
+    print("Restart Claude Code or open a new session for the skills to be picked up.")
     return 0
 
 

@@ -13,14 +13,16 @@ from _aip_common import (
     write_json,
     write_text,
 )
+from aip_knowledge import rebuild_index
 
 
-# 项目级活文档 → 生成它用哪个模板。
+# 项目级活文档 → 生成它用哪个模板。无模板项（knowledge_index.md）由生成器产出。
 LIVING_TEMPLATE_MAP = {
     "STATUS.md": "status-template.md",
     "canonical-assets.md": "canonical-assets-template.md",
     "decisions.md": "decisions-template.md",
     "findings.md": "findings-template.md",
+    "knowledge.md": "knowledge-template.md",
     "config.yaml": "config-template.yaml",
 }
 
@@ -48,11 +50,16 @@ def main() -> int:
 
     # 项目级活文档：已存在则保留（除非 --force），避免覆盖用户内容。
     for name in PROJECT_LIVING_FILES:
+        tpl_name = LIVING_TEMPLATE_MAP.get(name)
+        if not tpl_name:
+            continue  # 无模板的（knowledge_index.md）由生成器产出
         dest = project_living_path(target_repo, name)
         if dest.exists() and not args.force:
             continue
-        tpl = template_root / "templates" / LIVING_TEMPLATE_MAP[name]
+        tpl = template_root / "templates" / tpl_name
         write_text(dest, tpl.read_text(encoding="utf-8"))
+
+    rebuild_index(target_repo)  # 由 knowledge.md 派生 knowledge_index.md
 
     current_task = {
         "feature_id": "",
@@ -66,6 +73,7 @@ def main() -> int:
         "must_read": [
             f"{AIP_DIR}/protocols/ai-implementation-protocol.md",
             f"{AIP_DIR}/STATUS.md",
+            f"{AIP_DIR}/knowledge_index.md",
         ],
     }
     write_json(root / "_runtime" / "current_task.json", current_task)
@@ -78,6 +86,8 @@ def main() -> int:
         "- `canonical-assets.md`：正典构件登记（造新前先查，防堆积）\n"
         "- `decisions.md`：架构决策记录（ADR-lite，append-only）\n"
         "- `findings.md`：侧发现收件箱（开发时撞见的无关问题，捕获别追）\n"
+        "- `knowledge.md`：知识库（验证过的根因/坎/领域事实，append-only，先查后挖）\n"
+        "- `knowledge_index.md`：知识索引（自动生成，勿手改，`aip knowledge` 重建）\n"
         "- `config.yaml`：本项目适配配置（真理源/机器闸门命令/适用 lens）\n"
         "- `_runtime/`：当前任务指针\n"
         "- `features/`：功能工作包\n"
