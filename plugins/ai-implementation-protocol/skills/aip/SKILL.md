@@ -45,6 +45,7 @@ If this file is loaded from a home-local skill install such as:
 
 ```text
 ~/.agents/skills/aip/SKILL.md
+~/.claude/skills/aip/SKILL.md
 ```
 
 then use the installed plugin package at:
