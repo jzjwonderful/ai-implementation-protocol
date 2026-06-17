@@ -9,6 +9,7 @@ from _aip_common import (
     AIP_DIR,
     AIP_SLOT_FILENAMES,
     PROJECT_LIVING_FILES,
+    REQUIRED_BUG_FILES,
     REQUIRED_FEATURE_FILES,
     SCAN_PRUNE_DIRS,
     aip_root,
@@ -26,6 +27,10 @@ SPEC_REQUIRED_HEADINGS = ["## Goal", "## Scope", "## Acceptance Criteria"]
 HANDOFF_REQUIRED = [
     "## Current Phase", "## Current Task", "## Completed Work", "## Remaining Work",
     "## Blockers", "## Next Action", "## Files Touched", "## Verification Status",
+]
+BUG_REPORT_REQUIRED = [
+    "## 症状 / 复现", "## 竞争假设", "## 根因", "## 证据",
+    "## 触类旁通 · 同类波及面", "## 修复选项", "## 沉淀",
 ]
 
 
@@ -94,19 +99,41 @@ def competing_artifacts(target_repo: Path) -> list[str]:
     return hits
 
 
-def done_gate_problems(verification_text: str, spec_text: str) -> list[str]:
-    """status==done 时的残渣校验：闸门绑真证据、spec/verification 真被填。"""
+def shared_done_gate(verification_text: str) -> list[str]:
+    """feature 与 bug 共用的 done 残渣校验：机器闸门绑真证据 + fresh-eyes review。"""
     problems: list[str] = []
     if "## Machine Gates" not in verification_text:
         problems.append("verification.md missing '## Machine Gates' section")
-    if "| fail |" in verification_text:
+    gates_body = section_body(verification_text, "## Machine Gates")
+    if "| fail |" in gates_body:
         problems.append("verification.md has a gate with result 'fail'")
     if "| <" in verification_text:
-        problems.append("verification.md still has unfilled placeholder gate rows ('| <...')")
+        problems.append("verification.md still has unfilled placeholder rows ('| <...')")
     if "## Independent Review" not in verification_text:
         problems.append("verification.md missing '## Independent Review' (fresh-eyes) section")
+    return problems
+
+
+def done_gate_problems(verification_text: str, spec_text: str) -> list[str]:
+    problems = shared_done_gate(verification_text)
     if not section_body(spec_text, "## Acceptance Criteria"):
         problems.append("spec.md '## Acceptance Criteria' is empty")
+    return problems
+
+
+def bug_done_gate_problems(report_text: str, verification_text: str, resolution: str) -> list[str]:
+    """bug 完成闸门：根因/证据/同类面/沉淀非空；fixed 时必有回归证据；叠加共享闸门。"""
+    problems = shared_done_gate(verification_text)
+    for heading, label in (("## 根因", "根因"), ("## 证据", "证据"),
+                           ("## 触类旁通 · 同类波及面", "同类波及面"), ("## 沉淀", "沉淀")):
+        if not section_body(report_text, heading):
+            problems.append(f"report.md '{heading}' 节为空（{label}缺失 = 表面补丁/未沉淀）")
+    if resolution == "fixed":
+        reg = section_body(verification_text, "## Regression")
+        if not reg:
+            problems.append("resolution=fixed 但 verification.md 缺 '## Regression' 回归证据")
+        elif "pass" not in reg:
+            problems.append("verification.md '## Regression' 无 after=pass 的回归行")
     return problems
 
 
@@ -240,40 +267,61 @@ def main() -> int:
         _, g_warn = gate_coverage_problems(target_repo, "", False)
         warnings.extend(g_warn)
 
-    # --- 活动 feature 校验（无 active feature 则跳过，使其可当提交闸门）---
+    # --- 活动工作单元校验（无活动单元则跳过，使其可当提交闸门）---
     task_path = current_task_path(target_repo)
     if task_path.exists():
         current_task = read_json(task_path)
+        kind = current_task.get("kind", "feature")
         fid = current_task.get("feature_id", "")
+        status_done = current_task.get("status") == "done"
+        resolution = current_task.get("resolution") or ""
         if fid:
             fd = feature_dir(target_repo, fid)
             if not fd.exists():
-                errors.append(f"Missing feature directory: {fd}")
-            else:
-                for name in REQUIRED_FEATURE_FILES:
+                errors.append(f"Missing work package directory: {fd}")
+            elif kind == "bug":
+                for name in REQUIRED_BUG_FILES:
                     if not (fd / name).exists():
-                        errors.append(f"Missing feature file: {fd / name}")
-
+                        errors.append(f"Missing bug file: {fd / name}")
                 handoff = fd / "handoff.md"
                 if handoff.exists():
                     for sec in missing(HANDOFF_REQUIRED, read_text(handoff)):
                         errors.append(f"handoff.md missing section: {sec}")
-
+                report = fd / "report.md"
+                if report.exists():
+                    for sec in missing(BUG_REPORT_REQUIRED, read_text(report)):
+                        errors.append(f"report.md missing section: {sec}")
+                if status_done:
+                    if resolution not in ("fixed", "wont_fix", "by_design"):
+                        errors.append("bug done 但 current_task.resolution 非法（fixed|wont_fix|by_design）")
+                    verification = fd / "verification.md"
+                    rep_txt = read_text(report) if report.exists() else ""
+                    ver_txt = read_text(verification) if verification.exists() else ""
+                    if not verification.exists():
+                        errors.append("bug marked done but verification.md is missing")
+                    errors.extend(bug_done_gate_problems(rep_txt, ver_txt, resolution))
+                    g_err, g_warn = gate_coverage_problems(target_repo, ver_txt, True)
+                    errors.extend(g_err)
+                    warnings.extend(g_warn)
+            else:
+                for name in REQUIRED_FEATURE_FILES:
+                    if not (fd / name).exists():
+                        errors.append(f"Missing feature file: {fd / name}")
+                handoff = fd / "handoff.md"
+                if handoff.exists():
+                    for sec in missing(HANDOFF_REQUIRED, read_text(handoff)):
+                        errors.append(f"handoff.md missing section: {sec}")
                 spec = fd / "spec.md"
                 if spec.exists():
                     for sec in missing(SPEC_REQUIRED_HEADINGS, read_text(spec)):
                         errors.append(f"spec.md missing section: {sec}")
-
                 plan = fd / "plan.md"
                 if plan.exists() and "## Tasks" not in read_text(plan):
                     errors.append("plan.md missing '## Tasks' section")
-
                 tb = fd / "task_board.yaml"
                 if tb.exists() and count_in_progress(read_text(tb)) > 1:
                     errors.append("task_board.yaml has more than one in_progress task")
-
-                # --- 完成闸门：残渣校验只在 status==done ---
-                if current_task.get("status") == "done":
+                if status_done:
                     verification = fd / "verification.md"
                     if not verification.exists():
                         errors.append("feature marked done but verification.md is missing")
