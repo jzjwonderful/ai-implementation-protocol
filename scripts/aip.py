@@ -52,6 +52,8 @@ def main() -> int:
 
     done_parser = subparsers.add_parser("done", help="Mark the active feature done (runs aip check; rolls back on fail).")
     add_repo_root(done_parser)
+    done_parser.add_argument("--resolution", choices=["fixed", "wont_fix", "by_design"], default=None,
+                             help="Bug 收尾结论（kind=bug 必填）。")
 
     args = parser.parse_args()
 
@@ -93,7 +95,10 @@ def main() -> int:
         return run_script("aip_knowledge.py", ["--repo-root", args.repo_root])
 
     if args.command == "done":
-        return run_script("aip_done.py", ["--repo-root", args.repo_root])
+        done_args = ["--repo-root", args.repo_root]
+        if args.resolution:
+            done_args.extend(["--resolution", args.resolution])
+        return run_script("aip_done.py", done_args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2

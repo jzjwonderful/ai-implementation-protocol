@@ -202,5 +202,28 @@ class BugDoneGate(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
 
 
+class BugDoneResolution(unittest.TestCase):
+    def test_done_without_resolution_refused(self):
+        d = init_repo()
+        start_bug(d)
+        # 用 finalize_bug 的内容但不设 resolution
+        finalize_bug(d, resolution="fixed")  # 先填齐文档
+        set_status(d, status="in_progress", resolution=None)  # 清掉 resolution，回到未收尾
+        r = run("done", "--repo-root", str(d))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("resolution", r.stdout)
+
+    def test_done_with_resolution_flag_passes(self):
+        d = init_repo()
+        start_bug(d)
+        finalize_bug(d, resolution="fixed")
+        set_status(d, status="in_progress", resolution=None)
+        r = run("done", "--resolution", "fixed", "--repo-root", str(d))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        ct = json.loads((d / ".aip/_runtime/current_task.json").read_text(encoding="utf-8"))
+        self.assertEqual(ct["resolution"], "fixed")
+        self.assertEqual(ct["status"], "done")
+
+
 if __name__ == "__main__":
     unittest.main()
