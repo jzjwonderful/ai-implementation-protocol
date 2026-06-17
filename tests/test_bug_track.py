@@ -180,6 +180,27 @@ class BugDoneGate(unittest.TestCase):
         r = check(d)
         self.assertEqual(r.returncode, 1)
 
+    def test_illegal_resolution_fails(self):
+        d = init_repo()
+        start_bug(d)
+        finalize_bug(d)
+        set_status(d, resolution="bogus")
+        r = check(d)
+        self.assertEqual(r.returncode, 1)
+
+    def test_failed_machine_gate_caught(self):
+        d = init_repo()
+        start_bug(d)
+        finalize_bug(d)
+        fd = d / ".aip/features/2026-06-17-x"
+        bad_ver = FILLED_VERIFICATION.replace(
+            "| tests | pytest | pass | 12 passed |",
+            "| tests | pytest | fail | 0 passed |",
+        )
+        (fd / "verification.md").write_text(bad_ver, encoding="utf-8", newline="\n")
+        r = check(d)
+        self.assertEqual(r.returncode, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

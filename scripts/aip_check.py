@@ -132,7 +132,7 @@ def bug_done_gate_problems(report_text: str, verification_text: str, resolution:
         reg = section_body(verification_text, "## Regression")
         if not reg:
             problems.append("resolution=fixed 但 verification.md 缺 '## Regression' 回归证据")
-        elif "pass" not in reg:
+        elif "| pass |" not in reg:
             problems.append("verification.md '## Regression' 无 after=pass 的回归行")
     return problems
 
@@ -296,13 +296,14 @@ def main() -> int:
                         errors.append("bug done 但 current_task.resolution 非法（fixed|wont_fix|by_design）")
                     verification = fd / "verification.md"
                     rep_txt = read_text(report) if report.exists() else ""
-                    ver_txt = read_text(verification) if verification.exists() else ""
                     if not verification.exists():
                         errors.append("bug marked done but verification.md is missing")
-                    errors.extend(bug_done_gate_problems(rep_txt, ver_txt, resolution))
-                    g_err, g_warn = gate_coverage_problems(target_repo, ver_txt, True)
-                    errors.extend(g_err)
-                    warnings.extend(g_warn)
+                    else:
+                        ver_txt = read_text(verification)
+                        errors.extend(bug_done_gate_problems(rep_txt, ver_txt, resolution))
+                        g_err, g_warn = gate_coverage_problems(target_repo, ver_txt, True)
+                        errors.extend(g_err)
+                        warnings.extend(g_warn)
             else:
                 for name in REQUIRED_FEATURE_FILES:
                     if not (fd / name).exists():
