@@ -21,6 +21,7 @@ $aip check
 $aip knowledge
 $aip done
 $aip help
+$aip bug 2026-06-17-crash-on-save --title "Crash on save"
 ```
 
 Aliases:
@@ -118,7 +119,8 @@ python <plugin-root>/scripts/aip.py --help
 - `$aip resume`: run `python <plugin-root>/scripts/aip.py resume --repo-root .`.
 - `$aip check`: run `python <plugin-root>/scripts/aip.py check --repo-root .`.
 - `$aip knowledge`: run `python <plugin-root>/scripts/aip.py knowledge --repo-root .`.
-- `$aip done`: run `python <plugin-root>/scripts/aip.py done --repo-root .`.
+- `$aip done`: run `python <plugin-root>/scripts/aip.py done --repo-root .`. For bug work units, `--resolution fixed|wont_fix|by_design` is **required**.
+- `$aip bug <bug-id> [--title "..."]`: run `python <plugin-root>/scripts/aip.py bug <bug-id> --title "..." --repo-root .`，随后**挂起 `root-cause` skill** 驱动调查，产物落该 bug 包 `report.md`。
 - `$aip help`: summarize these commands and do not edit files.
 
 Preserve explicit `--repo-root <path>` if the user provides it. Otherwise use the current workspace root.
@@ -206,6 +208,7 @@ not restate it in project docs; point here.**
 | plan | `features/<id>/plan.md` + `task_board.yaml` | writing-plans |
 | implement | task_board + `session_log.md` | subagent-driven-development / executing-plans + test-driven-development |
 | debug | `.aip/knowledge.md`（根因沉淀）+ 索引 | root-cause（AIP-native，先查后挖+证伪）；superpowers 在场时方法让位 systematic-debugging |
+| bug · investigate | `features/<id>/report.md`（各节逐步落）| **root-cause**（bug 轨道 investigate 阶段强绑定，不可跳过）|
 | verify | `verification.md` machine-gate table | verification-before-completion |
 | review | `verification.md` Independent Review section | requesting-code-review / receiving-code-review |
 | finish | `handoff.md` closeout | finishing-a-development-branch |
@@ -213,6 +216,19 @@ not restate it in project docs; point here.**
 - **Slots belong to AIP, methods belong to superpowers**: a method's output lands in the AIP slot above, never a parallel location (no second plan under `docs/plans/...`).
 - **Resume is AIP-only**: `.aip/_runtime/current_task.json` + `handoff.md` is the single resumable-state source; `executing-plans` checkpoints map onto `task_board.yaml`.
 - Absent (e.g. Codex), AIP runs standalone — you just lose the method layer.
+
+## Bug Track (analysis + fix, coherent)
+
+`$aip bug <id>` 建轻量 bug 包（report/file_scope/verification/handoff/session_log/decisions，
+无 spec/plan/task_board），`current_task.kind=bug, current_phase=investigate`。连贯流程：
+
+1. 建包后**挂起 `root-cause` skill**：先查 knowledge_index → 复现取证 → 竞争假设 → 逐层证伪 →
+   症状 vs 根因 → 触类旁通同类排查；产物逐节落 `report.md`。
+2. 根因确认 → root-cause 的 Stop-and-ask：摆【根因+证据+同类波及面+修复选项】交用户拍板，写"选定方案"。
+3. `current_phase=fix`：修主站点 + file_scope 内同类兄弟站点（同一变更）。
+4. `current_phase=verify`：先写 `## Regression`（修前 fail/修后 pass），跑机器闸门，记 fresh-eyes review；
+   真因沉淀进 `knowledge.md`（填 report `## 沉淀`：K-NNN 或 N/A+理由）→ `aip knowledge`。
+5. `$aip check` → `$aip done --resolution fixed|wont_fix|by_design`。
 
 ## Enforcement (make the gate automatic)
 

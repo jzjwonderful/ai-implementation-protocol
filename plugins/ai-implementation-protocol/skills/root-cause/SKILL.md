@@ -24,6 +24,10 @@ description: Use when facing any bug, error, crash, unexpected behavior, "why do
 7. **交用户判断** —— 摆出【根因 + 证据 + **同类波及面（已扫范围 + 命中站点）** + 修复选项 + 各自取舍】，由用户决策（接 AIP Stop-and-ask），不擅自实施深层改动。
 8. **沉淀** —— 验证过的真因写入 `.aip/knowledge.md`（按顶部 `## 类目` 选分类，填全字段），然后跑 `aip knowledge` 重建索引；属决策的进 `decisions.md`，无关侧发现进 `findings.md`。
 
+> 在 AIP **bug 轨道**（`current_task.kind=bug`）下，调查产物落该 bug 包 `report.md` 的对应节
+> （症状/复现、竞争假设、根因、证据、触类旁通·同类波及面、修复选项、选定方案、沉淀），
+> 不另起平行位置；`aip check` 会校验这些节非空与回归证据。
+
 ## 时刻保持
 
 - **警惕与证伪**：任何假设（含索引命中的旧条目）都要试图推翻，证据不足不下结论。
