@@ -227,7 +227,7 @@ not restate it in project docs; point here.**
 2. 根因确认 → root-cause 的 Stop-and-ask：摆【根因+证据+同类波及面+修复选项】交用户拍板，写"选定方案"。
 3. `current_phase=fix`：修主站点 + file_scope 内同类兄弟站点（同一变更）。
 4. `current_phase=verify`：先写 `## Regression`（修前 fail/修后 pass），跑机器闸门，记 fresh-eyes review；
-   真因沉淀进 `knowledge.md`（填 report `## 沉淀`：K-NNN 或 N/A+理由）→ `aip knowledge`。
+   真因沉淀进 `knowledge.md`（填 report `## 沉淀`：K-NNN 或 N/A+理由）→ `$aip knowledge`。
 5. `$aip check` → `$aip done --resolution fixed|wont_fix|by_design`。
 
 ## Enforcement (make the gate automatic)

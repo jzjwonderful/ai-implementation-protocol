@@ -225,5 +225,33 @@ class BugDoneResolution(unittest.TestCase):
         self.assertEqual(ct["status"], "done")
 
 
+class CompetingArtifactFingerprint(unittest.TestCase):
+    def test_unrelated_report_md_not_flagged(self):
+        d = init_repo()
+        start_bug(d)
+        docs_dir = d / "docs"
+        docs_dir.mkdir()
+        (docs_dir / "report.md").write_text(
+            "# Q2 Sales Report\n\nRevenue up.\n", encoding="utf-8", newline="\n"
+        )
+        r = check(d)
+        self.assertNotIn("Competing AIP artifact", r.stdout)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_leaked_bug_report_is_flagged(self):
+        d = init_repo()
+        start_bug(d)
+        docs_dir = d / "docs"
+        docs_dir.mkdir()
+        (docs_dir / "report.md").write_text(
+            "# Bug Report: leaked\n\n## 触类旁通 · 同类波及面\nsome content\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        r = check(d)
+        self.assertIn("Competing AIP artifact", r.stdout)
+        self.assertEqual(r.returncode, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

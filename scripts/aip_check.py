@@ -73,6 +73,7 @@ def unclassified_findings(findings_text: str) -> int:
 SLOT_MARKERS = {
     "current_task.json": '"must_read"',
     "handoff.md": "## Next Action",
+    "report.md": "## 触类旁通 · 同类波及面",
     "verification.md": "## Machine Gates",
     "session_log.md": "# Session Log",
     "task_board.yaml": "status:",

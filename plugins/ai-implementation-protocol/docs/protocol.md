@@ -33,7 +33,7 @@ A work unit is either a **feature** (new development) or a **bug** (fix, light t
 
 A **bug** package is lighter: it drops `spec.md` / `plan.md` / `task_board.yaml` and tracks
 progress through `current_task.current_phase` (`investigate` → `fix` → `verify`). Its core
-living doc is `report.md` (症状/复现 → 竞争假设 → 根因+证据 → 触类旁通同类波及面 → 修复选项 →
+living doc is `report.md` (症状/复现 → 竞争假设 → 根因+证据 → 触类旁通 · 同类波及面 → 修复选项 →
 沉淀). Verification adds a `## Regression` gate (a repro that failed before and passes after).
 
 Bug completeness gate (`aip check`, status==done): 根因 + 证据 + 同类波及面 + 沉淀 节非空；
