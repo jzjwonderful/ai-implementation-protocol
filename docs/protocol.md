@@ -121,7 +121,9 @@ project binds them via `config.yaml`.
    Replacing old scaffolds follows Strangler (migrate consumers, delete in the same change).
 8. **Side-finding protocol** — unrelated problems found while doing task A are captured in
    `findings.md` (capture, don't chase) with a 3-second triage, never silently dropped and
-   never allowed to derail the current task.
+   never allowed to derail the current task. Boundary: a sibling site sharing the **same root
+   cause** as the bug being fixed is *not* a side-finding — it is in-scope and handled under
+   #9's sweep; only genuinely *unrelated* problems go here.
 9. **Root-cause-first investigation & knowledge sedimentation** — on any bug/unexpected
    behavior, don't patch the symptom: recall known causes from `.aip/knowledge_index.md`
    (a hit is a prior hypothesis to re-verify, not an answer), enumerate competing
@@ -130,6 +132,10 @@ project binds them via `config.yaml`.
    `.aip/knowledge.md` under a declared `## 类目`; the derived `.aip/knowledge_index.md` is
    rebuilt via `aip knowledge`. `aip check` validates index consistency (always), entry
    completeness + legal category (done gate), and flags entries unverified for >180 days.
+   Once a cause is confirmed, **generalize it (触类旁通)**: treat it as a defect *class*, not a
+   single site — sweep the current change scope (`file_scope`) for every sibling sharing that
+   root cause and fix them in the same change; siblings outside the declared scope are recorded
+   in `findings.md`, never silently left.
 
 ### Cross-cutting disciplines
 - **输出语言风格** — 面向用户的回答与说明（不含代码、命令、文件内容）遵守四条：
