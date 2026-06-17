@@ -41,6 +41,19 @@ class KnowledgeMechanism(unittest.TestCase):
         idx = (d / ".aip/knowledge_index.md").read_text(encoding="utf-8")
         self.assertIn("K-001 | process-lifecycle | active | 杀进程后仍 running | 2026-06-16", idx)
 
+    def test_template_skeleton_is_not_parsed_as_entry(self):
+        # 模板注释里的骨架 ID 不得被当成真条目，否则与用户真实条目撞 ID。
+        d = init_repo()
+        kn = d / ".aip/knowledge.md"
+        kn.write_text(
+            kn.read_text(encoding="utf-8")
+            + "\n## K-001: 真实条目\n- 分类: ui\n- 状态: active\n- 最后复核: 2026-06-16\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(run("knowledge", "--repo-root", str(d)).returncode, 0)
+        idx = (d / ".aip/knowledge_index.md").read_text(encoding="utf-8")
+        self.assertEqual(idx.count("K-001 |"), 1, idx)
+
     def test_check_fails_on_stale_index(self):
         d = init_repo()
         kn = d / ".aip/knowledge.md"

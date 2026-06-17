@@ -9,7 +9,7 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 <!--
 新增条目复制下面骨架，ID 递增；标题一句话：
 
-## K-001: 标题
+## K-NNN: 标题
 - 分类: process-lifecycle
 - 状态: active
 - 症状: <可观察表象>
