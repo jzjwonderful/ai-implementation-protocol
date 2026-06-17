@@ -31,6 +31,17 @@
     "must_read": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["feature", "bug"],
+      "default": "feature",
+      "description": "Work-unit type. 'feature' for normal feature development; 'bug' for defect investigation and fix."
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["fixed", "wont_fix", "by_design"],
+      "description": "Bug close reason. Only present when a bug work-unit is done. Absent/null until closed."
     }
   }
 }
