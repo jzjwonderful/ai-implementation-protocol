@@ -34,6 +34,13 @@ def main() -> int:
     start_parser.add_argument("--title", default="", help="Optional human-readable title.")
     start_parser.add_argument("--template-root", default=str(DEFAULT_TEMPLATE_ROOT), help="AIP template root.")
 
+    bug_parser = subparsers.add_parser("bug", help="Create a new AIP bug work package (light track).")
+    add_repo_root(bug_parser)
+    bug_parser.add_argument("bug_id", nargs="?", help="Bug directory id.")
+    bug_parser.add_argument("--bug-id", dest="bug_id_flag", help="Bug directory id.")
+    bug_parser.add_argument("--title", default="", help="Optional human-readable title.")
+    bug_parser.add_argument("--template-root", default=str(DEFAULT_TEMPLATE_ROOT), help="AIP template root.")
+
     resume_parser = subparsers.add_parser("resume", help="Print the current AIP resume summary.")
     add_repo_root(resume_parser)
 
@@ -66,6 +73,15 @@ def main() -> int:
         if args.title:
             script_args.extend(["--title", args.title])
         return run_script("aip_start_feature.py", script_args)
+
+    if args.command == "bug":
+        bug_id = args.bug_id_flag or args.bug_id
+        if not bug_id:
+            parser.error("bug requires BUG_ID or --bug-id BUG_ID")
+        script_args = ["--repo-root", args.repo_root, "--bug-id", bug_id, "--template-root", args.template_root]
+        if args.title:
+            script_args.extend(["--title", args.title])
+        return run_script("aip_start_bug.py", script_args)
 
     if args.command == "resume":
         return run_script("aip_resume.py", ["--repo-root", args.repo_root])

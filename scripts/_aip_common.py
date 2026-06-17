@@ -19,6 +19,15 @@ REQUIRED_FEATURE_FILES = [
     "session_log.md",
 ]
 
+# bug 工作包（轻量轨）必需文件：砍掉 spec/plan/task_board，进度用 current_task.current_phase 跟踪。
+REQUIRED_BUG_FILES = [
+    "report.md",
+    "file_scope.yaml",
+    "handoff.md",
+    "verification.md",
+    "session_log.md",
+]
+
 # 项目级活文档（跨 feature，长期存在）。init 生成、check 校验存在。
 PROJECT_LIVING_FILES = [
     "STATUS.md",
@@ -37,6 +46,7 @@ AIP_SLOT_FILENAMES = [
     "handoff.md",
     "verification.md",
     "session_log.md",
+    "report.md",
 ]
 
 # 扫描"无并行产物"时跳过的重目录。
