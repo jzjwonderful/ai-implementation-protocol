@@ -40,6 +40,7 @@ class BugScaffold(unittest.TestCase):
         self.assertEqual(ct["kind"], "bug")
         self.assertEqual(ct["current_phase"], "investigate")
         self.assertIn(".aip/features/2026-06-17-x/report.md", ct["must_read"])
+        self.assertIsNone(ct["resolution"])
 
     def test_bug_refuses_existing_dir(self):
         d = init_repo()
