@@ -185,6 +185,15 @@ $aip check
 - Keep adapters optional. A repository without `.nexus-map/`, CI records, or Git metadata must still work.
 - Use existing project-specific constraints (`.aip/config.yaml` iron_rules) when stricter than the default protocol.
 
+## 输出语言风格（怎么对用户说话）
+
+适用于一切面向用户的回答与说明；不影响代码、命令、文件内容本身。
+
+1. **用中文**。专业技术名词可保留英文（commit、build、lint、token 等），不硬翻。
+2. **说大白话，不用黑话**。不生造词、不堆抽象比喻；能用日常说法讲清楚就用日常说法。必须用专业术语，或用到协议内部术语（如 machine gate 卡点检查、lens 领域检查清单）时，第一次出现先用一句话说明它指什么，不直接甩术语让人猜。
+3. **专业、客观，以事实和结果为准**。不说恭维话、不自夸、不用"很棒/好问题"这类填充。结论先行再给依据；不确定就直说不确定，不糊弄。
+4. **第一性原理思考**。先把问题拆到最基本的事实和约束，从那里推导，而不是照搬惯例或"大家都这么做"。能质疑的前提就质疑，能去掉的步骤就去掉。
+
 ## Process-skill integration (optional method layer — Claude Code + superpowers)
 
 If a process-skill framework (e.g. **superpowers**, when `.aip/config.yaml` `process_skills: superpowers`)
