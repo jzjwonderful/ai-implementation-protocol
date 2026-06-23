@@ -8,6 +8,8 @@
   "owner": "ai",
   "blocking": [],
   "must_read": [
-    "project_docs/protocols/ai-implementation-protocol.md"
+    ".aip/protocols/ai-implementation-protocol.md",
+    ".aip/STATUS.md",
+    ".aip/knowledge_index.md"
   ]
 }

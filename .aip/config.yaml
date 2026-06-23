@@ -1,0 +1,46 @@
+# AIP 项目适配配置 —— 引擎(协议/check)按这里声明的内容适配本项目。
+# 改这一份即完成"把通用 AIP 引擎绑定到本项目"，无需改协议或脚本。
+#
+# 本项目 = AIP 自身：零依赖的 Python CLI + 可分发插件包（Codex/Claude Code）。
+
+# 真理源：本项目的权威文档。AIP 把它们加进 must_read。
+# docs/protocol.md 是协议唯一真源（plugins/ 副本由 sync_plugin.py 再生，不手改）。
+truth_sources:
+  - docs/protocol.md
+  - docs/architecture.md
+  - README.md
+
+# 机器闸门：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据。
+# 本项目纯标准库、无构建步、无 lint 配置；唯一真实闸门是单元测试。
+gates:
+  tests:
+    cmd: "python -m unittest discover -s tests -p \"test_*.py\""
+  build:
+    # cmd: ""              # 纯 Python，无构建步
+  lint_or_drift:
+    # cmd: ""              # 无 lint 工具；根/插件副本一致性靠 iron_rules + sync_plugin.py 人工纪律
+  e2e:
+    # cmd: ""              # 无 e2e 场景
+
+# 反堆积机器兜底（可选）。本项目无对应工具链。
+anti_accretion:
+
+# 领域专家 lens：本项目无前端/客户端等专家域，留空。
+lenses:
+
+# 索引工具：本项目未使用 codegraph/nexus，留空。
+indexes:
+
+# 项目铁律：实现时自动触发的硬约束。
+iron_rules:
+  - "未授权不提交：git add/commit/push 需用户明确指示"
+  - "新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变"
+  - "顶层 scripts/docs/templates/schemas 为唯一真源；改后必须跑 `python scripts/sync_plugin.py` 再生 plugins/ 副本，二者须逐字节一致"
+  - "协议是真源：行为/规则变更同次更新 docs/protocol.md，并经 sync_plugin 同步进插件副本"
+  - "行为/架构变更同次更新 .aip/STATUS.md"
+
+# 验证规范：自由文本指针。
+# verification_notes: "测试用标准库 unittest；跑 `python -m unittest discover -s tests -p \"test_*.py\"`。"
+
+# 方法层：本项目开发已在用 superpowers（docs/superpowers/ 下的 spec/plan 即其产物）。
+process_skills: "superpowers"

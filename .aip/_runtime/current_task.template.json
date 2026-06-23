@@ -1,0 +1,15 @@
+{
+  "feature_id": "",
+  "status": "planned",
+  "current_phase": "spec",
+  "current_task": "",
+  "next_action": "",
+  "last_updated": "",
+  "owner": "ai",
+  "blocking": [],
+  "must_read": [
+    ".aip/protocols/ai-implementation-protocol.md",
+    ".aip/STATUS.md",
+    ".aip/knowledge_index.md"
+  ]
+}
