@@ -26,6 +26,21 @@ Every active feature must have:
 - one task board with explicit statuses
 - one handoff file with a fixed structure
 
+## Work-Unit Kinds
+
+A work unit is either a **feature** (new development) or a **bug** (fix, light track).
+`current_task.json.kind` distinguishes them (absent ⇒ `feature`, backward-compatible).
+
+A **bug** package is lighter: it drops `spec.md` / `plan.md` / `task_board.yaml` and tracks
+progress through `current_task.current_phase` (`investigate` → `fix` → `verify`). Its core
+living doc is `report.md` (症状/复现 → 竞争假设 → 根因+证据 → 触类旁通 · 同类波及面 → 修复选项 →
+沉淀). Verification adds a `## Regression` gate (a repro that failed before and passes after).
+
+Bug completeness gate (`aip check`, status==done): 根因 + 证据 + 同类波及面 + 沉淀 节非空；
+`resolution==fixed` 时必有回归证据；`resolution` ∈ {fixed, wont_fix, by_design}. Pure
+"won't fix / by-design" closes via `resolution` without a regression gate but still requires
+a root cause. The bug track binds the `root-cause` skill (Safeguard #9) to a resumable work unit.
+
 ## Mandatory Lifecycle
 
 ### Before implementation
@@ -121,7 +136,9 @@ project binds them via `config.yaml`.
    Replacing old scaffolds follows Strangler (migrate consumers, delete in the same change).
 8. **Side-finding protocol** — unrelated problems found while doing task A are captured in
    `findings.md` (capture, don't chase) with a 3-second triage, never silently dropped and
-   never allowed to derail the current task.
+   never allowed to derail the current task. Boundary: a sibling site sharing the **same root
+   cause** as the bug being fixed is *not* a side-finding — it is in-scope and handled under
+   #9's sweep; only genuinely *unrelated* problems go here.
 9. **Root-cause-first investigation & knowledge sedimentation** — on any bug/unexpected
    behavior, don't patch the symptom: recall known causes from `.aip/knowledge_index.md`
    (a hit is a prior hypothesis to re-verify, not an answer), enumerate competing
@@ -130,6 +147,10 @@ project binds them via `config.yaml`.
    `.aip/knowledge.md` under a declared `## 类目`; the derived `.aip/knowledge_index.md` is
    rebuilt via `aip knowledge`. `aip check` validates index consistency (always), entry
    completeness + legal category (done gate), and flags entries unverified for >180 days.
+   Once a cause is confirmed, **generalize it (触类旁通)**: treat it as a defect *class*, not a
+   single site — sweep the current change scope (`file_scope`) for every sibling sharing that
+   root cause and fix them in the same change; siblings outside the declared scope are recorded
+   in `findings.md`, never silently left.
 
 ### Cross-cutting disciplines
 - **输出语言风格** — 面向用户的回答与说明（不含代码、命令、文件内容）遵守四条：

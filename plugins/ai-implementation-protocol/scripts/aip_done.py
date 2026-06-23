@@ -13,6 +13,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 def main() -> int:
     parser = argparse.ArgumentParser(description="Mark the active AIP feature done (gated by aip check).")
     parser.add_argument("--repo-root", required=True, help="Target project root.")
+    parser.add_argument("--resolution", choices=["fixed", "wont_fix", "by_design"], default=None,
+                        help="Bug 收尾结论（kind=bug 必填）。")
     args = parser.parse_args()
 
     target_repo = Path(args.repo_root).resolve()
@@ -22,6 +24,13 @@ def main() -> int:
         return 1
 
     current_task = read_json(ct_path)
+    if current_task.get("kind", "feature") == "bug":
+        resolution = args.resolution or current_task.get("resolution")
+        if resolution not in ("fixed", "wont_fix", "by_design"):
+            print("bug 收尾需指定 resolution：`$aip done --resolution fixed|wont_fix|by_design`。")
+            return 1
+        current_task["resolution"] = resolution
+
     prev_status = current_task.get("status", "in_progress")
     current_task["status"] = "done"
     current_task["last_updated"] = iso_now()
