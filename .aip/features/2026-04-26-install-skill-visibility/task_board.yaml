@@ -1,8 +1,0 @@
-phase: done
-tasks:
-  - id: T1
-    title: Install aip skill into user skill directory
-    status: done
-  - id: T2
-    title: Verify temporary and current user installs
-    status: done
