@@ -27,7 +27,7 @@ def upsert_block(path: Path, body: str, begin: str, end: str) -> None:
     else:
         sep = "" if text.endswith("\n\n") else ("\n" if text.endswith("\n") else "\n\n")
         new = text + sep + block
-    path.write_text(new, encoding="utf-8")
+    path.write_text(new, encoding="utf-8", newline="\n")
 
 def managed_block() -> str:
     return f"{BEGIN}\n{BLOCK_BODY}{END}\n"
