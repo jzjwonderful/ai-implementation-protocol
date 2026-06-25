@@ -18,7 +18,7 @@ PRE_COMMIT_MARK = "# AIP gate (install_hooks.py)"
 
 
 def pre_commit_body(engine_root: Path) -> str:
-    cmd = f'python "{engine_root.as_posix()}/scripts/aip.py" check --repo-root .'
+    cmd = f'python "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
     return (
         "#!/bin/sh\n"
         f"{PRE_COMMIT_MARK}\n"
@@ -63,7 +63,7 @@ def install_claude_stop(repo_root: Path, engine_root: Path) -> None:
             data = json.loads(settings.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             raise SystemExit(f"Cannot parse {settings}; fix it or remove --claude-stop.")
-    cmd = f'python "{engine_root.as_posix()}/scripts/aip.py" check --repo-root .'
+    cmd = f'python "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
     hooks = data.setdefault("hooks", {})
     stop = hooks.setdefault("Stop", [])
     # 去重：已含同命令则不重复加。
