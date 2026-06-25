@@ -8,10 +8,12 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 
 <!--
 新增条目复制下面骨架，ID 递增；标题一句话：
+AI 新沉淀一律先写 `状态: draft`，经人确认后改 `active`。
 
 ## K-NNN: 标题
 - 分类: process-lifecycle
 - 状态: active
+  # active=已人工确认 | draft=AI 待确认 | superseded(by K-00X)
 - 症状: <可观察表象>
 - 根因: <已验证的真正原因>
 - 证据: <命令输出 / 代码引用 / 复现步骤>
