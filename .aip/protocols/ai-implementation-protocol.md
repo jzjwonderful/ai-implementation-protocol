@@ -36,7 +36,7 @@ AIP 定义了一套最小必要记录规则，让任何 AI 在接手任务时都
 
 ### 写入纪律（所有沉淀通用）
 
-拟草稿 → 读目标文档比对去重（像就合并/加关联，不像才新增）→ 写 `状态: draft` → 向用户吭一声（报：记了什么、参考了哪条、跑了什么闸门）。draft 直到人确认才变 active；AI 从不擅自升 active、不静默改旧内容。只收**已验证**的进 knowledge；trivial 且同文件的顺手修、不登记。
+拟草稿 → 读目标文档比对去重（像就合并/加关联，不像才新增）→ 写 `状态: draft` → 向用户吭一声（报：记了什么、参考了哪条、跑了什么闸门）。draft 直到人确认才变 active；AI 从不擅自升 active、不静默改旧内容。只收**已验证**的进 knowledge；琐碎且同文件的顺手修、不登记。
 
 ### 完成闸门（一条任务线做完时）
 
@@ -69,7 +69,7 @@ AIP 定义了一套最小必要记录规则，让任何 AI 在接手任务时都
 
 `aip check`（即 `python scripts/aip_check.py --repo-root .`）是唯一的机器闸门，检查：
 
-1. **活文档存在**：六类活文档（`OVERVIEW.md`、`decisions.md`、`knowledge.md`、`knowledge_index.md`、`reference.md`、`inbox.md`、`conventions.md`、`config.yaml`）都在 `.aip/` 下。
+1. **活文档存在**：活文档与配置/派生件（`OVERVIEW.md`、`decisions.md`、`knowledge.md`、`knowledge_index.md`、`reference.md`、`inbox.md`、`conventions.md`、`config.yaml` 共 8 个）都在 `.aip/` 下。
 2. **知识索引一致**：`knowledge_index.md` 与 `knowledge.md` 当前内容一致（不一致就跑 `aip_knowledge.py` 重建）。
 3. **知识条目字段完整**：`knowledge.md` 每条目的必填字段（分类、状态、症状、根因、适用范围、最后复核）都不为空。
 4. **无旧机制残留**：仓库内不出现被禁止的旧文件名（旧 per-feature 接管文件、已被取代的旧文档名）。

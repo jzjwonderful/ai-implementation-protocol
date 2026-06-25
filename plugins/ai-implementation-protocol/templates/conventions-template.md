@@ -9,4 +9,4 @@
 ## 设计风格
 - <例：优先组合而非继承>
 ## 构建 / 调试 / 验收固定流程
-- 构建：<命令> ｜ 测试：<命令> ｜ 验收通用标准：<清单>
+- 构建：`python -m unittest discover -s tests` ｜ 测试：`python -m unittest discover -s tests` ｜ 验收通用标准：<暂无>

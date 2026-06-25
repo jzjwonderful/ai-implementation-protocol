@@ -9,4 +9,4 @@
 ## 设计风格
 - <暂无>
 ## 构建 / 调试 / 验收固定流程
-- 构建：`python -m pytest` ｜ 测试：`python -m pytest` ｜ 验收通用标准：<暂无>
+- 构建：`python -m unittest discover -s tests` ｜ 测试：`python -m unittest discover -s tests` ｜ 验收通用标准：<暂无>

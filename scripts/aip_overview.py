@@ -9,7 +9,22 @@ AUTO_BEGIN = "<!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->"
 AUTO_END = "<!-- AIP:AUTO-DIGEST:END -->"
 
 def top_headings(text: str, prefix: str) -> list[str]:
-    return [l[len(prefix):].strip() for l in text.splitlines() if l.startswith(prefix)]
+    results = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if line.startswith(prefix):
+            heading = line[len(prefix):].strip()
+            if heading == "格式":
+                continue
+            if "<" in heading or ">" in heading:
+                continue
+            results.append(heading)
+    return results
 
 def _read(repo: Path, name: str) -> str:
     p = project_living_path(repo, name)
