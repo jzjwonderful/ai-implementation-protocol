@@ -1,108 +1,50 @@
 from __future__ import annotations
-
 import argparse
 from pathlib import Path
-
-from _aip_common import (
-    AIP_DIR,
-    PROJECT_LIVING_FILES,
-    aip_root,
-    ensure_dir,
-    project_living_path,
-    protocol_path,
-    write_json,
-    write_text,
-)
-from aip_knowledge import rebuild_index
+from _aip_common import PROJECT_LIVING_FILES, aip_root, ensure_dir, load_template, write_text
 from aip_discovery import upsert_managed_block
 
-
-# 项目级活文档 → 生成它用哪个模板。无模板项（knowledge_index.md）由生成器产出。
-LIVING_TEMPLATE_MAP = {
-    "STATUS.md": "status-template.md",
-    "canonical-assets.md": "canonical-assets-template.md",
+# 活文档名 → 模板名（无模板的建空骨架）。零配置：不向用户索取工程信息。
+TEMPLATE_OF = {
+    "OVERVIEW.md": "overview-template.md",
     "decisions.md": "decisions-template.md",
-    "findings.md": "findings-template.md",
     "knowledge.md": "knowledge-template.md",
+    "reference.md": "reference-template.md",
+    "inbox.md": "inbox-template.md",
+    "conventions.md": "conventions-template.md",
     "config.yaml": "config-template.yaml",
 }
 
+def scaffold(repo: Path, engine_root: Path) -> list[Path]:
+    root = aip_root(repo); ensure_dir(root); ensure_dir(root / "protocols")
+    created = []
+    for name in PROJECT_LIVING_FILES:
+        dst = root / name
+        if dst.exists():
+            continue  # 幂等：不覆盖
+        if name == "knowledge_index.md":
+            write_text(dst, "# 知识索引（自动生成，勿手改）\n")
+        else:
+            tpl = TEMPLATE_OF.get(name)
+            write_text(dst, load_template(engine_root, tpl) if tpl else "")
+        created.append(dst)
+    return created
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Initialize AIP in a target repository.")
-    parser.add_argument("--repo-root", required=True, help="Target project root.")
-    parser.add_argument(
-        "--template-root",
-        default=Path(__file__).resolve().parents[1],
-        help="AIP repository root. Defaults to this script's repository.",
-    )
-    parser.add_argument("--force", action="store_true", help="覆盖已存在的项目级活文档。")
-    args = parser.parse_args()
-
-    target_repo = Path(args.repo_root).resolve()
-    template_root = Path(args.template_root).resolve()
-
-    root = aip_root(target_repo)
-    ensure_dir(root / "_runtime")
-    ensure_dir(root / "features")
-    ensure_dir(root / "protocols")
-
-    write_text(protocol_path(target_repo), (template_root / "docs" / "protocol.md").read_text(encoding="utf-8"))
-
-    # 项目级活文档：已存在则保留（除非 --force），避免覆盖用户内容。
-    for name in PROJECT_LIVING_FILES:
-        tpl_name = LIVING_TEMPLATE_MAP.get(name)
-        if not tpl_name:
-            continue  # 无模板的（knowledge_index.md）由生成器产出
-        dest = project_living_path(target_repo, name)
-        if dest.exists() and not args.force:
-            continue
-        tpl = template_root / "templates" / tpl_name
-        write_text(dest, tpl.read_text(encoding="utf-8"))
-
-    rebuild_index(target_repo)  # 由 knowledge.md 派生 knowledge_index.md
-
-    current_task = {
-        "feature_id": "",
-        "status": "planned",
-        "current_phase": "spec",
-        "current_task": "",
-        "next_action": "",
-        "last_updated": "",
-        "owner": "ai",
-        "blocking": [],
-        "must_read": [
-            f"{AIP_DIR}/protocols/ai-implementation-protocol.md",
-            f"{AIP_DIR}/STATUS.md",
-            f"{AIP_DIR}/knowledge_index.md",
-        ],
-    }
-    write_json(root / "_runtime" / "current_task.json", current_task)
-    write_json(root / "_runtime" / "current_task.template.json", current_task)
-
-    readme = (
-        "# .aip\n\n"
-        "本目录由 AIP 初始化生成，存放该仓库 AIP 机制的全部产出（隐藏工具目录，类比 .git）。\n\n"
-        "- `STATUS.md`：现状真理源（实现到哪/缺口/部署）——新会话先读这页\n"
-        "- `canonical-assets.md`：正典构件登记（造新前先查，防堆积）\n"
-        "- `decisions.md`：架构决策记录（ADR-lite，append-only）\n"
-        "- `findings.md`：侧发现收件箱（开发时撞见的无关问题，捕获别追）\n"
-        "- `knowledge.md`：知识库（验证过的根因/坎/领域事实，append-only，先查后挖）\n"
-        "- `knowledge_index.md`：知识索引（自动生成，勿手改，`aip knowledge` 重建）\n"
-        "- `config.yaml`：本项目适配配置（真理源/机器闸门命令/适用 lens）\n"
-        "- `_runtime/`：当前任务指针\n"
-        "- `features/`：功能工作包\n"
-        "- `protocols/`：项目内协议副本\n"
-    )
-    write_text(root / "README.md", readme)
-
-    # 发现机制：向仓库根写幂等托管引导块，让后续 AI（Claude 读 CLAUDE.md / Codex 读 AGENTS.md）自动看到 AIP。
-    upsert_managed_block(target_repo / "CLAUDE.md")
-    upsert_managed_block(target_repo / "AGENTS.md")
-
-    print(f"AIP initialized in: {target_repo / AIP_DIR}")
+    ap = argparse.ArgumentParser(description="Init AIP into a repo (zero-config).")
+    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--engine-root", default=str(Path(__file__).resolve().parents[1]))
+    ap.add_argument("--no-hooks", action="store_true")
+    a = ap.parse_args()
+    repo = Path(a.repo_root).resolve(); engine = Path(a.engine_root).resolve()
+    scaffold(repo, engine)
+    for guide in ["CLAUDE.md", "AGENTS.md"]:
+        upsert_managed_block(repo / guide)
+    if not a.no_hooks and (repo / ".git").exists():
+        import install_hooks
+        install_hooks.install_pre_commit(repo, engine, force=False)
+    print("AIP 已初始化（零配置）。工程信息将在用到时自动捕获，不在此追问。")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

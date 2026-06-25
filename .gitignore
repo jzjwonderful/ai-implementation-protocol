@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# subagent-driven-development 临时账本/简报/diff（勿提交）
+.superpowers/

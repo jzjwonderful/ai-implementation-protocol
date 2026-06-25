@@ -22,7 +22,7 @@ description: Use when facing any bug, error, crash, unexpected behavior, "why do
 6. **触类旁通（同类排查）** —— 根因一旦确认，**按其机理把它当成一类缺陷而非一处**：在当前变更范围（`file_scope`）内横扫所有共享该根因的兄弟站点，连同主站点一并修复，别只堵眼前这一个。范围之外的同类登记进 `findings.md`，绝不默默漏过。
    - **边界**：同一根因的兄弟站点属 **in-scope**，不是侧发现——必须扫、必须处理；侧发现协议只收**无关**问题（capture, don't chase）。别拿"别追侧发现"当借口跳过同类排查。
 7. **交用户判断** —— 摆出【根因 + 证据 + **同类波及面（已扫范围 + 命中站点）** + 修复选项 + 各自取舍】，由用户决策（接 AIP Stop-and-ask），不擅自实施深层改动。
-8. **沉淀** —— 验证过的真因写入 `.aip/knowledge.md`（按顶部 `## 类目` 选分类，填全字段），然后跑 `aip knowledge` 重建索引；属决策的进 `decisions.md`，无关侧发现进 `findings.md`。
+8. **沉淀** —— 验证过的真因写入 `.aip/knowledge.md`（按顶部 `## 类目` 选分类，填全字段，含 `适用范围`）：先检索去重（像就并/加关联，不像才新增），写 `状态: draft`，人确认后再改 active；然后跑 `python scripts/aip_knowledge.py --repo-root .` 重建索引；属决策的进 `decisions.md`，无关侧发现进 `findings.md`。
 
 > 在 AIP **bug 轨道**（`current_task.kind=bug`）下，调查产物落该 bug 包 `report.md` 的对应节
 > （症状/复现、竞争假设、根因、证据、触类旁通·同类波及面、修复选项、选定方案、沉淀），

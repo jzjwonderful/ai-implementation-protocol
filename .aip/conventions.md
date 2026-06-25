@@ -1,0 +1,12 @@
+# 项目规约 · 活文档
+
+> 这工程「怎么干」的常驻规则。从空白靠捕获长大——被纠正一次就记一条。机器能强制的（linter/formatter/CI）指向它，文档只记需人/AI 判断的。
+
+## 代码风格
+- <暂无>
+## 注释风格
+- <暂无>
+## 设计风格
+- <暂无>
+## 构建 / 调试 / 验收固定流程
+- 构建：`python -m unittest discover -s tests` ｜ 测试：`python -m unittest discover -s tests` ｜ 验收通用标准：<暂无>

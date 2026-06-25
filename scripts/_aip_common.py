@@ -9,49 +9,25 @@ from typing import Any, Iterable
 # 业务仓库里 AIP 的全部产出都落在这个隐藏目录下（像 .git/.nexus-map），不污染项目根。
 AIP_DIR = ".aip"
 
-REQUIRED_FEATURE_FILES = [
-    "spec.md",
-    "plan.md",
-    "task_board.yaml",
-    "file_scope.yaml",
-    "handoff.md",
-    "verification.md",
-    "session_log.md",
-]
-
-# bug 工作包（轻量轨）必需文件：砍掉 spec/plan/task_board，进度用 current_task.current_phase 跟踪。
-REQUIRED_BUG_FILES = [
-    "report.md",
-    "file_scope.yaml",
-    "handoff.md",
-    "verification.md",
-    "session_log.md",
-]
-
 # 项目级活文档（跨 feature，长期存在）。init 生成、check 校验存在。
 PROJECT_LIVING_FILES = [
-    "STATUS.md",
-    "canonical-assets.md",
-    "decisions.md",
-    "findings.md",
-    "knowledge.md",
-    "knowledge_index.md",
-    "config.yaml",
+    "OVERVIEW.md", "decisions.md", "knowledge.md", "knowledge_index.md",
+    "reference.md", "inbox.md", "conventions.md", "config.yaml",
 ]
 
-# AIP 的"槽位"文件名。这些只允许出现在 .aip/ 内；出现在别处 = 状态漂移/并行产物。
-AIP_SLOT_FILENAMES = [
-    "current_task.json",
-    "task_board.yaml",
-    "handoff.md",
-    "verification.md",
-    "session_log.md",
-    "report.md",
+# 不该出现在仓库任何地方的文件名：旧 per-feature 接管残留 + 已被取代的旧文档名（迁移守卫）。
+FORBIDDEN_SLOT_FILENAMES = [
+    "current_task.json", "task_board.yaml", "handoff.md", "verification.md",
+    "session_log.md", "report.md", "file_scope.yaml",
+    "STATUS.md", "findings.md", "canonical-assets.md",
 ]
+
+# knowledge.md 每条目必填字段（check 校验）。
+REQUIRED_KNOWLEDGE_FIELDS = ["分类", "状态", "症状", "根因", "适用范围", "最后复核"]
 
 # 扫描"无并行产物"时跳过的重目录。
 SCAN_PRUNE_DIRS = {
-    ".git", ".aip", "node_modules", ".venv", "venv", "dist", "build",
+    ".git", "node_modules", ".venv", "venv", "dist", "build",
     "__pycache__", ".pytest_cache", "bin", "obj", "packages", ".idea", ".vscode",
 }
 
@@ -92,14 +68,6 @@ def load_template(repo_root: Path, name: str) -> str:
 
 def aip_root(target_repo: Path) -> Path:
     return target_repo / AIP_DIR
-
-
-def feature_dir(target_repo: Path, feature_id: str) -> Path:
-    return aip_root(target_repo) / "features" / feature_id
-
-
-def current_task_path(target_repo: Path) -> Path:
-    return aip_root(target_repo) / "_runtime" / "current_task.json"
 
 
 def protocol_path(target_repo: Path) -> Path:

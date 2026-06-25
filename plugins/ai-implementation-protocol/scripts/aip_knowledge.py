@@ -8,7 +8,7 @@ from _aip_common import project_living_path, read_text, write_text
 
 INDEX_HEADER = (
     "# 知识索引（自动生成，勿手改；运行 `aip knowledge` 重建）\n"
-    "# 格式: ID | 分类 | 状态 | 标题 | 最后复核\n"
+    "# 格式: ID | 分类 | 状态 | 适用范围 | 标题 | 最后复核\n"
 )
 
 ENTRY_RE = re.compile(r"^## (K-\d+):\s*(.*)$")
@@ -57,7 +57,8 @@ def render_index(entries: list[dict]) -> str:
     for e in entries:
         f = e["fields"]
         lines.append(
-            f'{e["id"]} | {f.get("分类", "")} | {f.get("状态", "")} | {e["title"]} | {f.get("最后复核", "")}'
+            f'{e["id"]} | {f.get("分类", "")} | {f.get("状态", "")} | '
+            f'{f.get("适用范围", "")} | {e["title"]} | {f.get("最后复核", "")}'
         )
     return "\n".join(lines).rstrip() + "\n"
 
