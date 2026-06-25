@@ -43,6 +43,10 @@ MIRROR_DIRS = ["scripts", "templates"]
 PLUGIN_ROOT = "plugins/ai-implementation-protocol"
 
 def check_dual_copy(repo: Path) -> list[str]:
+    # 镜像比对只对 AIP 引擎自身仓库有意义。消费方项目没有这个插件包，
+    # 否则项目自带的 scripts/、templates/ 会被逐个误判成"副本缺失"。
+    if not (repo / PLUGIN_ROOT).is_dir():
+        return []
     out = []
     for sub in MIRROR_DIRS:
         src = repo / sub
