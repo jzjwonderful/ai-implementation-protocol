@@ -4,7 +4,7 @@ import argparse
 import re
 from pathlib import Path
 
-from _aip_common import project_living_path, read_text, write_text
+from _aip_common import force_utf8, project_living_path, read_text, write_text
 
 INDEX_HEADER = (
     "# 知识索引（自动生成，勿手改；运行 `aip knowledge` 重建）\n"
@@ -76,6 +76,7 @@ def rebuild_index(target_repo: Path) -> Path:
 
 
 def main() -> int:
+    force_utf8()
     parser = argparse.ArgumentParser(description="Rebuild the AIP knowledge index from knowledge.md.")
     parser.add_argument("--repo-root", required=True, help="Target project root.")
     args = parser.parse_args()

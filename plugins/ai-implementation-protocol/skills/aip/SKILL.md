@@ -5,17 +5,18 @@ description: Use when the user invokes `$aip` 或要应用 AI Implementation Pro
 
 # AIP 引擎（技能为主，AI 自主驱动）
 
-AIP 用六类活文档管项目级状态，零依赖、随处可用。命令收敛为 AI 自主行为；人只在装 AIP 时敲 `$aip init`。每次用到 AIP 都**吭一声**报给人（记了什么、参考了哪条、跑了什么闸门），方便人观测效果。
+AIP 用七类活文档管项目级状态，零依赖、随处可用。命令收敛为 AI 自主行为；人只在装 AIP 时敲 `$aip init`。每次用到 AIP 都**吭一声**报给人（记了什么、参考了哪条、跑了什么闸门），方便人观测效果。
 
 > **脚本在哪**：下文 `<engine>` 指 AIP 引擎根（带 `scripts/`、`templates/` 的那个目录），标准安装位置是 `~/plugins/ai-implementation-protocol`。脚本随引擎走、**不拷进目标项目**，所以路径要写全（裸 `scripts/aip_init.py` 在项目里找不到）。若不在标准位置，就定位含 `scripts/aip_init.py` 的目录当 `<engine>`。脚本自带模板解析，只用 `--repo-root` 指目标项目即可。
 
-## 六类活文档（去哪找什么）
+## 七类活文档（去哪找什么）
 - `.aip/OVERVIEW.md` — 多线看板（手写顶部）+ 自动摘要。开始/接手任务前读它。
 - `.aip/decisions.md` — 架构/方向级决策（非任务级需求）。
 - `.aip/knowledge.md`(+`_index`) — 验证过的技术坑/根因。
 - `.aip/reference.md` — 领域概念/术语、核心铁律、可复用实现（裁决）。
 - `.aip/inbox.md` — 旁路问题收件箱。
 - `.aip/conventions.md` — 项目规约。
+- `.aip/config.yaml` — 工程配置（构建/测试命令等）。零配置起步，不在 init 时问，用到再填。
 
 ## 通用开发纪律（随 AIP 分发，可增补）
 > 这一节是 AIP 随插件分发、对所有项目生效的纪律清单的唯一来源。以后增补规则/技巧只往这里加。

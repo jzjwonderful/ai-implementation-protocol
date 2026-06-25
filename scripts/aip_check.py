@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from _aip_common import (
     FORBIDDEN_SLOT_FILENAMES, PROJECT_LIVING_FILES, REQUIRED_KNOWLEDGE_FIELDS,
-    SCAN_PRUNE_DIRS, aip_root, project_living_path, read_text,
+    SCAN_PRUNE_DIRS, aip_root, force_utf8, project_living_path, read_text,
 )
 from aip_knowledge import expected_index_text, parse_entries
 
@@ -72,6 +72,7 @@ def run_all(repo: Path) -> list[str]:
     return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_dual_copy(repo)
 
 def main() -> int:
+    force_utf8()
     p = argparse.ArgumentParser(description="AIP hygiene gate.")
     p.add_argument("--repo-root", required=True)
     viol = run_all(Path(p.parse_args().repo_root).resolve())

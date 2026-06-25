@@ -7,7 +7,7 @@ END = "<!-- END AIP (managed) -->"
 
 BLOCK_BODY = (
     "## AI Implementation Protocol\n"
-    "本仓库用 AIP 管理实现工作（机制见 `.aip/protocols/`）。需要时去 `.aip/` 找：\n"
+    "本仓库用 AIP 管理实现工作（机制由 `aip` 技能驱动）。需要时去 `.aip/` 找：\n"
     "- `OVERVIEW.md` 现状/在建（开始或接手任务前先读）\n"
     "- `knowledge.md`(+`knowledge_index.md`) 验证过的坑（遇问题先查）\n"
     "- `decisions.md` 为什么这么定 / `reference.md` 这工程是什么+该复用什么\n"

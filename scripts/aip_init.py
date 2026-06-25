@@ -1,7 +1,7 @@
 from __future__ import annotations
 import argparse
 from pathlib import Path
-from _aip_common import PROJECT_LIVING_FILES, aip_root, ensure_dir, load_template, write_text
+from _aip_common import PROJECT_LIVING_FILES, aip_root, ensure_dir, force_utf8, load_template, write_text
 from aip_discovery import upsert_managed_block
 
 # 活文档名 → 模板名（无模板的建空骨架）。零配置：不向用户索取工程信息。
@@ -16,7 +16,7 @@ TEMPLATE_OF = {
 }
 
 def scaffold(repo: Path, engine_root: Path) -> list[Path]:
-    root = aip_root(repo); ensure_dir(root); ensure_dir(root / "protocols")
+    root = aip_root(repo); ensure_dir(root)
     created = []
     for name in PROJECT_LIVING_FILES:
         dst = root / name
@@ -31,6 +31,7 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
     return created
 
 def main() -> int:
+    force_utf8()
     ap = argparse.ArgumentParser(description="Init AIP into a repo (zero-config).")
     ap.add_argument("--repo-root", default=".")
     ap.add_argument("--engine-root", default=str(Path(__file__).resolve().parents[1]))

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import argparse
 from pathlib import Path
-from _aip_common import project_living_path, read_text
+from _aip_common import force_utf8, project_living_path, read_text
 from aip_knowledge import parse_entries
 from aip_discovery import upsert_block
 
@@ -44,6 +44,7 @@ def rebuild_overview(repo: Path) -> Path:
     return p
 
 def main() -> int:
+    force_utf8()
     ap = argparse.ArgumentParser(description="Rebuild OVERVIEW auto-digest.")
     ap.add_argument("--repo-root", required=True)
     print(f"OVERVIEW digest rebuilt: {rebuild_overview(Path(ap.parse_args().repo_root).resolve())}")
