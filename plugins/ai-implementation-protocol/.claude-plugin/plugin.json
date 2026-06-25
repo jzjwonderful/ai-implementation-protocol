@@ -1,7 +1,7 @@
 {
   "name": "ai-implementation-protocol",
-  "version": "0.1.0",
-  "description": "A portable protocol and local CLI toolkit for AI task continuity, feature handoffs, and resumable implementation work.",
+  "version": "0.2.0",
+  "description": "A portable, skill-based protocol for AI project continuity: living docs (OVERVIEW/decisions/knowledge/reference/inbox/conventions), self-growth knowledge, and a hygiene gate. Zero-dependency; AI-driven, install into any repo and run $aip init.",
   "author": {
     "name": "AIP Project",
     "url": "https://github.com/jzjwonderful/ai-implementation-protocol"
