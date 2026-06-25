@@ -43,6 +43,10 @@ def main() -> int:
     if not a.no_hooks and (repo / ".git").exists():
         import install_hooks
         install_hooks.install_pre_commit(repo, engine, force=False)
+    # 同步派生件，让刚建好的骨架直接通过 check（否则空索引与模板 knowledge 不一致会报红）。
+    import aip_knowledge, aip_overview
+    aip_knowledge.rebuild_index(repo)
+    aip_overview.rebuild_overview(repo)
     print("AIP 已初始化（零配置）。工程信息将在用到时自动捕获，不在此追问。")
     return 0
 
