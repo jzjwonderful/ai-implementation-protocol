@@ -39,8 +39,28 @@ def check_no_orphan_slots(repo: Path) -> list[str]:
             out.append(f"发现旧机制残留/未迁移文件: {path.relative_to(repo)}")
     return out
 
+MIRROR_DIRS = ["scripts", "templates"]
+PLUGIN_ROOT = "plugins/ai-implementation-protocol"
+
+def check_dual_copy(repo: Path) -> list[str]:
+    out = []
+    for sub in MIRROR_DIRS:
+        src = repo / sub
+        if not src.is_dir():
+            continue
+        for f in src.rglob("*"):
+            if not f.is_file() or "__pycache__" in f.parts:
+                continue
+            rel = f.relative_to(repo)
+            mirror = repo / PLUGIN_ROOT / rel
+            if not mirror.exists():
+                out.append(f"plugins 副本缺失: {rel}（跑 sync_plugin.py）")
+            elif read_text(mirror) != read_text(f):
+                out.append(f"plugins 副本漂移: {rel}（跑 sync_plugin.py）")
+    return out
+
 def run_all(repo: Path) -> list[str]:
-    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo)
+    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_dual_copy(repo)
 
 def main() -> int:
     p = argparse.ArgumentParser(description="AIP hygiene gate.")

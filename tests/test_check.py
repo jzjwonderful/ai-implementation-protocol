@@ -44,5 +44,21 @@ class OrphanSlots(unittest.TestCase):
     def test_clean_ok(self):
         self.assertEqual(chk.check_no_orphan_slots(make_repo()), [])
 
+class DualCopy(unittest.TestCase):
+    def _mk(self):
+        d = make_repo(); (d/"scripts").mkdir()
+        (d/"scripts"/"a.py").write_text("print(1)\n", encoding="utf-8")
+        pl = d/"plugins"/"ai-implementation-protocol"/"scripts"; pl.mkdir(parents=True)
+        (pl/"a.py").write_text("print(1)\n", encoding="utf-8"); return d
+    def test_match_ok(self):
+        self.assertEqual(chk.check_dual_copy(self._mk()), [])
+    def test_drift(self):
+        d = self._mk()
+        (d/"plugins"/"ai-implementation-protocol"/"scripts"/"a.py").write_text("print(2)\n", encoding="utf-8")
+        self.assertTrue(any("a.py" in v for v in chk.check_dual_copy(d)))
+    def test_missing_mirror(self):
+        d = self._mk(); (d/"scripts"/"b.py").write_text("x\n", encoding="utf-8")
+        self.assertTrue(any("b.py" in v for v in chk.check_dual_copy(d)))
+
 if __name__ == "__main__":
     unittest.main()
