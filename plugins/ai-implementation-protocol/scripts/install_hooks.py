@@ -10,15 +10,22 @@ git 钩子放 .git/hooks/pre-commit（即时生效、无框架依赖）。bypass
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 
 PRE_COMMIT_MARK = "# AIP gate (install_hooks.py)"
 
+# 钩子在非交互环境运行，裸 `python` 在只有 python3 的机器上会失败；
+# 烧进装钩子时所用解释器的绝对路径，保证以后跑得起来。
+def _check_cmd(engine_root: Path) -> str:
+    py = Path(sys.executable).as_posix()
+    return f'"{py}" "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
+
 
 def pre_commit_body(engine_root: Path) -> str:
-    cmd = f'python "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
+    cmd = _check_cmd(engine_root)
     return (
         "#!/bin/sh\n"
         f"{PRE_COMMIT_MARK}\n"
@@ -63,7 +70,7 @@ def install_claude_stop(repo_root: Path, engine_root: Path) -> None:
             data = json.loads(settings.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             raise SystemExit(f"Cannot parse {settings}; fix it or remove --claude-stop.")
-    cmd = f'python "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
+    cmd = _check_cmd(engine_root)
     hooks = data.setdefault("hooks", {})
     stop = hooks.setdefault("Stop", [])
     # 去重：已含同命令则不重复加。

@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from _aip_common import (
     FORBIDDEN_SLOT_FILENAMES, PROJECT_LIVING_FILES, REQUIRED_KNOWLEDGE_FIELDS,
-    SCAN_PRUNE_DIRS, project_living_path, read_text,
+    SCAN_PRUNE_DIRS, aip_root, project_living_path, read_text,
 )
 from aip_knowledge import expected_index_text, parse_entries
 
@@ -31,8 +31,13 @@ def check_knowledge_fields(repo: Path) -> list[str]:
     return out
 
 def check_no_orphan_slots(repo: Path) -> list[str]:
+    # 迁移守卫只扫 .aip/——旧机制的残留都落在这里。项目自带的同名文件
+    # （如根目录 STATUS.md、src/report.md）不归 AIP 管，扫全仓会大量误报。
     out = []
-    for path in repo.rglob("*"):
+    root = aip_root(repo)
+    if not root.is_dir():
+        return out
+    for path in root.rglob("*"):
         if not path.is_file() or any(p in SCAN_PRUNE_DIRS for p in path.parts):
             continue
         if path.name in FORBIDDEN_SLOT_FILENAMES:
