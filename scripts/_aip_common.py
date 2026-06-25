@@ -27,7 +27,7 @@ REQUIRED_KNOWLEDGE_FIELDS = ["分类", "状态", "症状", "根因", "适用范�
 
 # 扫描"无并行产物"时跳过的重目录。
 SCAN_PRUNE_DIRS = {
-    ".git", ".aip", "node_modules", ".venv", "venv", "dist", "build",
+    ".git", "node_modules", ".venv", "venv", "dist", "build",
     "__pycache__", ".pytest_cache", "bin", "obj", "packages", ".idea", ".vscode",
 }
 

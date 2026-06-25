@@ -24,5 +24,25 @@ class LivingAndIndex(unittest.TestCase):
         d = make_repo(); (d/".aip"/"knowledge_index.md").write_text("# 旧\n", encoding="utf-8")
         self.assertTrue(chk.check_index_sync(d))
 
+class KnowledgeFields(unittest.TestCase):
+    def test_missing_field(self):
+        d = make_repo()
+        (d/".aip"/"knowledge.md").write_text(
+            "# k\n\n## 类目\nother\n\n## K-001: 缺字段\n- 分类: other\n- 状态: draft\n", encoding="utf-8")
+        self.assertTrue(any("K-001" in v and "适用范围" in v for v in chk.check_knowledge_fields(d)))
+    def test_full_entry_ok(self):
+        d = make_repo()
+        (d/".aip"/"knowledge.md").write_text(
+            "# k\n\n## 类目\nother\n\n## K-001: 全\n- 分类: other\n- 状态: active\n- 症状: x\n"
+            "- 根因: y\n- 证据: z\n- 适用范围: w\n- 最后复核: 2026-06-25\n", encoding="utf-8")
+        self.assertEqual(chk.check_knowledge_fields(d), [])
+
+class OrphanSlots(unittest.TestCase):
+    def test_flags_old_file(self):
+        d = make_repo(); (d/".aip"/"handoff.md").write_text("x\n", encoding="utf-8")
+        self.assertTrue(any("handoff.md" in v for v in chk.check_no_orphan_slots(d)))
+    def test_clean_ok(self):
+        self.assertEqual(chk.check_no_orphan_slots(make_repo()), [])
+
 if __name__ == "__main__":
     unittest.main()

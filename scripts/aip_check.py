@@ -1,8 +1,11 @@
 from __future__ import annotations
 import argparse
 from pathlib import Path
-from _aip_common import PROJECT_LIVING_FILES, project_living_path, read_text
-from aip_knowledge import expected_index_text
+from _aip_common import (
+    FORBIDDEN_SLOT_FILENAMES, PROJECT_LIVING_FILES, REQUIRED_KNOWLEDGE_FIELDS,
+    SCAN_PRUNE_DIRS, project_living_path, read_text,
+)
+from aip_knowledge import expected_index_text, parse_entries
 
 def check_living_files(repo: Path) -> list[str]:
     return [f"缺失活文档: .aip/{n}" for n in PROJECT_LIVING_FILES
@@ -16,8 +19,28 @@ def check_index_sync(repo: Path) -> list[str]:
         return ["knowledge_index.md 与 knowledge.md 不一致（跑 aip knowledge 重建）"]
     return []
 
+def check_knowledge_fields(repo: Path) -> list[str]:
+    kn = project_living_path(repo, "knowledge.md")
+    if not kn.exists():
+        return []
+    out = []
+    for e in parse_entries(read_text(kn)):
+        for field in REQUIRED_KNOWLEDGE_FIELDS:
+            if not e["fields"].get(field):
+                out.append(f'知识条目 {e["id"]} 缺必填字段: {field}')
+    return out
+
+def check_no_orphan_slots(repo: Path) -> list[str]:
+    out = []
+    for path in repo.rglob("*"):
+        if not path.is_file() or any(p in SCAN_PRUNE_DIRS for p in path.parts):
+            continue
+        if path.name in FORBIDDEN_SLOT_FILENAMES:
+            out.append(f"发现旧机制残留/未迁移文件: {path.relative_to(repo)}")
+    return out
+
 def run_all(repo: Path) -> list[str]:
-    return check_living_files(repo) + check_index_sync(repo)
+    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo)
 
 def main() -> int:
     p = argparse.ArgumentParser(description="AIP hygiene gate.")
