@@ -1,0 +1,31 @@
+import sys, tempfile, unittest
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import aip_overview as ov
+
+def repo():
+    d = Path(tempfile.mkdtemp()); a = d/".aip"; a.mkdir()
+    (a/"OVERVIEW.md").write_text(
+        "# 总览\n## 在建（多线看板）\n### ▶[active] t1 手写内容\n\n"
+        "<!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->\n旧摘要\n<!-- AIP:AUTO-DIGEST:END -->\n",
+        encoding="utf-8")
+    (a/"knowledge.md").write_text("# k\n\n## 类目\nother\n\n## K-001: 某坑\n- 分类: other\n- 状态: active\n", encoding="utf-8")
+    (a/"decisions.md").write_text("# 决策\n\n## ADR-1: 选了 A\n正文\n", encoding="utf-8")
+    (a/"reference.md").write_text("# 参照\n\n## 领域概念\n### 订单\n说明\n", encoding="utf-8")
+    return d
+
+class Overview(unittest.TestCase):
+    def test_digest_pulls_from_docs(self):
+        dg = ov.build_digest(repo())
+        self.assertIn("K-001", dg); self.assertIn("ADR-1", dg)
+    def test_rebuild_keeps_handwritten_board(self):
+        d = repo(); ov.rebuild_overview(d)
+        t = (d/".aip"/"OVERVIEW.md").read_text(encoding="utf-8")
+        self.assertIn("▶[active] t1 手写内容", t)     # 手写看板保留
+        self.assertNotIn("旧摘要", t)                  # AUTO 区被刷新
+        self.assertIn("K-001", t)
+        self.assertEqual(t.count("AIP:AUTO-DIGEST:BEGIN"), 1)
+
+if __name__ == "__main__":
+    unittest.main()
