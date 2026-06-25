@@ -21,6 +21,7 @@ IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "superpower
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sync canonical top-level sources into the plugin package.")
     parser.add_argument("--check", action="store_true", help="只报告将同步什么，不写入。")
+    parser.add_argument("--repo-root", default=None, help="仓库根目录（当前已用脚本位置推断，此参数为兼容保留，不影响行为）。")
     args = parser.parse_args()
 
     if not (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").exists():
