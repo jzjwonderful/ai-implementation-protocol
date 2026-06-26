@@ -32,8 +32,18 @@ def copy_plugin(source: Path, destination: Path, force: bool) -> None:
     shutil.copytree(
         source,
         destination,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+        # 新模型不分发任何斜杠命令；即使源里残留 commands/ 也不带进安装目录。
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "commands"),
     )
+
+
+def purge_obsolete_commands(home: Path) -> list[Path]:
+    # 清掉旧 per-command 模型在 ~/.agents/commands/aip 留下的命令文件。
+    obsolete = home / ".agents" / "commands" / "aip"
+    if obsolete.is_dir():
+        shutil.rmtree(obsolete)
+        return [obsolete]
+    return []
 
 
 def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
@@ -115,6 +125,7 @@ def main() -> int:
 
     copy_plugin(source_plugin, destination_plugin, args.force)
     installed = install_skills(destination_plugin, home, args.force)
+    purged = purge_obsolete_commands(home)
 
     marketplace = load_marketplace(marketplace_path)
     upsert_marketplace_entry(marketplace, f"./plugins/{PLUGIN_NAME}")
@@ -123,6 +134,8 @@ def main() -> int:
     print(f"Installed Codex plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
+    for path in purged:
+        print(f"Removed obsolete commands: {path}")
     print(f"Updated marketplace: {marketplace_path}")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0

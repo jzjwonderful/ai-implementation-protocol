@@ -20,7 +20,8 @@ def copy_plugin(source: Path, destination: Path, force: bool) -> None:
     shutil.copytree(
         source,
         destination,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+        # 新模型不分发任何斜杠命令；即使源里残留 commands/ 也不带进安装目录。
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "commands"),
     )
 
 
@@ -42,20 +43,14 @@ def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
     return installed
 
 
-def install_commands(source_plugin: Path, home: Path, force: bool) -> list[Path]:
-    src_root = source_plugin / "commands"
-    if not src_root.exists():
-        return []
-    installed: list[Path] = []
-    for src in sorted(src_root.rglob("*.md")):
-        rel = src.relative_to(src_root)
-        dest = home / ".claude" / "commands" / rel
-        if dest.exists() and not force:
-            raise SystemExit(f"Command exists: {dest}. Re-run with --force to replace it.")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-        installed.append(dest)
-    return installed
+def purge_obsolete_commands(home: Path) -> list[Path]:
+    # 新模型只有技能、没有斜杠命令。清掉旧 per-command 模型在 ~/.claude/commands/aip
+    # 留下的命令文件，避免升级后 Claude 里还冒出 check/resume/start 等旧命令。
+    obsolete = home / ".claude" / "commands" / "aip"
+    if obsolete.is_dir():
+        shutil.rmtree(obsolete)
+        return [obsolete]
+    return []
 
 
 def main() -> int:
@@ -82,13 +77,13 @@ def main() -> int:
 
     copy_plugin(source_plugin, destination_plugin, args.force)
     installed = install_skills(destination_plugin, home, args.force)
-    installed_cmds = install_commands(destination_plugin, home, args.force)
+    purged = purge_obsolete_commands(home)
 
     print(f"Installed Claude Code plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
-    for path in installed_cmds:
-        print(f"Installed command: {path}")
+    for path in purged:
+        print(f"Removed obsolete commands: {path}")
     print("Restart Claude Code or open a new session for the skills to be picked up.")
     return 0
 

@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+"""把 AIP 从本机彻底卸载（Claude Code 与 Codex 两套落点都清）。
+
+清理范围（缺啥跳啥，幂等）：
+- 引擎包         ~/plugins/ai-implementation-protocol/
+- Claude 技能    ~/.claude/skills/{aip,root-cause}/
+- Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
+- Codex 技能     ~/.agents/skills/{aip,root-cause}/
+- Codex 旧命令   ~/.agents/commands/aip/
+- Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
+
+装进各业务仓库 .git/hooks/pre-commit 的 AIP 闸门是逐仓库的、无法在这里枚举，
+需到对应仓库手动删（删该文件或其中的 AIP gate 行）。
+"""
+
+import argparse
+import json
+import shutil
+import sys
+from pathlib import Path
+
+PLUGIN_NAME = "ai-implementation-protocol"
+SKILL_NAMES = ["aip", "root-cause"]
+
+
+def _utf8() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
+def rm(path: Path, removed: list[str]) -> None:
+    if path.is_dir():
+        shutil.rmtree(path); removed.append(str(path))
+    elif path.exists():
+        path.unlink(); removed.append(str(path))
+
+
+def prune_marketplace(path: Path, removed: list[str]) -> None:
+    if not path.exists():
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+    plugins = data.get("plugins")
+    if not isinstance(plugins, list):
+        return
+    kept = [p for p in plugins if p.get("name") != PLUGIN_NAME]
+    if len(kept) != len(plugins):
+        data["plugins"] = kept
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        removed.append(f"{path}（移除 {PLUGIN_NAME} 条目）")
+
+
+def main() -> int:
+    _utf8()
+    ap = argparse.ArgumentParser(description="Uninstall AIP from this machine (Claude Code + Codex).")
+    ap.add_argument("--home", default=Path.home(), type=Path, help="用户主目录。默认当前用户。")
+    home = ap.parse_args().home.resolve()
+    removed: list[str] = []
+
+    rm(home / "plugins" / PLUGIN_NAME, removed)
+    for s in SKILL_NAMES:
+        rm(home / ".claude" / "skills" / s, removed)
+    rm(home / ".claude" / "commands" / "aip", removed)
+    for s in SKILL_NAMES:
+        rm(home / ".agents" / "skills" / s, removed)
+    rm(home / ".agents" / "commands" / "aip", removed)
+    prune_marketplace(home / ".agents" / "plugins" / "marketplace.json", removed)
+
+    if removed:
+        print("已移除：")
+        for r in removed:
+            print(f"  - {r}")
+    else:
+        print("没发现 AIP 安装痕迹（可能已卸载干净）。")
+    print("提醒：装进各业务仓库 .git/hooks/pre-commit 的 AIP 闸门需到对应仓库手动删。")
+    print("重启 Claude Code / Codex 后命令与技能列表才刷新。")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
