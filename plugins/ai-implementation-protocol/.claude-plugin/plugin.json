@@ -1,6 +1,6 @@
 {
   "name": "ai-implementation-protocol",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A portable, skill-based protocol for AI project continuity: living docs (OVERVIEW/decisions/knowledge/reference/inbox/conventions), self-growth knowledge, and a hygiene gate. Zero-dependency; AI-driven, install into any repo and run $aip init.",
   "author": {
     "name": "AIP Project",

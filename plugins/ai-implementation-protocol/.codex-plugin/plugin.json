@@ -1,7 +1,7 @@
 {
   "name": "ai-implementation-protocol",
-  "version": "0.1.0",
-  "description": "A portable protocol and local CLI toolkit for AI task continuity, feature handoffs, and resumable implementation work.",
+  "version": "0.2.1",
+  "description": "A portable, skill-based protocol for AI project continuity: living docs (OVERVIEW/decisions/knowledge/reference/inbox/conventions), self-growth knowledge, and a hygiene gate. Zero-dependency; AI-driven, install into any repo and run $aip init.",
   "author": {
     "name": "AIP Project",
     "url": "https://github.com/jzjwonderful/ai-implementation-protocol"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "AI Implementation Protocol",
-    "shortDescription": "Create resumable AI implementation work packages.",
-    "longDescription": "AI Implementation Protocol packages a local protocol, templates, and Python scripts that help Codex initialize project_docs, create feature work packages, resume active tasks, and validate handoff completeness.",
+    "shortDescription": "Skill-based protocol for AI project continuity.",
+    "longDescription": "AI Implementation Protocol packages a skill and supporting scripts that maintain project-level living docs (OVERVIEW/decisions/knowledge/reference/inbox/conventions), grow a verified-knowledge base, and enforce a hygiene gate. Zero-config: install into any repo and run $aip init; the rest is AI-driven.",
     "developerName": "AIP Project",
     "category": "Productivity",
     "capabilities": [
@@ -27,9 +27,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$aip init",
-      "$aip start 2026-04-26-my-feature",
-      "$aip resume"
+      "$aip init"
     ],
     "websiteURL": "https://github.com/jzjwonderful/ai-implementation-protocol",
     "brandColor": "#2563EB"
