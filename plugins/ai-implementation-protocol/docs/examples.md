@@ -4,10 +4,10 @@
 
 Use AIP for:
 
-- feature specs
-- refactor plans
-- file scope control
-- verification command records
+- tracking multi-session refactors on the OVERVIEW board
+- recording verified root causes (crashes, races) in the knowledge base
+- a decision log for architecture trade-offs
+- machine-check evidence (build/tests) bound to "done"
 
 Good fit:
 
@@ -20,8 +20,8 @@ Good fit:
 Use AIP for:
 
 - API change tracking
-- migration handoff
-- incident follow-up
+- resuming a migration across sessions
+- incident root-cause follow-up
 - multi-agent implementation
 
 ## Frontend Project
@@ -29,14 +29,14 @@ Use AIP for:
 Use AIP for:
 
 - design-spec alignment
-- route/component scope tracking
+- change-scope tracking on the board
 - browser verification notes
 
 ## Common Pattern
 
-Across all examples, the same structure remains stable:
+Across all examples, the same structure stays stable:
 
-- one runtime pointer
-- one feature directory
-- one machine-readable task board
-- one enforced handoff format
+- one hidden `.aip/` directory
+- one OVERVIEW board holding work-line state (next step + `must_read`)
+- one append-only knowledge base and decision log
+- one blocking `aip check`

@@ -8,25 +8,25 @@ Adapt AIP to any software project without rewriting the protocol.
 
 The target project receives a single hidden `.aip/` directory containing:
 
-- project-level living docs (`STATUS.md`, `canonical-assets.md`, `decisions.md`, `findings.md`, `config.yaml`)
-- runtime state files (`_runtime/current_task.json`)
-- feature work package directories (`features/<id>/`)
+- project-level living docs (`OVERVIEW.md`, `decisions.md`, `knowledge.md` + `knowledge_index.md`, `reference.md`, `inbox.md`, `conventions.md`, `config.yaml`)
 - optional `.nexus-map/` linkage
+
+Task state lives on the `OVERVIEW.md` board — there is no per-feature directory and no runtime pointer.
 
 ## Engine vs Config
 
 AIP is the project-agnostic **engine** (protocol + CLI + check). A project binds it by editing
-one file — `.aip/config.yaml` — declaring its truth sources, machine-gate commands, applicable
+one file — `.aip/config.yaml` — declaring its truth sources, machine-check commands, applicable
 domain lenses, index tools, and iron rules. Porting AIP to a new project = fill that config; no
 protocol or script changes.
 
 ## Recommended Steps
 
-1. Run `aip init` (scaffolds `.aip/`)
-2. Fill `.aip/config.yaml` (truth sources / gate commands / lenses / iron rules)
-3. Review `.aip/protocols/ai-implementation-protocol.md`
-4. Create the first feature with `aip start <feature-id>`
-5. Add `aip check` to local workflow or CI
+1. Run `aip init` (scaffolds `.aip/` and installs the git pre-commit hook; zero-config)
+2. Review `.aip/protocols/ai-implementation-protocol.md`
+3. Add a work line to `OVERVIEW.md` when you start something; track its next step + `must_read` there
+4. Fill `.aip/config.yaml` as you go — truth sources, machine-check commands, lenses, iron rules (captured when first needed, not asked upfront)
+5. Keep `aip check` running via the hook (or add it to CI)
 
 ## Install Targets
 
@@ -52,16 +52,16 @@ method must leave). See `docs/protocol.md` → Enforcement.
 
 Projects may customize:
 
-- required read files
-- default verification commands
-- repository-specific notes
+- `must_read` files per work line
+- machine-check commands and verification notes
+- repository-specific conventions
 - CI policy
 
 Projects should not customize:
 
-- core status vocabulary
-- current task runtime shape
-- handoff required sections
+- the `.aip/` output location
+- the living-doc set and their roles
+- the forbidden-filename guard (no per-feature packages, no runtime pointer)
 
 ## Nexus Integration
 

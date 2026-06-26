@@ -2,201 +2,129 @@
 
 ## Goal
 
-AI Implementation Protocol defines how work must be recorded so any AI can resume a task without requirement drift, hidden assumptions, or quality loss.
+AI Implementation Protocol (AIP) defines the minimal records that let any AI resume a task without requirement drift, hidden assumptions, or quality loss.
 
 ## Output Location
 
-All AIP outputs in a target repository live under a single hidden directory `.aip/`
-(like `.git`). Nothing is scattered into the project root.
+All AIP outputs in a target repository live under a single hidden directory `.aip/` (like `.git`). Nothing is scattered into the project root.
 
-## Mandatory Objects
+## Project-Level Living Docs
 
-Project-level living docs (cross-feature, long-lived) under `.aip/`:
+AIP keeps project state in a small set of living docs (cross-task, long-lived) under `.aip/`. There are **no per-feature work-package directories and no runtime pointer** — task state lives on the OVERVIEW board.
 
-- `STATUS.md` — current-state source of truth (read first on resume)
-- `canonical-assets.md` — registry of assets to reuse (anti-accretion)
-- `decisions.md` — ADR-lite decision log (append-only)
-- `findings.md` — side-finding inbox (capture, don't chase)
-- `config.yaml` — project adaptation (truth sources / machine-gate commands / lenses)
+- `OVERVIEW.md` — multi-line board (hand-written top) + auto-generated digest. Read this first when starting or resuming any work.
+- `decisions.md` — architecture/direction-level decision log (append-only).
+- `knowledge.md` (+ the derived `knowledge_index.md`) — verified root causes and pitfalls.
+- `reference.md` — domain concepts/terms, core invariants, and reusable implementations (the canonical pick).
+- `inbox.md` — side-finding inbox (problems hit while doing something unrelated).
+- `conventions.md` — project conventions (standing how-we-work rules).
+- `config.yaml` — project adaptation (truth sources / machine-check commands / lenses / iron rules).
 
-Every active feature must have:
+`aip init` creates these, and `aip check` validates their presence (the derived `knowledge_index.md` counts as required too).
 
-- one feature directory under `.aip/features/<feature-id>/`
-- one runtime pointer at `.aip/_runtime/current_task.json`
-- one task board with explicit statuses
-- one handoff file with a fixed structure
+### Retired slots (must not reappear)
 
-## Work-Unit Kinds
+Earlier AIP versions used per-feature packages, a runtime pointer, and a separate bug track. Those are gone. `aip check` treats these filenames as **forbidden anywhere in the repo** (a migration guard): `current_task.json`, `task_board.yaml`, `handoff.md`, `verification.md`, `session_log.md`, `report.md`, `file_scope.yaml`, `STATUS.md`, `findings.md`, `canonical-assets.md`. Their roles moved: current state → `OVERVIEW.md`; side-findings → `inbox.md`; reusable-asset registry → `reference.md`.
 
-A work unit is either a **feature** (new development) or a **bug** (fix, light track).
-`current_task.json.kind` distinguishes them (absent ⇒ `feature`, backward-compatible).
+## Resume / Onboarding
 
-A **bug** package is lighter: it drops `spec.md` / `plan.md` / `task_board.yaml` and tracks
-progress through `current_task.current_phase` (`investigate` → `fix` → `verify`). Its core
-living doc is `report.md` (症状/复现 → 竞争假设 → 根因+证据 → 触类旁通 · 同类波及面 → 修复选项 →
-沉淀). Verification adds a `## Regression` gate (a repro that failed before and passes after).
+Any AI starting or resuming work:
 
-Bug completeness gate (`aip check`, status==done): 根因 + 证据 + 同类波及面 + 沉淀 节非空；
-`resolution==fixed` 时必有回归证据；`resolution` ∈ {fixed, wont_fix, by_design}. Pure
-"won't fix / by-design" closes via `resolution` without a regression gate but still requires
-a root cause. The bug track binds the `root-cause` skill (Safeguard #9) to a resumable work unit.
+1. Read `OVERVIEW.md`, find the `▶[active]` line, read its **next step** and `must_read`.
+2. Read every file listed in `must_read` (includes `decisions.md` and `knowledge_index.md`).
+3. Only then start — don't replay history.
 
-## Mandatory Lifecycle
+## Capture + Completion Check
 
-### Before implementation
+### Two capture paths
 
-Required:
+- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → write to `knowledge.md` (start as `状态: draft`, promoted to `active` only after the human confirms).
+- **Side path** — a problem unrelated to the current task → search `knowledge.md` + `inbox.md` first → if new, file it in `inbox.md` (don't blindly append).
 
-- `spec.md`
-- `plan.md`
-- `task_board.yaml`
-- `file_scope.yaml`
-- `current_task.json`
+### Write discipline (all sedimentation)
 
-### During implementation
+Draft → compare against the target doc to de-dup (merge/cross-link if similar, add only if genuinely new) → write `状态: draft` → notify the user (what was recorded, which entry was referenced, which checks ran). A draft stays draft until the human confirms; the AI never self-promotes to `active` or silently edits old content. Only **verified** items enter knowledge.
 
-After each meaningful task update:
+### Completion check (when a work line is done)
 
-- update `task_board.yaml`
-- append `session_log.md`
-- update `handoff.md`
+**Tier 1 (every time a line wraps up):**
 
-### Before claiming completion
+1. Run `aip check` (red blocks the commit; fix item by item).
+2. Scoped correction: tidy only the entries you touched this round and their direct links (draft/diff, no silent edits elsewhere).
+3. Capture sweep: list what you concretely learned/hit this round — into knowledge / inbox / reference / conventions / config?
+4. Rebuild derived files: `aip knowledge` (index) and `aip overview` (digest).
+5. Move the line off the OVERVIEW board.
 
-Required:
+**Tier 2 (on an architecture/trade-off decision):** append one record to `decisions.md` (context, decision, rationale, impact) so it isn't re-litigated later.
 
-- update `verification.md` with a **machine-gate table bound to real evidence**
-  (every gate declared in `config.yaml` run, result pass/fail + evidence; nothing skipped silently)
-- record an **independent (fresh-eyes) review** result in `verification.md`
-- every `findings.md` entry added this round is **classified** (no `待分类` left)
-- update `handoff.md`, update `current_task.json`
-- pass `aip_check.py`
+## `aip check` (the one machine check)
 
-## Required Handoff Sections
+`aip check` (`python scripts/aip_check.py --repo-root .`) validates:
 
-Every `handoff.md` must include:
+1. **Living docs present** — the living docs above exist under `.aip/`.
+2. **Index consistent** — `knowledge_index.md` matches the current `knowledge.md` (rebuild with `aip knowledge` if not).
+3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty.
+4. **No legacy residue** — none of the forbidden filenames appear in the repo.
+5. **Dual-copy sync** (engine repo only) — top-level `scripts/` and `templates/` match the `plugins/ai-implementation-protocol/` copies byte-for-byte (rebuild with `sync_plugin.py` if not).
 
-- current phase
-- current task
-- completed work
-- remaining work
-- blockers
-- next action
-- files touched
-- verification status
+Exit 0 = pass; non-zero = violations listed on stdout.
 
-## Allowed Status Values
+## Commands (AI-autonomous; the human only runs init)
 
-Task board task statuses:
+Day-to-day actions (capture, check, rebuild index/digest, read OVERVIEW to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
 
-- `pending`
-- `in_progress`
-- `blocked`
-- `done`
+```
+python scripts/aip_init.py --repo-root .
+```
 
-Feature runtime statuses:
+**Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the OVERVIEW active line on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
 
-- `planned`
-- `in_progress`
-- `blocked`
-- `done`
+## External-Tool Degradation Chain
 
-## Resume Rule
+When looking up references / finding an equivalent implementation / searching an index, pick the simplest tool that matches:
 
-Any AI resuming work must:
+1. LSP available → `findReferences` / `incomingCalls` (precise).
+2. No LSP → grep + read candidates + check `reference.md` (good enough).
+3. Large codebase → nexus-query / CodeGraph (if installed).
 
-1. read `.aip/_runtime/current_task.json`
-2. read the files listed under `must_read` (includes `.aip/STATUS.md` and the project's truth sources)
-3. inspect `task_board.yaml`
-4. read `handoff.md`
-5. only then begin editing or planning
+AIP doesn't record which external tools are installed (the platform lists what's available each session). Adapter outputs (a nexus index, CI records) may enrich inputs, but the protocol stays fully usable without them.
 
-## Safeguard Mechanisms
+## Cross-cutting disciplines
 
-These make delivery resist the recurring failures of AI-assisted work — wrong guesses,
-silent omissions, entropy/accretion, and getting derailed. They are tool-agnostic; a
-project binds them via `config.yaml`.
-
-1. **Machine gates bound to real evidence** — "done" is hard-bound to the `config.yaml`
-   gate commands actually passing (tests/build/lint-or-drift/e2e), not to paperwork being
-   filled in. `aip_check` enforces it.
-2. **Stop-and-ask** — on any uncertainty / spec gap / ambiguity, stop and put it to the
-   user as a decision item. Never guess and continue; wrong guesses are the root cause of
-   repeated corrections.
-3. **Fresh-eyes review** — verification includes an independent review (reviewer ≠ author)
-   with a falsification mindset; no rubber-stamping one's own work.
-4. **Traceability / no silent drop** — numbered acceptance criteria tracked to completion;
-   `task_board` allows ≤1 in-progress task; nothing claimed done that wasn't verified.
-5. **Thin slices** — split large work into end-to-end independently-acceptable slices; earlier
-   feedback is cheaper.
-6. **ADR-lite decisions** — architecture/trade-off decisions recorded with rationale in
-   `decisions.md` so they aren't re-litigated.
-7. **Reuse-first & anti-accretion** — before creating any new tool/scaffold, refresh the
-   project index and search `canonical-assets.md`; creating new requires written justification.
-   Replacing old scaffolds follows Strangler (migrate consumers, delete in the same change).
-8. **Side-finding protocol** — unrelated problems found while doing task A are captured in
-   `findings.md` (capture, don't chase) with a 3-second triage, never silently dropped and
-   never allowed to derail the current task. Boundary: a sibling site sharing the **same root
-   cause** as the bug being fixed is *not* a side-finding — it is in-scope and handled under
-   #9's sweep; only genuinely *unrelated* problems go here.
-9. **Root-cause-first investigation & knowledge sedimentation** — on any bug/unexpected
-   behavior, don't patch the symptom: recall known causes from `.aip/knowledge_index.md`
-   (a hit is a prior hypothesis to re-verify, not an answer), enumerate competing
-   hypotheses, dig to a cause you can point at in code/config/environment, then hand the
-   cause + evidence + options to the user. Verified causes are deposited (append-only) in
-   `.aip/knowledge.md` under a declared `## 类目`; the derived `.aip/knowledge_index.md` is
-   rebuilt via `aip knowledge`. `aip check` validates index consistency (always), entry
-   completeness + legal category (done gate), and flags entries unverified for >180 days.
-   Once a cause is confirmed, **generalize it (触类旁通)**: treat it as a defect *class*, not a
-   single site — sweep the current change scope (`file_scope`) for every sibling sharing that
-   root cause and fix them in the same change; siblings outside the declared scope are recorded
-   in `findings.md`, never silently left.
-
-### Cross-cutting disciplines
 - **输出语言风格** — 面向用户的回答与说明（不含代码、命令、文件内容）遵守四条：
   1. **用中文**；专业技术名词可保留英文（commit、build、lint、token 等），不硬翻。
   2. **说大白话，不用黑话**；不生造词、不堆抽象比喻。能用日常说法讲清楚就用日常说法；
-     必须用专业术语或协议内部术语（如 machine gate、lens）时，第一次出现要用一句话说明它指什么，
-     不直接甩术语让人去猜。
+     必须用专业术语或协议内部术语时，第一次出现要用一句话说明它指什么，不直接甩术语让人去猜。
   3. **专业、客观，以事实和结果为准**；不说恭维话、不自夸、不用"很棒/好问题"这类填充。
      结论先行再给依据；不确定就直说不确定，不糊弄。
   4. **第一性原理思考**；遇到问题先拆到最基本的事实和约束，从那里推导，而不是照搬惯例。
      能质疑的前提就质疑，能去掉的步骤就去掉。
 - **Comment hygiene** — code comments must not reference drift-prone external ids
-  (requirement #, plan line #, doc section #). Reference only immutable anchors (`ADR-N`).
+  (requirement #, plan line #, doc section #). Reference only immutable anchors (`ADR-N`,
+  i.e. Architecture Decision Record entries; likewise `K-NNN` knowledge and `I-N` inbox ids).
 - **Refresh manual indexes before query** — codegraph/nexus/etc. are manually updated;
   refresh before querying or a stale index misleads you into creating duplicates.
 - **Conditional domain lenses** — when a change touches a domain declared in `config.yaml`
   `lenses` (e.g. frontend, industrial client), mount that expert checklist during design and review.
 
 ### Process-skill integration (optional method layer)
-AIP owns the **slots** (artifacts, state, gates); an external process-skill framework, when present,
-owns the **methods** (how to fill each slot well). They compose:
-- Slots belong to AIP; methods' output lands in the AIP slot, never a parallel location.
-- **Resume is AIP-only**: `_runtime/current_task.json` + `handoff.md` is the single resumable-state
-  source. Any external "execute plan in a separate session" checkpointing maps onto `task_board.yaml`;
-  no second progress/plan file.
+
+AIP owns the **slots** (living docs, state, checks); an external process-skill framework, when present, owns the **methods** (how to fill each slot well). They compose:
+
+- Slots belong to AIP; a method's output lands in the AIP slot, never a parallel location.
+- **Resume is AIP-only**: the `OVERVIEW.md` active line (next step + `must_read`) is the single resumable-state source. Any external "execute the plan in a separate session" checkpointing maps onto the OVERVIEW board, not a second progress/plan file.
 - AIP runs standalone if no method layer is present.
-- The concrete phase→skill mapping is single-sourced in the installed `aip` skill, not duplicated here
-  or in project docs (drift prevention).
+- The concrete phase→skill mapping is single-sourced in the installed `aip` skill.
 
-### Enforcement (how this is 100% vs advisory)
-What is load-bearing is enforced by **deterministic gates that block**, not prose:
-- **Scaffold** (`aip start`) creates slots in the one correct place — no location drift.
-- **`aip check`** is a blocking gate: living docs present, ≤1 in-progress, findings classified,
-  required slot shape, machine-gate evidence (no `fail`, no unfilled `| <...>` placeholders) on done,
-  and **no competing AIP artifacts outside `.aip/`** (drift/dup detector).
-- **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` automatically
-  so it can't be forgotten.
-Method *quality* (was the brainstorming deep, the TDD real) cannot be machine-forced — gates check the
-*residue* a method must leave (sources cited, real command output, reviewer≠author note). Beyond residue
-it is best-effort by design: a poorly executed method yields an incomplete slot the gate rejects.
+### Enforcement (load-bearing vs advisory)
 
-## Schemas Are Reference-Only
+What is load-bearing is enforced by **deterministic checks that block**, not prose:
 
-`schemas/*.json` document the shape of `current_task.json` / `task_board.yaml` for humans
-and tooling. `aip check` does **not** validate against them (no third-party dependency);
-they are guidance, not an enforced gate.
+- **Scaffold** (`aip init`) creates the living docs in the one correct place — no location drift.
+- **`aip check`** is a blocking check: living docs present, knowledge index consistent and fields complete, no forbidden legacy files, dual-copy synced. A hook runs it automatically.
+- **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` so it can't be forgotten.
+
+Method *quality* (was the investigation deep, the review real) can't be machine-forced — the checks verify the *residue* a method must leave (verified causes, sources cited, human-confirmed promotion). Beyond residue it is best-effort by design: a poorly executed method leaves an incomplete slot the check rejects.
 
 ## Optional Knowledge Sources
 
@@ -206,4 +134,4 @@ If present, these may be consumed as enhancement inputs:
 - git history
 - CI records
 
-They are optional. The protocol itself must remain usable without them.
+They are optional. The protocol itself stays usable without them.

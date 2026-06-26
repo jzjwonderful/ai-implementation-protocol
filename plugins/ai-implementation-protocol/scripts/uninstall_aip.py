@@ -10,7 +10,7 @@ from __future__ import annotations
 - Codex 旧命令   ~/.agents/commands/aip/
 - Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
 
-装进各业务仓库 .git/hooks/pre-commit 的 AIP 闸门是逐仓库的、无法在这里枚举，
+装进各业务仓库 .git/hooks/pre-commit 的 AIP 检查是逐仓库的、无法在这里枚举，
 需到对应仓库手动删（删该文件或其中的 AIP gate 行）。
 """
 
@@ -78,7 +78,7 @@ def main() -> int:
             print(f"  - {r}")
     else:
         print("没发现 AIP 安装痕迹（可能已卸载干净）。")
-    print("提醒：装进各业务仓库 .git/hooks/pre-commit 的 AIP 闸门需到对应仓库手动删。")
+    print("提醒：装进各业务仓库 .git/hooks/pre-commit 的 AIP 检查需到对应仓库手动删。")
     print("重启 Claude Code / Codex 后命令与技能列表才刷新。")
     return 0
 

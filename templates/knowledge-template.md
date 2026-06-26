@@ -1,6 +1,6 @@
 # 知识库（验证过的根因 / 坎 / 领域事实）
 
-append-only。过时条目不删，标 `状态: superseded(by K-00X)`。
+条目编号 `K-NNN`（K = Knowledge，知识库条目；如 K-001、K-002）。只追加，过时条目不删，标 `状态: superseded(by K-00X)`。
 改完跑 `aip knowledge` 重建 `knowledge_index.md`。
 
 ## 类目
@@ -19,5 +19,5 @@ AI 新沉淀一律先写 `状态: draft`，经人确认后改 `active`。
 - 证据: <命令输出 / 代码引用 / 复现步骤>
 - 适用范围: <在什么条件下成立>
 - 最后复核: 2026-06-16
-- 关联: ADR-N / findings#N / feature-id
+- 关联: ADR-N / K-NNN / feature-id
 -->

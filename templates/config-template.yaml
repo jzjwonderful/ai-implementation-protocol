@@ -6,7 +6,7 @@ truth_sources:
   # - docs/PRD.md
   # - docs/conventions/ui-and-dev-guidelines.md
 
-# 机器闸门：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据，
+# 机器检查：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据，
 # 而不是只看文书是否写齐。每条含 name + cmd（在 repo 根可执行）。
 gates:
   tests:
@@ -24,8 +24,8 @@ anti_accretion:
   # python: "vulture ."
   # duplication: "npx jscpd"
 
-# 领域专家 lens：按改动域条件挂载的专家视角清单（域名由项目定义）。
-# 每个 lens 指向一份 checklist 文档；改动碰到对应 globs 时挂载。
+# 领域专家视角：按改动域条件挂载的专家视角清单（域名由项目定义）。
+# 每个视角指向一份 checklist 文档；改动碰到对应 globs 时挂载。
 lenses:
   # - name: frontend
   #   when_globs: ["web/**", "webapp/**"]
@@ -34,7 +34,7 @@ lenses:
   #   when_globs: ["client/**", "agent/**"]
   #   checklist: docs/lenses/client.md
 
-# 索引工具：手动更新的代码图谱/知识库。AIP 在"复用优先闸门"里要求查前先刷新。
+# 索引工具：手动更新的代码图谱/知识库。AIP 在"复用优先检查"里要求查前先刷新。
 indexes:
   # - name: codegraph
   #   refresh: "<刷新命令或 MCP 动作>"

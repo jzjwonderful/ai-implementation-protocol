@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-"""把 `aip check` 挂成自动闸门——"没法忘"那一级。
+"""把 `aip check` 挂成自动检查——"没法忘"那一级。
 
-- git pre-commit（主闸门，硬挡）：每次提交前跑 `aip check`，红了挡住提交。
+- git pre-commit（主检查，硬挡）：每次提交前跑 `aip check`，红了挡住提交。
 - 可选 Claude Code Stop 钩子（--claude-stop，非阻塞）：每轮结束跑一次 check 把状态摆出来。
 
 git 钩子放 .git/hooks/pre-commit（即时生效、无框架依赖）。bypass 用 `git commit --no-verify`。

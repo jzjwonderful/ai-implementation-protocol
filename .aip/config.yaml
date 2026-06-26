@@ -10,8 +10,8 @@ truth_sources:
   - docs/architecture.md
   - README.md
 
-# 机器闸门：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据。
-# 本项目纯标准库、无构建步、无 lint 配置；唯一真实闸门是单元测试。
+# 机器检查：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据。
+# 本项目纯标准库、无构建步、无 lint 配置；唯一会真跑的检查是单元测试。
 gates:
   tests:
     cmd: "python -m unittest discover -s tests -p \"test_*.py\""
@@ -25,7 +25,7 @@ gates:
 # 反堆积机器兜底（可选）。本项目无对应工具链。
 anti_accretion:
 
-# 领域专家 lens：本项目无前端/客户端等专家域，留空。
+# 领域专家视角：本项目无前端/客户端等专家域，留空。
 lenses:
 
 # 索引工具：本项目未使用 codegraph/nexus，留空。
@@ -35,9 +35,9 @@ indexes:
 iron_rules:
   - "未授权不提交：git add/commit/push 需用户明确指示"
   - "新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变"
-  - "顶层 scripts/docs/templates/schemas 为唯一真源；改后必须跑 `python scripts/sync_plugin.py` 再生 plugins/ 副本，二者须逐字节一致"
+  - "顶层 scripts/docs/templates 为唯一真源；改后必须跑 `python scripts/sync_plugin.py` 再生 plugins/ 副本，二者须逐字节一致"
   - "协议是真源：行为/规则变更同次更新 docs/protocol.md，并经 sync_plugin 同步进插件副本"
-  - "行为/架构变更同次更新 .aip/STATUS.md"
+  - "行为/架构变更同次更新 .aip/OVERVIEW.md 看板"
 
 # 验证规范：自由文本指针。
 # verification_notes: "测试用标准库 unittest；跑 `python -m unittest discover -s tests -p \"test_*.py\"`。"

@@ -8,16 +8,15 @@ AIP has four layers.
 
 Human and machine rules that define:
 
-- required files
-- allowed statuses
-- handoff format
+- the required living docs
+- capture and completion discipline
 - resume behavior
-- validation expectations
+- validation expectations (`aip check`)
 
 Key files:
 
 - `docs/protocol.md`
-- `schemas/*.json`
+- the installed `aip` skill (single source for command lines and phase→skill mapping)
 
 ### 2. Template Layer
 
@@ -35,10 +34,11 @@ Local scripts that enforce protocol correctness.
 
 Key scripts:
 
-- `aip_init.py`
-- `aip_start_feature.py`
-- `aip_resume.py`
-- `aip_check.py`
+- `aip_init.py` — scaffold `.aip/` (zero-config)
+- `aip_check.py` — the blocking validation check
+- `aip_knowledge.py` — rebuild the knowledge index
+- `aip_overview.py` — rebuild the OVERVIEW digest
+- `install_hooks.py` — install the git pre-commit (+ optional Claude Stop) hook
 
 ### 4. Adapter Layer
 
@@ -58,7 +58,7 @@ That means:
 
 - AIP must work in a plain repository with Python only
 - adapters may enrich resume output or validation
-- adapters may not be required for feature continuity
+- adapters may not be required for resuming work
 
 ## Why This Architecture
 
