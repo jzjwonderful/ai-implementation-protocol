@@ -1,8 +1,7 @@
 <!-- BEGIN AIP (managed) -->
 ## AI Implementation Protocol
-本仓库用 AIP 管理实现工作。后续 AI 会话请先读：
-- `.aip/STATUS.md` 现状真理源
-- `.aip/_runtime/current_task.json` 当前任务指针 + must_read
-- `.aip/knowledge_index.md` 已沉淀真因索引（遇问题先查）
-命令：`$aip resume` 续作 / `$aip check` 校验 / 详见 `.aip/protocols/`。
+**会话开始时必须先调用 `aip` 技能，再做任何其他事（包括回答问题）。**
+调完技能后读 `.aip/OVERVIEW.md`（当前在建线）；遇问题先查 `.aip/knowledge.md`。
+其余按需查：`decisions.md` 架构决策 / `reference.md` 核心概念+复用件 / `inbox.md` 旁路问题 / `conventions.md` 规约。
+语言一律大白话，禁止黑话。
 <!-- END AIP (managed) -->

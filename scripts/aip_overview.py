@@ -47,7 +47,14 @@ def main() -> int:
     force_utf8()
     ap = argparse.ArgumentParser(description="Rebuild OVERVIEW auto-digest.")
     ap.add_argument("--repo-root", required=True)
-    print(f"OVERVIEW digest rebuilt: {rebuild_overview(Path(ap.parse_args().repo_root).resolve())}")
+    ap.add_argument("--print", dest="do_print", action="store_true",
+                    help="重建后把 OVERVIEW 内容输出到 stdout（用于 SessionStart hook）")
+    a = ap.parse_args()
+    p = rebuild_overview(Path(a.repo_root).resolve())
+    if a.do_print:
+        print(f"\n=== AIP OVERVIEW ===\n{read_text(p)}\n===================")
+    else:
+        print(f"OVERVIEW digest rebuilt: {p}")
     return 0
 
 if __name__ == "__main__":

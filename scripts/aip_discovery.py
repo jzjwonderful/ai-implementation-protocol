@@ -7,12 +7,10 @@ END = "<!-- END AIP (managed) -->"
 
 BLOCK_BODY = (
     "## AI Implementation Protocol\n"
-    "本仓库用 AIP 管理实现工作（机制由 `aip` 技能驱动）。需要时去 `.aip/` 找：\n"
-    "- `OVERVIEW.md` 现状/在建（开始或接手任务前先读）\n"
-    "- `knowledge.md`(+`knowledge_index.md`) 验证过的坑（遇问题先查）\n"
-    "- `decisions.md` 为什么这么定 / `reference.md` 这工程是什么+该复用什么\n"
-    "- `inbox.md` 旁路问题 / `conventions.md` 项目规约\n"
-    "AIP 动作由 AI 按时机自主触发；语言一律大白话，禁止黑话。\n"
+    "**会话开始时必须先调用 `aip` 技能，再做任何其他事（包括回答问题）。**\n"
+    "调完技能后读 `.aip/OVERVIEW.md`（当前在建线）；遇问题先查 `.aip/knowledge.md`。\n"
+    "其余按需查：`decisions.md` 架构决策 / `reference.md` 核心概念+复用件 / `inbox.md` 旁路问题 / `conventions.md` 规约。\n"
+    "语言一律大白话，禁止黑话。\n"
 )
 
 

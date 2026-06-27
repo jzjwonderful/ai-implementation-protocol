@@ -48,6 +48,7 @@ def main() -> int:
         except SystemExit as e:
             # 项目已有非 AIP 的 pre-commit 钩子：不覆盖、不中断 init，提示人自行处理。
             print(f"（跳过 pre-commit 钩子：{e}）")
+        install_hooks.install_claude_session_start(repo, engine)
     # 同步派生件，让刚建好的骨架直接通过 check（否则空索引与模板 knowledge 不一致会报红）。
     import aip_knowledge, aip_overview
     aip_knowledge.rebuild_index(repo)

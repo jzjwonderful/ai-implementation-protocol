@@ -61,6 +61,29 @@ def install_pre_commit(repo_root: Path, engine_root: Path, force: bool) -> None:
     print(f"Installed pre-commit hook: {hook}")
 
 
+def install_claude_session_start(repo_root: Path, engine_root: Path) -> None:
+    settings = repo_root / ".claude" / "settings.json"
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    data = {}
+    if settings.exists():
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            raise SystemExit(f"Cannot parse {settings}; fix it manually.")
+    py = Path(sys.executable).as_posix()
+    cmd = f'"{py}" "{engine_root.as_posix()}/scripts/aip_overview.py" --repo-root . --print'
+    hooks = data.setdefault("hooks", {})
+    starts = hooks.setdefault("SessionStart", [])
+    for group in starts:
+        for h in group.get("hooks", []):
+            if h.get("command") == cmd:
+                print(f"Claude SessionStart hook already present in {settings}")
+                return
+    starts.append({"hooks": [{"type": "command", "command": cmd}]})
+    settings.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    print(f"Installed Claude SessionStart hook: {settings}")
+
+
 def install_claude_stop(repo_root: Path, engine_root: Path) -> None:
     settings = repo_root / ".claude" / "settings.json"
     settings.parent.mkdir(parents=True, exist_ok=True)
@@ -89,6 +112,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".", type=Path, help="目标仓库根。默认当前目录。")
     parser.add_argument("--engine-root", default=ENGINE_ROOT, type=Path, help="AIP 引擎根。默认本仓库。")
     parser.add_argument("--claude-stop", action="store_true", help="额外装非阻塞的 Claude Code Stop 钩子。")
+    parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（输出 OVERVIEW 到上下文）。")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的非 AIP pre-commit 钩子。")
     args = parser.parse_args()
 
@@ -98,6 +122,8 @@ def main() -> int:
     install_pre_commit(repo_root, engine_root, args.force)
     if args.claude_stop:
         install_claude_stop(repo_root, engine_root)
+    if args.session_start:
+        install_claude_session_start(repo_root, engine_root)
 
     print("Hooks installed. pre-commit now runs `aip check`; bypass once with `git commit --no-verify`.")
     return 0
