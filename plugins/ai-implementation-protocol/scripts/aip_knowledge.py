@@ -6,10 +6,8 @@ from pathlib import Path
 
 from _aip_common import force_utf8, project_living_path, read_text, write_text
 
-INDEX_HEADER = (
-    "# 知识索引（自动生成，勿手改；运行 `aip knowledge` 重建）\n"
-    "# 格式: ID | 分类 | 状态 | 适用范围 | 标题 | 最后复核\n"
-)
+INDEX_HEADER = "# 知识索引（自动生成，勿手改；运行 `aip knowledge` 重建）"
+INDEX_COLUMNS = ("ID", "分类", "状态", "适用范围", "标题", "最后复核")
 
 ENTRY_RE = re.compile(r"^## (K-\d+):\s*(.*)$")
 FIELD_RE = re.compile(r"^- (\S+?):\s*(.*)$")
@@ -52,14 +50,23 @@ def parse_entries(text: str) -> list[dict]:
     return entries
 
 
+def _cell(value: str) -> str:
+    """转义单元格里的竖线，否则会破坏 GFM 表格的列结构。"""
+    return value.replace("|", "\\|")
+
+
 def render_index(entries: list[dict]) -> str:
-    lines = [INDEX_HEADER]
+    lines = [
+        INDEX_HEADER,
+        "",
+        "| " + " | ".join(INDEX_COLUMNS) + " |",
+        "| " + " | ".join("---" for _ in INDEX_COLUMNS) + " |",
+    ]
     for e in entries:
         f = e["fields"]
-        lines.append(
-            f'{e["id"]} | {f.get("分类", "")} | {f.get("状态", "")} | '
-            f'{f.get("适用范围", "")} | {e["title"]} | {f.get("最后复核", "")}'
-        )
+        row = [e["id"], f.get("分类", ""), f.get("状态", ""),
+               f.get("适用范围", ""), e["title"], f.get("最后复核", "")]
+        lines.append("| " + " | ".join(_cell(c) for c in row) + " |")
     return "\n".join(lines).rstrip() + "\n"
 
 

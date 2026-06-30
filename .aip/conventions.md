@@ -7,6 +7,6 @@
 ## 注释风格
 - <暂无>
 ## 设计风格
-- <暂无>
+- 凡是后缀为 `.md` 的生成/派生件（如 `knowledge_index.md`、OVERVIEW 自动摘要块），输出必须是合法 Markdown（GFM）：用真表格（带 `|---|` 分隔行、行首尾带 `|`）而非裸竖线行；不用 `#` 当行注释（Markdown 里 `#` 是标题），要注释用 `<!-- -->`。新增任何 `.md` 生成器都照此办，并加测试守住格式。
 ## 构建 / 调试 / 验收固定流程
 - 构建：`python -m unittest discover -s tests` ｜ 测试：`python -m unittest discover -s tests` ｜ 验收通用标准：<暂无>

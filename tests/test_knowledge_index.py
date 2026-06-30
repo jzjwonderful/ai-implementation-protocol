@@ -33,15 +33,21 @@ class KnowledgeIndex(unittest.TestCase):
         d = Path(tempfile.mkdtemp()); (d/".aip").mkdir()
         (d/".aip"/"knowledge.md").write_text(SAMPLE, encoding="utf-8"); return d
     def test_header_has_apply_scope(self):
-        self.assertIn("适用范围", k.expected_index_text(self._b()).splitlines()[1])
+        header = [l for l in k.expected_index_text(self._b()).splitlines() if l.startswith("| ID")][0]
+        self.assertIn("适用范围", header)
+    def test_valid_gfm_table(self):
+        out = k.expected_index_text(self._b()).splitlines()
+        hdr = next(i for i, l in enumerate(out) if l.startswith("| ID"))
+        sep = out[hdr + 1]
+        self.assertEqual(set(sep) - set(" "), {"|", "-"})  # 分隔行只由 | - 空格 组成
     def test_draft_preserved(self):
-        line = [l for l in k.expected_index_text(self._b()).splitlines() if l.startswith("K-002")][0]
+        line = [l for l in k.expected_index_text(self._b()).splitlines() if l.startswith("| K-002")][0]
         self.assertIn("draft", line)
     def test_row_order(self):
-        line = [l for l in k.expected_index_text(self._b()).splitlines() if l.startswith("K-001")][0]
-        cols = [c.strip() for c in line.split("|")]
-        self.assertEqual(cols[1], "build"); self.assertEqual(cols[2], "active")
-        self.assertEqual(cols[3], "仅 Windows runner + pnpm<9"); self.assertEqual(cols[5], "2026-06-01")
+        line = [l for l in k.expected_index_text(self._b()).splitlines() if l.startswith("| K-001")][0]
+        cols = [c.strip() for c in line.split("|")]  # 行首/尾的 | 会产生空串，列从下标 1 起
+        self.assertEqual(cols[2], "build"); self.assertEqual(cols[3], "active")
+        self.assertEqual(cols[4], "仅 Windows runner + pnpm<9"); self.assertEqual(cols[6], "2026-06-01")
 
 if __name__ == "__main__":
     unittest.main()
