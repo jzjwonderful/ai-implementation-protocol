@@ -18,7 +18,7 @@ gates:
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
-    # cmd: ""              # 无 lint 工具；根/插件副本一致性靠 iron_rules + sync_plugin.py 人工纪律
+    cmd: "python scripts/sync_plugin.py --check"   # 根/插件副本逐字节比对（含 VERSION），不一致退出码 1
   e2e:
     # cmd: ""              # 无 e2e 场景
 

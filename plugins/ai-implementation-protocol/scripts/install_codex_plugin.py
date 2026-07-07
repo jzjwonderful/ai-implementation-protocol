@@ -131,12 +131,20 @@ def main() -> int:
     upsert_marketplace_entry(marketplace, f"./plugins/{PLUGIN_NAME}")
     write_json(marketplace_path, marketplace)
 
+    # 安装后自检：关键文件真落盘了才算装好。
+    missing = [p for p in [destination_plugin / ".codex-plugin" / "plugin.json",
+                           destination_plugin / "scripts" / "aip_init.py",
+                           marketplace_path] if not p.exists()]
+    if missing or not installed:
+        raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
+
     print(f"Installed Codex plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
     for path in purged:
         print(f"Removed obsolete commands: {path}")
     print(f"Updated marketplace: {marketplace_path}")
+    print(f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0
 

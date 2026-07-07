@@ -9,7 +9,7 @@
   - 下一步: 按 issue#4 的任务 0~7 顺序逐个提交；全部完成后移出本线
 
 ## 已知缺口 / 旁路待办
-1. `gates.lint_or_drift` 未声明：根/插件副本一致性靠 sync_plugin.py + pre-commit hook 兜底，但未在 config.yaml 显式声明检查命令
+（当前无）
 
 <!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->
 ### 自动摘要（派生，勿手改）

@@ -83,9 +83,13 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 2. **Index consistent** — `knowledge_index.md` matches the current `knowledge.md` (rebuild with `aip knowledge` if not).
 3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty.
 4. **No legacy residue** — none of the forbidden filenames appear in the repo.
-5. **Dual-copy sync** (engine repo only) — top-level `scripts/` and `templates/` match the `plugins/ai-implementation-protocol/` copies byte-for-byte (rebuild with `sync_plugin.py` if not).
+5. **Dual-copy sync** (engine repo only) — the synced top-level sources (`scripts/`, `docs/`, `templates/`, `VERSION`) match the `plugins/ai-implementation-protocol/` copies byte-for-byte, with no stale extras on the plugin side (rebuild with `sync_plugin.py` if not; the compare logic lives once, in `sync_plugin.drift`, which `sync_plugin.py --check` also runs).
 
 Exit 0 = pass; non-zero = violations listed on stdout.
+
+## `aip doctor` (diagnosis, non-blocking)
+
+`aip doctor` (`python scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (including knowledge entries whose `最后复核` is >90 days old — WARN only), install health (plugin package, skill files, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo dual-copy sync. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
 
 ## Commands (AI-autonomous; the human only runs init)
 

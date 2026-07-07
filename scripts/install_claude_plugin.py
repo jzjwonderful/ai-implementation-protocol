@@ -79,11 +79,18 @@ def main() -> int:
     installed = install_skills(destination_plugin, home, args.force)
     purged = purge_obsolete_commands(home)
 
+    # 安装后自检：关键文件真落盘了才算装好。
+    missing = [p for p in [destination_plugin / ".claude-plugin" / "plugin.json",
+                           destination_plugin / "scripts" / "aip_init.py"] if not p.exists()]
+    if missing or not installed:
+        raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
+
     print(f"Installed Claude Code plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
     for path in purged:
         print(f"Removed obsolete commands: {path}")
+    print(f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
     print("Restart Claude Code or open a new session for the skills to be picked up.")
     return 0
 
