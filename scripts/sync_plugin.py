@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "plugins" / "ai-implementation-protocol"
 SYNCED_DIRS = ["scripts", "docs", "templates", "schemas"]
+SYNCED_FILES = ["VERSION"]
 # superpowers/ 是开发期产物（spec/plan），不进可分发插件包。
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "superpowers")
 
@@ -39,6 +40,17 @@ def main() -> int:
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src, dst, ignore=IGNORE)
+        print(f"synced: {name}")
+
+    for name in SYNCED_FILES:
+        src = REPO_ROOT / name
+        if not src.exists():
+            print(f"skip (no source): {name}")
+            continue
+        if args.check:
+            print(f"would sync: {name} -> plugins/ai-implementation-protocol/{name}")
+            continue
+        shutil.copy2(src, PLUGIN_ROOT / name)
         print(f"synced: {name}")
 
     print("Plugin sync complete." if not args.check else "Check only; nothing written.")
