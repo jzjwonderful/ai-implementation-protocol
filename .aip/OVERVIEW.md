@@ -4,7 +4,9 @@
 > 只装往前看 + 易腐的状态；不装 git 能派生的（改了哪些文件、流水账）。每块封顶几行；线 done 立即移出。
 
 ## 在建（多线看板）
-（当前无活跃线）
+▶[active] issue#4 增强实施：README 纠偏 → SKILL/协议纪律修订 → init 测试 → VERSION+doctor → 安装/sync 修正
+  - must_read: docs/protocol.md, plugins/ai-implementation-protocol/skills/aip/SKILL.md
+  - 下一步: 按 issue#4 的任务 0~7 顺序逐个提交；全部完成后移出本线
 
 ## 已知缺口 / 旁路待办
 1. `gates.lint_or_drift` 未声明：根/插件副本一致性靠 sync_plugin.py + pre-commit hook 兜底，但未在 config.yaml 显式声明检查命令
