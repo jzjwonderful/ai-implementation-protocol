@@ -38,19 +38,37 @@ Any AI starting or resuming work:
 
 ### Two capture paths
 
-- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → write to `knowledge.md` (start as `状态: draft`, promoted to `active` only after the human confirms).
+- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → write to `knowledge.md` (`状态: draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
 - **Side path** — a problem unrelated to the current task → search `knowledge.md` + `inbox.md` first → if new, file it in `inbox.md` (don't blindly append).
 
 ### Write discipline (all sedimentation)
 
-Draft → compare against the target doc to de-dup (merge/cross-link if similar, add only if genuinely new) → write `状态: draft` → notify the user (what was recorded, which entry was referenced, which checks ran). A draft stays draft until the human confirms; the AI never self-promotes to `active` or silently edits old content. Only **verified** items enter knowledge.
+Run the review checklist (next section) → write → notify the user in-session (which docs changed, a one-line reason each) → the edit lands in the same git commit as the work. There is no pre-approval gate: the human audits after the fact via the notification plus git diff, which is why skipping the notification is forbidden.
+
+- `状态: draft` marks an entry the AI itself is not yet sure of (evidence incomplete); `active` means the review checklist passed. The AI may write `active` directly but must state the evidence in the notification.
+- Only **verified** items enter knowledge; guesses and side-issues go to `inbox.md`.
+- **Overturning a decision/convention** — past decisions are not iron law: an AI that finds one no longer fits current needs is expected to say so and correct it. The only mechanism is appending a new entry marked "supersedes ADR-N" with the reason; the old entry is flagged superseded, never rewritten or deleted in place.
+- **Deleting/merging existing content** — the only two valid reasons are "proven wrong" and "duplicate of another entry"; "unused this round" is not one. The notification must name what was removed and why.
+
+### Review checklist (`aip review`, soft quality)
+
+The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `$aip review`:
+
+1. Read the target doc in full (not just the tail); merge or cross-link near-duplicates instead of adding.
+2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox.md`.
+3. Necessity: could a new AI six months from now read this and act without asking anyone? If not, rewrite; if still not, drop it.
+4. Minimal: one entry states one thing; don't restate what git history or the code itself derives.
+5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
+6. Afterwards run `aip check` and rebuild the derived files (`aip knowledge` / `aip overview`).
+
+A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (per `.aip/` git history); the user runs `$aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
 
 ### Completion check (when a work line is done)
 
 **Tier 1 (every time a line wraps up):**
 
 1. Run `aip check` (red blocks the commit; fix item by item).
-2. Scoped correction: tidy only the entries you touched this round and their direct links (draft/diff, no silent edits elsewhere).
+2. Scoped correction: tidy only the entries you touched this round and their direct links (checklist-reviewed and notified; no silent edits outside the line's scope).
 3. Capture sweep: list what you concretely learned/hit this round — into knowledge / inbox / reference / conventions / config?
 4. Rebuild derived files: `aip knowledge` (index) and `aip overview` (digest).
 5. Move the line off the OVERVIEW board.
@@ -71,11 +89,13 @@ Exit 0 = pass; non-zero = violations listed on stdout.
 
 ## Commands (AI-autonomous; the human only runs init)
 
-Day-to-day actions (capture, check, rebuild index/digest, read OVERVIEW to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
+Day-to-day actions (capture, check, review, rebuild index/digest, read OVERVIEW to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
 
 ```
 python scripts/aip_init.py --repo-root .
 ```
+
+`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, write the guide blocks, install hooks, rebuild derived files — idempotent, existing files are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
 
 **Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the OVERVIEW active line on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
 
@@ -124,7 +144,7 @@ What is load-bearing is enforced by **deterministic checks that block**, not pro
 - **`aip check`** is a blocking check: living docs present, knowledge index consistent and fields complete, no forbidden legacy files, dual-copy synced. A hook runs it automatically.
 - **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` so it can't be forgotten.
 
-Method *quality* (was the investigation deep, the review real) can't be machine-forced — the checks verify the *residue* a method must leave (verified causes, sources cited, human-confirmed promotion). Beyond residue it is best-effort by design: a poorly executed method leaves an incomplete slot the check rejects.
+Method *quality* (was the investigation deep, the review real) can't be machine-forced — the checks verify the *residue* a method must leave (verified causes, sources cited, in-session notification of every doc edit, the git trail). Beyond residue it is best-effort by design: a poorly executed method leaves an incomplete slot the check rejects.
 
 ## Optional Knowledge Sources
 
