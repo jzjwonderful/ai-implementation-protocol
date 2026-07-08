@@ -13,8 +13,4 @@
 - `conventions.md`：项目规约（怎么干的常驻规则）
 - `config.yaml`：本项目适配配置（真理源/机器检查命令/适用视角）
 
-其它：
-
-- `protocols/`：项目内协议副本
-
 任务线状态记在 `OVERVIEW.md` 看板，不再有 per-feature 工作包目录或运行时指针。

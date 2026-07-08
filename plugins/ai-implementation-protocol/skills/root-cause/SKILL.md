@@ -22,9 +22,9 @@ description: Use when facing any bug, error, crash, unexpected behavior, "why do
 6. **触类旁通（同类排查）** —— 根因一旦确认，**按其机理把它当成一类缺陷而非一处**：在当前变更范围内横扫所有共享该根因的兄弟站点，连同主站点一并修复，别只堵眼前这一个。范围之外的同类登记进 `inbox.md`，绝不默默漏过。
    - **边界**：同一根因的兄弟站点属 **in-scope**，不是侧发现——必须扫、必须处理；侧发现协议只收**无关**问题（capture, don't chase）。别拿"别追侧发现"当借口跳过同类排查。
 7. **交用户判断** —— 摆出【根因 + 证据 + **同类波及面（已扫范围 + 命中站点）** + 修复选项 + 各自取舍】，由用户决策（接 AIP Stop-and-ask），不擅自实施深层改动。
-8. **沉淀** —— 验证过的真因写入 `.aip/knowledge.md`（按顶部 `## 类目` 选分类，填全字段，含 `适用范围`）：先检索去重（像就并/加关联，不像才新增），写 `状态: draft`，人确认后再改 active；然后跑 `python scripts/aip_knowledge.py --repo-root .` 重建索引；属决策的进 `decisions.md`，无关侧发现进 `inbox.md`。
+8. **沉淀** —— 验证过的真因写入 `.aip/knowledge.md`（按顶部 `## 类目` 选分类，填全字段，含 `适用范围`）：先检索去重（像就并/加关联，不像才新增）；按捕获纪律定状态——过 review 自检清单可直接标 `active` 并在知会里给依据，证据不足才先写 `draft`；然后跑 `python scripts/aip_knowledge.py --repo-root .` 重建索引；属决策的进 `decisions.md`，无关侧发现进 `inbox.md`。
 
-> 调查产物一律落 AIP 活文档，不另起平行位置：验证过的真因进 `.aip/knowledge.md`（先 draft），
+> 调查产物一律落 AIP 活文档，不另起平行位置：验证过的真因进 `.aip/knowledge.md`（按捕获纪律定 draft/active），
 > 属架构决策的进 `.aip/decisions.md`，无关侧发现进 `.aip/inbox.md`；工作线状态记在 `.aip/OVERVIEW.md` 看板。
 
 ## 时刻保持
