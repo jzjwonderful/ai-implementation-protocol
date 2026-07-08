@@ -36,9 +36,11 @@ Key scripts:
 
 - `aip_init.py` — scaffold `.aip/` (zero-config)
 - `aip_check.py` — the blocking validation check
+- `aip_doctor.py` — non-blocking install/environment health check (advisory)
 - `aip_knowledge.py` — rebuild the knowledge index
 - `aip_overview.py` — rebuild the OVERVIEW digest
 - `install_hooks.py` — install the git pre-commit (+ optional Claude Stop) hook
+- `sync_plugin.py` — regenerate the plugin copies from the top-level sources
 
 ### 4. Adapter Layer
 

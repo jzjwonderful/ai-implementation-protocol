@@ -44,29 +44,16 @@ def check_no_orphan_slots(repo: Path) -> list[str]:
             out.append(f"发现旧机制残留/未迁移文件: {path.relative_to(repo)}")
     return out
 
-MIRROR_DIRS = ["scripts", "templates"]
 PLUGIN_ROOT = "plugins/ai-implementation-protocol"
 
 def check_dual_copy(repo: Path) -> list[str]:
     # 镜像比对只对 AIP 引擎自身仓库有意义。消费方项目没有这个插件包，
     # 否则项目自带的 scripts/、templates/ 会被逐个误判成"副本缺失"。
+    # 比对实现只有一份，在 sync_plugin.drift（覆盖全部同步目录 + VERSION）。
     if not (repo / PLUGIN_ROOT).is_dir():
         return []
-    out = []
-    for sub in MIRROR_DIRS:
-        src = repo / sub
-        if not src.is_dir():
-            continue
-        for f in src.rglob("*"):
-            if not f.is_file() or "__pycache__" in f.parts:
-                continue
-            rel = f.relative_to(repo)
-            mirror = repo / PLUGIN_ROOT / rel
-            if not mirror.exists():
-                out.append(f"plugins 副本缺失: {rel}（跑 sync_plugin.py）")
-            elif read_text(mirror) != read_text(f):
-                out.append(f"plugins 副本漂移: {rel}（跑 sync_plugin.py）")
-    return out
+    import sync_plugin
+    return [f"plugins {v}（跑 sync_plugin.py）" for v in sync_plugin.drift(repo)]
 
 def run_all(repo: Path) -> list[str]:
     return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_dual_copy(repo)

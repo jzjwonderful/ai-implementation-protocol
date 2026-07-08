@@ -34,7 +34,7 @@ git pull
 python scripts/install_claude_plugin.py --force
 ```
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip.py init --repo-root <target>`) once in each AIP-enabled repository to scaffold the new `knowledge.md` / `knowledge_index.md` living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
 
 The installer copies the plugin package to:
 
@@ -51,13 +51,10 @@ and installs the bundled skills to:
 
 `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks to drive root-cause investigation and deposit verified causes into `.aip/knowledge.md`.
 
-Open a new Claude Code session after installation. The `aip` skill will auto-trigger when you invoke `$aip`:
+Open a new Claude Code session after installation. `$aip init` is the only command a human types — everything else (capture, checks, index rebuilds, resuming from the OVERVIEW board) is triggered by the AI at the right moment:
 
 ```text
 $aip init
-$aip start 2026-04-26-my-feature --title "My feature"
-$aip resume
-$aip check
 ```
 
 ## Install The Codex Plugin
@@ -77,7 +74,7 @@ git pull
 python scripts/install_codex_plugin.py --force
 ```
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip.py init --repo-root <target>`) once in each AIP-enabled repository to scaffold the new `knowledge.md` / `knowledge_index.md` living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
 
 The installer copies the plugin package to:
 
@@ -100,49 +97,28 @@ It also installs the bundled skill entries to:
 
 Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` and `root-cause` skills.
 
-Use it from Codex with command-like skill prompts:
+Use it from Codex the same way — `$aip init` once per repo, the rest is AI-triggered:
 
 ```text
 $aip init
-$aip start 2026-04-26-my-feature --title "My feature"
-$aip resume
-$aip check
 ```
 
 ## Core Ideas
 
-AIP separates project knowledge into four layers:
-
-1. repository knowledge
-2. feature work package
-3. machine-readable runtime state
-4. local validation tools
+AIP keeps project state in a small set of **living docs** (cross-task, long-lived) plus local validation scripts. There are no per-feature work packages and no runtime pointer — task state lives on the OVERVIEW board.
 
 All AIP outputs inside a target project live under a single hidden `.aip/` directory (like `.git`):
 
 ```text
 .aip/
-├── STATUS.md                 # current-state source of truth (read first)
-├── canonical-assets.md       # registry of assets to reuse (anti-accretion)
+├── OVERVIEW.md               # multi-line board + auto digest (read first)
 ├── decisions.md              # ADR-lite decision log (append-only)
-├── findings.md               # side-finding inbox (capture, don't chase)
 ├── knowledge.md              # verified root causes / gotchas (append-only, recall-first)
 ├── knowledge_index.md        # generated catalog of knowledge.md (rebuilt via `aip knowledge`)
-├── config.yaml               # project adaptation (truth sources / gates / lenses)
-├── _runtime/
-│   └── current_task.json
-├── features/
-│   └── <feature-id>/
-│       ├── spec.md
-│       ├── plan.md
-│       ├── task_board.yaml
-│       ├── file_scope.yaml
-│       ├── decisions.md
-│       ├── handoff.md
-│       ├── verification.md
-│       └── session_log.md
-└── protocols/
-    └── ai-implementation-protocol.md
+├── reference.md              # domain concepts, core invariants, reusable implementations
+├── inbox.md                  # side-finding inbox (capture, don't chase)
+├── conventions.md            # standing how-we-work rules
+└── config.yaml               # project adaptation (truth sources / gates / lenses)
 ```
 
 ## Repository Layout
@@ -150,48 +126,32 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 - `docs/`: protocol and product docs
 - `templates/`: reusable project files
 - `scripts/`: local CLI scripts
-- `schemas/`: machine-readable file schemas
-- `plugins/ai-implementation-protocol/`: installable Codex plugin package
+- `tests/`: unit tests for the scripts
+- `plugins/ai-implementation-protocol/`: installable plugin package (Codex + Claude Code)
 - `.agents/plugins/marketplace.json`: repo-local Codex marketplace entry
 - `adapters/`: optional integrations
 - `examples/`: sample project layouts
 
 ## Why The Plugin Directory Duplicates Files
 
-`plugins/ai-implementation-protocol/` is the package Codex installs. It intentionally contains its own `docs/`, `templates/`, `schemas/`, and `scripts/` copies so the installed plugin can run from `~/plugins/ai-implementation-protocol/` without depending on the original cloned repository path.
+`plugins/ai-implementation-protocol/` is the package that gets installed. It intentionally contains its own `docs/`, `templates/`, and `scripts/` copies so the installed plugin can run from `~/plugins/ai-implementation-protocol/` without depending on the original cloned repository path.
 
-The top-level directories remain the source project layout for developing AIP itself. The plugin directory is the distributable Codex package.
+The top-level directories remain the single source of truth for developing AIP itself; after editing them, run `python scripts/sync_plugin.py` to regenerate the plugin copies. The plugin directory is the distributable package.
 
 ## First Commands
 
-Initialize a target repository:
+Initialize a target repository (the only command a human runs):
 
 ```bash
-python scripts/aip.py init --repo-root <target-project>
+python scripts/aip_init.py --repo-root <target-project>
 ```
 
-Start a feature:
+The remaining scripts are triggered by the AI at the right moment, per the installed `aip` skill:
 
 ```bash
-python scripts/aip.py start 2026-04-26-sample-feature --repo-root <target-project>
-```
-
-Resume work:
-
-```bash
-python scripts/aip.py resume --repo-root <target-project>
-```
-
-Validate handoff completeness:
-
-```bash
-python scripts/aip.py check --repo-root <target-project>
-```
-
-Rebuild the knowledge index after editing `knowledge.md`:
-
-```bash
-python scripts/aip.py knowledge --repo-root <target-project>
+python scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
+python scripts/aip_knowledge.py --repo-root <target-project>  # rebuild knowledge_index.md
+python scripts/aip_overview.py --repo-root <target-project>   # rebuild the OVERVIEW auto digest
 ```
 
 ## Codex Plugin Internals
@@ -210,7 +170,7 @@ Repo-local marketplace:
 .agents/plugins/marketplace.json
 ```
 
-The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, schemas, and CLI scripts. See `docs/github-distribution.md` for publisher and user installation details.
+The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, and CLI scripts. See `docs/github-distribution.md` for publisher and user installation details.
 
 ## Nexus Dependency
 
@@ -221,5 +181,5 @@ If `.nexus-map/` does not exist, AIP still works.
 
 ## Current State
 
-This repository is intentionally scaffolded as a minimal but runnable first version.
+The engine runs on the flat living-doc model (see `.aip/decisions.md`, ADR-2): eight living docs under `.aip/`, an OVERVIEW board for task lines, and `aip check` as the one blocking machine gate.
 The next conversation can continue from here without re-deciding the basic architecture.

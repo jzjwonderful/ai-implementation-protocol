@@ -80,10 +80,6 @@ def aip_root(target_repo: Path) -> Path:
     return target_repo / AIP_DIR
 
 
-def protocol_path(target_repo: Path) -> Path:
-    return aip_root(target_repo) / "protocols" / "ai-implementation-protocol.md"
-
-
 def project_living_path(target_repo: Path, name: str) -> Path:
     return aip_root(target_repo) / name
 

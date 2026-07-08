@@ -23,10 +23,9 @@ protocol or script changes.
 ## Recommended Steps
 
 1. Run `aip init` (scaffolds `.aip/` and installs the git pre-commit hook; zero-config)
-2. Review `.aip/protocols/ai-implementation-protocol.md`
-3. Add a work line to `OVERVIEW.md` when you start something; track its next step + `must_read` there
-4. Fill `.aip/config.yaml` as you go — truth sources, machine-check commands, lenses, iron rules (captured when first needed, not asked upfront)
-5. Keep `aip check` running via the hook (or add it to CI)
+2. Add a work line to `OVERVIEW.md` when you start something; track its next step + `must_read` there
+3. Fill `.aip/config.yaml` as you go — truth sources, machine-check commands, lenses, iron rules (captured when first needed, not asked upfront)
+4. Keep `aip check` running via the hook (or add it to CI); run `aip doctor` any time to check install/environment health
 
 ## Install Targets
 

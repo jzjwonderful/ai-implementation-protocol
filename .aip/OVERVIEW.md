@@ -7,7 +7,7 @@
 （当前无活跃线）
 
 ## 已知缺口 / 旁路待办
-1. `gates.lint_or_drift` 未声明：根/插件副本一致性靠 sync_plugin.py + pre-commit hook 兜底，但未在 config.yaml 显式声明检查命令
+（当前无）
 
 <!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->
 ### 自动摘要（派生，勿手改）
@@ -17,6 +17,7 @@
 **近期决策**
 - ADR-1：本仓库自举——从旧 `project_docs/` 迁入 `.aip/`
 - ADR-2：协议文档从 per-feature/bug 轨道模型迁到扁平活文档模型
+- ADR-3：捕获纪律从「draft 等人确认」改为「自主修改 + 事后审计」
 
 **核心概念**
 - （空）

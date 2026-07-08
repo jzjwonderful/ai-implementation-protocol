@@ -5,10 +5,11 @@ This plugin packages AIP as a repo-local Codex plugin.
 It includes:
 
 - `.codex-plugin/plugin.json`
-- `skills/aip/SKILL.md` — `$aip` command router
+- `skills/aip/SKILL.md` — the `aip` engine skill (AI-autonomous; the human only runs `$aip init`)
 - `skills/root-cause/SKILL.md` — root-cause investigation + knowledge sedimentation
 - `scripts/` CLI tools
-- `docs/`, `templates/`, and `schemas/` resources used by the scripts
+- `docs/` and `templates/` resources used by the scripts
+- `VERSION` — the packaged engine version
 
 The repository marketplace entry lives at:
 
@@ -25,19 +26,15 @@ The installer also writes compatibility skill entries to:
 
 This makes the `aip` and `root-cause` skills visible in Codex versions that load user skills directly from `.agents/skills`.
 
-After installation, use the `aip` skill to initialize a repository, start a feature package, resume work, or validate handoff completeness.
+After installation, run `$aip init` once per repository. Everything else — capturing knowledge, running `aip check`, rebuilding the index/digest, resuming from the OVERVIEW board — is triggered by the AI at the right moment, not typed by the human.
 
-Codex skill examples:
+Codex skill example:
 
 ```text
 $aip init
-$aip start 2026-04-26-my-feature --title "My feature"
-$aip resume
-$aip check
-$aip knowledge
 ```
 
-The skill routes these invocations to `scripts/aip.py` inside the installed plugin package. The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`.
+The skill drives the CLI scripts (`aip_init.py`, `aip_check.py`, `aip_knowledge.py`, `aip_overview.py`, `aip_doctor.py`) inside the installed plugin package. The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`.
 
 For GitHub distribution, publish the repository and ask users to run:
 
