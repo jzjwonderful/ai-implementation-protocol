@@ -50,6 +50,13 @@ class Freshness(unittest.TestCase):
         items = doc.check_knowledge_freshness(d, today=date(2026, 7, 1))
         self.assertEqual(levels(items), ["WARN"])
 
+    def test_stale_days_override(self):
+        # 60 天前的条目：默认 90 天阈值不报，收紧到 30 天就报。
+        d = self._repo_with_entry("2026-05-02")
+        self.assertEqual(doc.check_knowledge_freshness(d, today=date(2026, 7, 1)), [])
+        items = doc.check_knowledge_freshness(d, today=date(2026, 7, 1), stale_days=30)
+        self.assertEqual(levels(items), ["WARN"])
+
 
 class InstallHealth(unittest.TestCase):
     def test_missing_install_is_warn(self):

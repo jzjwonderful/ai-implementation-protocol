@@ -52,11 +52,11 @@ Run the review checklist (next section) → write → notify the user in-session
 
 ### Review checklist (`aip review`, soft quality)
 
-The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `$aip review`:
+The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. **The default action is delete or merge, not add**: every addition must first clear the necessity bar below, or it doesn't get written. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `$aip review`:
 
 1. Read the target doc in full (not just the tail); merge or cross-link near-duplicates instead of adding.
-2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox.md`.
-3. Necessity: could a new AI six months from now read this and act without asking anyone? If not, rewrite; if still not, drop it.
+2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox.md`. Promote an entry to `active` only after every checklist item passes, and only with the evidence stated in the notification.
+3. Necessity: without this entry, would a new AI six months from now clearly pay a higher comprehension cost? If no, delete it; if yes but it reads unclearly, rewrite; if still unclear, drop it.
 4. Minimal: one entry states one thing; don't restate what git history or the code itself derives.
 5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
 6. Afterwards run `aip check` and rebuild the derived files (`aip knowledge` / `aip overview`).

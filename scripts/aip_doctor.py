@@ -37,7 +37,7 @@ def _read_version(path: Path) -> str | None:
         return None
 
 
-def check_project(repo: Path, engine: Path) -> list[Item]:
+def check_project(repo: Path, engine: Path, stale_days: int = STALE_DAYS) -> list[Item]:
     out: list[Item] = []
     if not aip_root(repo).is_dir():
         out.append(("INFO", f"项目未初始化 AIP（无 {aip_root(repo)}）",
@@ -52,11 +52,11 @@ def check_project(repo: Path, engine: Path) -> list[Item]:
         out.append(("ERROR", v, "补齐该条目的必填字段"))
     for v in aip_check.check_no_orphan_slots(repo):
         out.append(("ERROR", v, "内容迁入现行活文档后删除该文件"))
-    out.extend(check_knowledge_freshness(repo))
+    out.extend(check_knowledge_freshness(repo, stale_days=stale_days))
     return out
 
 
-def check_knowledge_freshness(repo: Path, today: date | None = None) -> list[Item]:
+def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days: int = STALE_DAYS) -> list[Item]:
     kn = aip_root(repo) / "knowledge.md"
     if not kn.exists():
         return []
@@ -74,8 +74,8 @@ def check_knowledge_freshness(repo: Path, today: date | None = None) -> list[Ite
                         "改成日期格式，复核后更新"))
             continue
         age = (today - reviewed).days
-        if age > STALE_DAYS:
-            out.append(("WARN", f'知识条目 {e["id"]} 已 {age} 天未复核（最后复核 {raw}）',
+        if age > stale_days:
+            out.append(("WARN", f'知识条目 {e["id"]} 已 {age} 天未复核（最后复核 {raw}，阈值 {stale_days} 天）',
                         "复核内容是否仍成立，更新「最后复核」日期"))
     return out
 
@@ -136,8 +136,8 @@ def check_engine_repo(repo: Path) -> list[Item]:
     return out
 
 
-def run_all(repo: Path, home: Path, engine: Path) -> list[Item]:
-    return (check_project(repo, engine) + check_install(home, engine)
+def run_all(repo: Path, home: Path, engine: Path, stale_days: int = STALE_DAYS) -> list[Item]:
+    return (check_project(repo, engine, stale_days) + check_install(home, engine)
             + check_hooks(repo, engine) + check_engine_repo(repo))
 
 
@@ -147,8 +147,11 @@ def main() -> int:
     ap.add_argument("--repo-root", default=".")
     ap.add_argument("--home", default=str(Path.home()), help="含 plugins/、.claude/、.agents/ 的主目录。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))
+    ap.add_argument("--stale-days", type=int, default=STALE_DAYS,
+                    help=f"knowledge 条目超过多少天未复核就提醒（默认 {STALE_DAYS}）。")
     a = ap.parse_args()
-    items = run_all(Path(a.repo_root).resolve(), Path(a.home).resolve(), Path(a.engine_root).resolve())
+    items = run_all(Path(a.repo_root).resolve(), Path(a.home).resolve(),
+                    Path(a.engine_root).resolve(), a.stale_days)
     for level, msg, fix in items:
         print(f"[{level}] {msg}" + (f"\n        修复：{fix}" if fix else ""))
     errors = sum(1 for lv, _, _ in items if lv == "ERROR")
