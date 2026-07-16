@@ -14,7 +14,7 @@ truth_sources:
 # 本项目纯标准库、无构建步、无 lint 配置；唯一会真跑的检查是单元测试。
 gates:
   tests:
-    cmd: "python -m unittest discover -s tests -p \"test_*.py\""
+    cmd: "python3 -m unittest discover -s tests -p \"test_*.py\""
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
@@ -38,9 +38,12 @@ iron_rules:
   - "顶层 scripts/docs/templates 为唯一真源；改后必须跑 `python scripts/sync_plugin.py` 再生 plugins/ 副本，二者须逐字节一致"
   - "协议是真源：行为/规则变更同次更新 docs/protocol.md，并经 sync_plugin 同步进插件副本"
   - "行为/架构变更同次更新 .aip/OVERVIEW.md 看板"
+  - "所有编码任务宣布完成前，必须对照适用的 plan/需求、测试和其他约束完成验证闭环；无法闭环时至少执行相关 lint/build，并明确列出未验证项和风险"
+  - "重新执行 aip init 必须升级 AGENTS.md/CLAUDE.md 中带 AIP managed 标记的规则块；不得覆盖已有活文档或项目自有内容"
+  - "每条 plan/需求必须映射到实现位置和行为证据；不得删除、跳过或削弱测试来绕过约束"
 
 # 验证规范：自由文本指针。
-# verification_notes: "测试用标准库 unittest；跑 `python -m unittest discover -s tests -p \"test_*.py\"`。"
+# verification_notes: "测试用标准库 unittest；跑 `python3 -m unittest discover -s tests -p \"test_*.py\"`。编码任务交付还必须提供约束对照和验证结果。"
 
 # 方法层：本项目开发已在用 superpowers（docs/superpowers/ 下的 spec/plan 即其产物）。
 process_skills: "superpowers"

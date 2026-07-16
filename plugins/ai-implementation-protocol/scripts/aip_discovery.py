@@ -4,12 +4,16 @@ from pathlib import Path
 
 BEGIN = "<!-- BEGIN AIP (managed) -->"
 END = "<!-- END AIP (managed) -->"
+MANAGED_VERSION = "2"
 
 BLOCK_BODY = (
+    f"<!-- AIP managed version: {MANAGED_VERSION} -->\n"
     "## AI Implementation Protocol\n"
     "**会话开始时必须先调用 `aip` 技能，再做任何其他事（包括回答问题）。**\n"
     "调完技能后读 `.aip/OVERVIEW.md`（当前在建线）；遇问题先查 `.aip/knowledge.md`。\n"
     "其余按需查：`decisions.md` 架构决策 / `reference.md` 核心概念+复用件 / `inbox.md` 旁路问题 / `conventions.md` 规约。\n"
+    "编码任务开始前先读懂项目验证机制，并建立“plan/需求 → 实现位置 → 行为证据”的验收矩阵；完成前逐项核对。\n"
+    "不能只凭 build/lint 通过宣布功能完成，也不得通过删除、跳过或削弱测试绕过约束；未闭环时必须说明未验证项和风险。\n"
     "语言一律大白话，禁止黑话。\n"
 )
 

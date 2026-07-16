@@ -36,6 +36,18 @@ Any AI starting or resuming work:
 
 ## Capture + Completion Check
 
+### Coding delivery verification
+
+For any coding work, including business feature development and bug fixes, verification is part of the work rather than an optional follow-up.
+
+Before editing code, the AI must understand the repository's verification mechanism and inspect the applicable plan or requirements, existing tests, build/lint commands, CI configuration, and other constraints. It must identify the verification path before implementation starts and create an acceptance matrix mapping each requirement to an implementation location and behavioral evidence. The matrix may live in the active OVERVIEW line or its `tracks/<id>.md` companion.
+
+Before declaring the work complete, the AI must compare the implementation against those constraints and run the applicable verification chain. The normal chain is: constraint comparison → implementation check → tests/build/lint/static or end-to-end checks → result comparison. If the full chain cannot run, the AI must at least run the relevant lint or build checks and state every skipped check, the reason, and the remaining risk. It must not describe unverified behavior as completed.
+
+Build and lint results alone never prove that a plan requirement was implemented. Each matrix row needs behavioral evidence or an explicit reason why behavioral evidence is not applicable. Existing tests must not be deleted, skipped, weakened, or changed only to make checks pass; any test change must be justified against the requirement and reviewed as part of the implementation.
+
+Every completion report for coding work must include the changed result, constraint comparison, commands run and their results, skipped checks and reasons, and remaining risks. If the full loop did not complete, the report must say “partially verified / verification loop incomplete”.
+
 ### Two capture paths
 
 - **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → write to `knowledge.md` (`状态: draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
@@ -67,11 +79,12 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 
 **Tier 1 (every time a line wraps up):**
 
-1. Run `aip check` (red blocks the commit; fix item by item).
-2. Scoped correction: tidy only the entries you touched this round and their direct links (checklist-reviewed and notified; no silent edits outside the line's scope).
-3. Capture sweep: list what you concretely learned/hit this round — into knowledge / inbox / reference / conventions / config?
-4. Rebuild derived files: `aip knowledge` (index) and `aip overview` (digest).
-5. Move the line off the OVERVIEW board.
+1. For coding work, perform the coding delivery verification above and include its evidence in the completion report.
+2. Run `aip check` (red blocks the commit; fix item by item).
+3. Scoped correction: tidy only the entries you touched this round and their direct links (checklist-reviewed and notified; no silent edits outside the line's scope).
+4. Capture sweep: list what you concretely learned/hit this round — into knowledge / inbox / reference / conventions / config?
+5. Rebuild derived files: `aip knowledge` (index) and `aip overview` (digest).
+6. Move the line off the OVERVIEW board.
 
 **Tier 2 (on an architecture/trade-off decision):** append one record to `decisions.md` (context, decision, rationale, impact) so it isn't re-litigated later.
 
@@ -99,7 +112,7 @@ Day-to-day actions (capture, check, review, rebuild index/digest, read OVERVIEW 
 python scripts/aip_init.py --repo-root .
 ```
 
-`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, write the guide blocks, install hooks, rebuild derived files — idempotent, existing files are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
+`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, upgrade the marked AIP guide blocks, install hooks, rebuild derived files — idempotent, existing living docs and user content are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
 
 **Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the OVERVIEW active line on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
 
