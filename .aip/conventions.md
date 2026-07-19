@@ -9,4 +9,4 @@
 ## 设计风格
 - 凡是后缀为 `.md` 的生成/派生件（如 `knowledge_index.md`、OVERVIEW 自动摘要块），输出必须是合法 Markdown（GFM）：用真表格（带 `|---|` 分隔行、行首尾带 `|`）而非裸竖线行；不用 `#` 当行注释（Markdown 里 `#` 是标题），要注释用 `<!-- -->`。新增任何 `.md` 生成器都照此办，并加测试守住格式。
 ## 构建 / 调试 / 验收固定流程
-- 构建：`python -m unittest discover -s tests` ｜ 测试：`python -m unittest discover -s tests` ｜ 验收通用标准：<暂无>
+- 构建：无独立构建步骤 ｜ 测试：`python -m unittest discover -s tests -p "test_*.py"` ｜ 副本检查：`python scripts/sync_plugin.py --check`（解释器名按本机定：python 或 python3 都行，需 Python 3.9+） ｜ 验收通用标准：编码任务必须完成适用约束的对照和验证闭环；每条 plan/需求必须有实现位置和行为证据；不能完整闭环时至少执行相关 lint/build，并明确说明未验证项和风险；不得通过删除、跳过或削弱测试绕过约束。

@@ -8,3 +8,6 @@ __pycache__/
 
 # subagent-driven-development 临时账本/简报/diff（勿提交）
 .superpowers/
+
+# Nexus 代码地图的本地索引缓存（生成物，勿提交）
+.nexus-map/

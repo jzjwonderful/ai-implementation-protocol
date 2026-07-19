@@ -13,6 +13,7 @@ from __future__ import annotations
 """
 
 import argparse
+import os
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -35,6 +36,27 @@ def _read_version(path: Path) -> str | None:
         return read_text(path).strip() or None
     except OSError:
         return None
+
+
+def default_codex_home(home: Path) -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return home / ".codex"
+
+
+def codex_skill_paths(home: Path, skill: str, codex_home: Path | None = None) -> list[Path]:
+    roots = [home / ".agents" / "skills"]
+    roots.append((codex_home or default_codex_home(home)) / "skills")
+    out: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        path = (root / skill / "SKILL.md").expanduser().resolve()
+        key = str(path).casefold()
+        if key not in seen:
+            seen.add(key)
+            out.append(path)
+    return out
 
 
 def check_project(repo: Path, engine: Path, stale_days: int = STALE_DAYS) -> list[Item]:
@@ -80,7 +102,7 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
     return out
 
 
-def check_install(home: Path, engine: Path) -> list[Item]:
+def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
     installed = home / "plugins" / PLUGIN_NAME
     reinstall = f"python {engine}/scripts/install_claude_plugin.py --force（Codex 用 install_codex_plugin.py）"
@@ -90,9 +112,11 @@ def check_install(home: Path, engine: Path) -> list[Item]:
     for skill in ["aip", "root-cause"]:
         if not (home / ".claude" / "skills" / skill / "SKILL.md").exists():
             out.append(("WARN", f"Claude 技能未安装：~/.claude/skills/{skill}/SKILL.md", reinstall))
-        if not (home / ".agents" / "skills" / skill / "SKILL.md").exists():
-            out.append(("INFO", f"Codex 技能未安装：~/.agents/skills/{skill}/SKILL.md（不用 Codex 可忽略）",
-                        f"python {engine}/scripts/install_codex_plugin.py --force"))
+        paths = codex_skill_paths(home, skill, codex_home)
+        if not any(path.exists() for path in paths):
+            pretty = " 或 ".join(str(path) for path in paths)
+            out.append(("INFO", f"Codex 技能未安装：{pretty}（不用 Codex 可忽略）",
+                        f"python {engine}/scripts/install_codex_plugin.py"))
     engine_ver = _read_version(engine / "VERSION")
     installed_ver = _read_version(installed / "VERSION")
     if installed_ver is None:
@@ -136,8 +160,9 @@ def check_engine_repo(repo: Path) -> list[Item]:
     return out
 
 
-def run_all(repo: Path, home: Path, engine: Path, stale_days: int = STALE_DAYS) -> list[Item]:
-    return (check_project(repo, engine, stale_days) + check_install(home, engine)
+def run_all(repo: Path, home: Path, engine: Path, stale_days: int = STALE_DAYS,
+            codex_home: Path | None = None) -> list[Item]:
+    return (check_project(repo, engine, stale_days) + check_install(home, engine, codex_home)
             + check_hooks(repo, engine) + check_engine_repo(repo))
 
 
@@ -146,12 +171,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="AIP install/environment health check.")
     ap.add_argument("--repo-root", default=".")
     ap.add_argument("--home", default=str(Path.home()), help="含 plugins/、.claude/、.agents/ 的主目录。")
+    ap.add_argument("--codex-home", default=None,
+                    help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS,
                     help=f"knowledge 条目超过多少天未复核就提醒（默认 {STALE_DAYS}）。")
     a = ap.parse_args()
-    items = run_all(Path(a.repo_root).resolve(), Path(a.home).resolve(),
-                    Path(a.engine_root).resolve(), a.stale_days)
+    home = Path(a.home).resolve()
+    codex_home = Path(a.codex_home).expanduser().resolve() if a.codex_home else None
+    items = run_all(Path(a.repo_root).resolve(), home,
+                    Path(a.engine_root).resolve(), a.stale_days, codex_home)
     for level, msg, fix in items:
         print(f"[{level}] {msg}" + (f"\n        修复：{fix}" if fix else ""))
     errors = sum(1 for lv, _, _ in items if lv == "ERROR")

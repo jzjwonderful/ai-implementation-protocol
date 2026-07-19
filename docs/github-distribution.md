@@ -64,11 +64,14 @@ It also installs:
 
 ```text
 ~/.agents/skills/aip/SKILL.md
+~/.agents/skills/root-cause/SKILL.md
 ```
 
 for Codex versions that discover user skills from `.agents/skills`.
 
-with a local marketplace entry for the plugin.
+The installer also writes the same skill files to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`.
+
+The installer also writes a local marketplace entry for the plugin.
 
 ## Updating An Existing Install
 
@@ -76,7 +79,7 @@ After pulling a newer version, users can replace the installed plugin:
 
 ```bash
 git pull
-python scripts/install_codex_plugin.py --force
+python scripts/install_codex_plugin.py
 ```
 
 ## Verification
@@ -86,7 +89,15 @@ After installation, confirm these files exist:
 ```text
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
 ~/.agents/skills/aip/SKILL.md
+~/.agents/skills/root-cause/SKILL.md
 ~/.agents/plugins/marketplace.json
+```
+
+Also confirm the Codex home skill files exist:
+
+```text
+$CODEX_HOME/skills/aip/SKILL.md
+$CODEX_HOME/skills/root-cause/SKILL.md
 ```
 
 Then restart Codex or refresh the plugin list and use the `aip` skill.

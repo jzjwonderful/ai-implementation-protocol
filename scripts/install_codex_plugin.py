@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -46,17 +47,46 @@ def purge_obsolete_commands(home: Path) -> list[Path]:
     return []
 
 
-def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
+def default_codex_home(home: Path) -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return home / ".codex"
+
+
+def codex_skill_roots(home: Path, codex_home: Path, skill_scope: str) -> list[Path]:
+    roots: list[Path] = []
+    if skill_scope in {"agents", "both"}:
+        roots.append(home / ".agents" / "skills")
+    if skill_scope in {"codex-home", "both"}:
+        roots.append(codex_home / "skills")
+
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for root in roots:
+        resolved = root.expanduser().resolve()
+        key = str(resolved).casefold()
+        if key not in seen:
+            seen.add(key)
+            unique.append(resolved)
+    return unique
+
+
+def install_skills(source_plugin: Path, skill_roots: list[Path], force: bool) -> list[Path]:
     skills_root = source_plugin / "skills"
     if not skills_root.exists():
         raise SystemExit(f"Plugin skills dir not found: {skills_root}")
 
+    sources = sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists())
+    planned = [(skill_root, src, skill_root / src.name) for skill_root in skill_roots for src in sources]
+    conflicts = [destination for _, _, destination in planned if destination.exists()]
+    if conflicts and not force:
+        raise SystemExit("Skill destination exists: " + ", ".join(str(p) for p in conflicts)
+                         + ". Re-run with --force to replace it.")
+
     installed: list[Path] = []
-    for src in sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists()):
-        destination_skill_dir = home / ".agents" / "skills" / src.name
+    for _, src, destination_skill_dir in planned:
         if destination_skill_dir.exists():
-            if not force:
-                raise SystemExit(f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it.")
             shutil.rmtree(destination_skill_dir)
         destination_skill_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
@@ -114,17 +144,37 @@ def main() -> int:
         type=Path,
         help="Home directory that contains .agents/plugins/marketplace.json and plugins/. Defaults to the current user home.",
     )
-    parser.add_argument("--force", action="store_true", help="Replace an existing installed plugin directory.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=True,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--skill-scope",
+        choices=["agents", "codex-home", "both"],
+        default="both",
+        help="Where to install Codex skills: both=~/.agents/skills and $CODEX_HOME/skills or ~/.codex/skills (default), "
+             "agents=~/.agents/skills only, codex-home=$CODEX_HOME/skills or ~/.codex/skills only.",
+    )
+    parser.add_argument(
+        "--codex-home",
+        default=None,
+        type=Path,
+        help="Codex home used when --skill-scope includes codex-home. Defaults to CODEX_HOME or <home>/.codex.",
+    )
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
     home = args.home.resolve()
+    codex_home = args.codex_home.expanduser().resolve() if args.codex_home else default_codex_home(home)
+    skill_roots = codex_skill_roots(home, codex_home, args.skill_scope)
     source_plugin = repo_root / "plugins" / PLUGIN_NAME
     destination_plugin = home / "plugins" / PLUGIN_NAME
     marketplace_path = home / ".agents" / "plugins" / "marketplace.json"
 
     copy_plugin(source_plugin, destination_plugin, args.force)
-    installed = install_skills(destination_plugin, home, args.force)
+    installed = install_skills(destination_plugin, skill_roots, args.force)
     purged = purge_obsolete_commands(home)
 
     marketplace = load_marketplace(marketplace_path)

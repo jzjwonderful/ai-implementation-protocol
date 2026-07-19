@@ -4,4 +4,4 @@
 > 琐碎且同文件 → 顺手修不登记。出口：立项为新线 / 进 decisions / 进 OVERVIEW 旁路待办 / 关闭。
 
 ## 条目
-- `.aip/config.yaml` 的 `gates.tests.cmd` 与 conventions 都写 `python -m unittest ...`，但脚本用了 `from __future__ import annotations` + `list[dict]`（需 Python 3.9+）。若机器上 `python` 指向 Python 2，gate 直接报错跑不起来。撞见场景：本会话里 `python` = 2.7，必须改用 `python3` 才能跑测试/脚本。出口待定：是否把命令统一成 `python3`，或在文档注明依赖 Python 3.9+。
+- 已关闭：命令不写死解释器名。gate/文档统一写 `python` 并注明「解释器名按本机、需 Python 3.9+」；强制闸门（pre-commit）本就烧 install_hooks 装钩子时的 `sys.executable` 绝对路径，不受名字影响。（早先"统一成 python3"的结论作废——Windows 上常只有 `python`、没有 `python3`，反而跑不起来。）

@@ -71,7 +71,7 @@ Update an existing local install:
 
 ```bash
 git pull
-python scripts/install_codex_plugin.py --force
+python scripts/install_codex_plugin.py
 ```
 
 > **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
@@ -94,6 +94,8 @@ It also installs the bundled skill entries to:
 ~/.agents/skills/aip/SKILL.md
 ~/.agents/skills/root-cause/SKILL.md
 ```
+
+The installer also writes the same skills to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
 
 Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` and `root-cause` skills.
 
