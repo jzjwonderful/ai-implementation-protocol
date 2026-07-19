@@ -77,6 +77,21 @@ class InstallHealth(unittest.TestCase):
         items = doc.check_install(home, ROOT)
         self.assertTrue(any("版本不一致" in msg and lv == "WARN" for lv, msg, _ in items))
 
+    def test_codex_home_skill_counts_as_installed(self):
+        home = Path(tempfile.mkdtemp())
+        installed = home/"plugins"/doc.PLUGIN_NAME
+        installed.mkdir(parents=True)
+        (installed/"VERSION").write_text((ROOT/"VERSION").read_text(encoding="utf-8"), encoding="utf-8")
+        for skill in ["aip", "root-cause"]:
+            claude = home/".claude"/"skills"/skill
+            claude.mkdir(parents=True)
+            (claude/"SKILL.md").write_text("x", encoding="utf-8")
+            codex = home/".codex"/"skills"/skill
+            codex.mkdir(parents=True)
+            (codex/"SKILL.md").write_text("x", encoding="utf-8")
+        items = doc.check_install(home, ROOT, codex_home=home/".codex")
+        self.assertFalse(any("Codex 技能未安装" in msg for _, msg, _ in items))
+
 
 class EngineRepoHealth(unittest.TestCase):
     def test_own_repo_is_clean(self):

@@ -29,7 +29,7 @@ protocol or script changes.
 
 ## Install Targets
 
-- **Codex**: `python scripts/install_codex_plugin.py` (installs the `aip` plugin + skill to `~/.agents/`).
+- **Codex**: `python scripts/install_codex_plugin.py` (installs the plugin and skills to both `~/.agents/skills` and `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced by default).
 - **Claude Code**: `python scripts/install_claude_plugin.py` (installs the `aip` skill to `~/.claude/skills/aip/`
   and the plugin package to `~/plugins/`).
 

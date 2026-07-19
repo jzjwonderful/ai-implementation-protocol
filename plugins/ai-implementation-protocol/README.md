@@ -26,6 +26,8 @@ The installer also writes compatibility skill entries to:
 
 This makes the `aip` and `root-cause` skills visible in Codex versions that load user skills directly from `.agents/skills`.
 
+The installer also writes the same skills to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
+
 After installation, run `$aip init` once per repository. Everything else — capturing knowledge, running `aip check`, rebuilding the index/digest, resuming from the OVERVIEW board — is triggered by the AI at the right moment, not typed by the human.
 
 Codex skill example:

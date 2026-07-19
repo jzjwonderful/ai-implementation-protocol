@@ -7,6 +7,7 @@ from __future__ import annotations
 - Claude 技能    ~/.claude/skills/{aip,root-cause}/
 - Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
 - Codex 技能     ~/.agents/skills/{aip,root-cause}/
+- Codex home 技能 $CODEX_HOME/skills/{aip,root-cause}/（默认 ~/.codex/skills）
 - Codex 旧命令   ~/.agents/commands/aip/
 - Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
 
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -56,11 +58,22 @@ def prune_marketplace(path: Path, removed: list[str]) -> None:
         removed.append(f"{path}（移除 {PLUGIN_NAME} 条目）")
 
 
+def default_codex_home(home: Path) -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return home / ".codex"
+
+
 def main() -> int:
     _utf8()
     ap = argparse.ArgumentParser(description="Uninstall AIP from this machine (Claude Code + Codex).")
     ap.add_argument("--home", default=Path.home(), type=Path, help="用户主目录。默认当前用户。")
-    home = ap.parse_args().home.resolve()
+    ap.add_argument("--codex-home", default=None, type=Path,
+                    help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
+    args = ap.parse_args()
+    home = args.home.resolve()
+    codex_home = args.codex_home.expanduser().resolve() if args.codex_home else default_codex_home(home)
     removed: list[str] = []
 
     rm(home / "plugins" / PLUGIN_NAME, removed)
@@ -69,6 +82,8 @@ def main() -> int:
     rm(home / ".claude" / "commands" / "aip", removed)
     for s in SKILL_NAMES:
         rm(home / ".agents" / "skills" / s, removed)
+    for s in SKILL_NAMES:
+        rm(codex_home / "skills" / s, removed)
     rm(home / ".agents" / "commands" / "aip", removed)
     prune_marketplace(home / ".agents" / "plugins" / "marketplace.json", removed)
 
