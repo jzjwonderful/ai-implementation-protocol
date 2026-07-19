@@ -21,13 +21,12 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def copy_plugin(source: Path, destination: Path, force: bool) -> None:
+def copy_plugin(source: Path, destination: Path) -> None:
     if not (source / ".codex-plugin" / "plugin.json").exists():
         raise SystemExit(f"Plugin manifest not found: {source / '.codex-plugin' / 'plugin.json'}")
 
+    # 安装即覆盖：装过就先清掉旧目录再拷。
     if destination.exists():
-        if not force:
-            raise SystemExit(f"Destination exists: {destination}. Re-run with --force to replace it.")
         shutil.rmtree(destination)
 
     shutil.copytree(
@@ -72,20 +71,16 @@ def codex_skill_roots(home: Path, codex_home: Path, skill_scope: str) -> list[Pa
     return unique
 
 
-def install_skills(source_plugin: Path, skill_roots: list[Path], force: bool) -> list[Path]:
+def install_skills(source_plugin: Path, skill_roots: list[Path]) -> list[Path]:
     skills_root = source_plugin / "skills"
     if not skills_root.exists():
         raise SystemExit(f"Plugin skills dir not found: {skills_root}")
 
     sources = sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists())
-    planned = [(skill_root, src, skill_root / src.name) for skill_root in skill_roots for src in sources]
-    conflicts = [destination for _, _, destination in planned if destination.exists()]
-    if conflicts and not force:
-        raise SystemExit("Skill destination exists: " + ", ".join(str(p) for p in conflicts)
-                         + ". Re-run with --force to replace it.")
+    planned = [(src, skill_root / src.name) for skill_root in skill_roots for src in sources]
 
     installed: list[Path] = []
-    for _, src, destination_skill_dir in planned:
+    for src, destination_skill_dir in planned:
         if destination_skill_dir.exists():
             shutil.rmtree(destination_skill_dir)
         destination_skill_dir.mkdir(parents=True, exist_ok=True)
@@ -145,12 +140,6 @@ def main() -> int:
         help="Home directory that contains .agents/plugins/marketplace.json and plugins/. Defaults to the current user home.",
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        default=True,
-        help=argparse.SUPPRESS,
-    )
-    parser.add_argument(
         "--skill-scope",
         choices=["agents", "codex-home", "both"],
         default="both",
@@ -173,8 +162,8 @@ def main() -> int:
     destination_plugin = home / "plugins" / PLUGIN_NAME
     marketplace_path = home / ".agents" / "plugins" / "marketplace.json"
 
-    copy_plugin(source_plugin, destination_plugin, args.force)
-    installed = install_skills(destination_plugin, skill_roots, args.force)
+    copy_plugin(source_plugin, destination_plugin)
+    installed = install_skills(destination_plugin, skill_roots)
     purged = purge_obsolete_commands(home)
 
     marketplace = load_marketplace(marketplace_path)
