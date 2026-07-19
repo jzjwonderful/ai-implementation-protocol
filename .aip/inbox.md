@@ -4,4 +4,4 @@
 > 琐碎且同文件 → 顺手修不登记。出口：立项为新线 / 进 decisions / 进 OVERVIEW 旁路待办 / 关闭。
 
 ## 条目
-- 已关闭：测试 gate 和验收规约已统一使用 `python3`，避免当前环境中 `python` 指向 Python 2.7 时无法运行测试。
+- 已关闭：命令不写死解释器名。gate/文档统一写 `python` 并注明「解释器名按本机、需 Python 3.9+」；强制闸门（pre-commit）本就烧 install_hooks 装钩子时的 `sys.executable` 绝对路径，不受名字影响。（早先"统一成 python3"的结论作废——Windows 上常只有 `python`、没有 `python3`，反而跑不起来。）

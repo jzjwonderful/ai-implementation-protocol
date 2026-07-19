@@ -4,6 +4,9 @@ from pathlib import Path
 
 BEGIN = "<!-- BEGIN AIP (managed) -->"
 END = "<!-- END AIP (managed) -->"
+# 只是写进托管块的版本戳，给人/doctor 看装的是第几版；不参与"要不要升级"的判断。
+# upsert 每次都把标记区整块重写，块内容一变就必刷新——不靠版本号比对，
+# 省得"改了内容却忘 bump 版本号"导致该升级的没升级。
 MANAGED_VERSION = "2"
 
 BLOCK_BODY = (

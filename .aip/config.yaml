@@ -12,9 +12,10 @@ truth_sources:
 
 # 机器检查：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据。
 # 本项目纯标准库、无构建步、无 lint 配置；唯一会真跑的检查是单元测试。
+# 解释器名按本机定：写 python 或 python3 都行，只要它是 Python 3.9+（脚本用了 3.9+ 语法）。
 gates:
   tests:
-    cmd: "python3 -m unittest discover -s tests -p \"test_*.py\""
+    cmd: "python -m unittest discover -s tests -p \"test_*.py\""
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
@@ -43,7 +44,7 @@ iron_rules:
   - "每条 plan/需求必须映射到实现位置和行为证据；不得删除、跳过或削弱测试来绕过约束"
 
 # 验证规范：自由文本指针。
-# verification_notes: "测试用标准库 unittest；跑 `python3 -m unittest discover -s tests -p \"test_*.py\"`。编码任务交付还必须提供约束对照和验证结果。"
+# verification_notes: "测试用标准库 unittest；跑 `python -m unittest discover -s tests -p \"test_*.py\"`（解释器名按本机，需 Python 3.9+）。编码任务交付还必须提供约束对照和验证结果。"
 
 # 方法层：本项目开发已在用 superpowers（docs/superpowers/ 下的 spec/plan 即其产物）。
 process_skills: "superpowers"
