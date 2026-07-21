@@ -60,11 +60,11 @@ After pulling a newer version:
 
 ```bash
 git pull
-python scripts/install_all.py --force
+python scripts/install_all.py            # overwrites every installed runtime
 # or one runtime:
-# python scripts/install_claude_plugin.py --force
-# python scripts/install_codex_plugin.py --force
-# python scripts/install_grok_plugin.py --force
+# python scripts/install_claude_plugin.py --force   # Claude still needs --force to overwrite
+# python scripts/install_codex_plugin.py
+# python scripts/install_grok_plugin.py
 ```
 
 ## Verification

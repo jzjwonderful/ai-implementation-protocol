@@ -1,4 +1,4 @@
-"""安装器冒烟：Claude / Codex / Grok 三端 skills 落点与 --force 行为。"""
+"""安装器冒烟：Claude / Codex / Grok 三端 skills 落点与覆盖安装行为。"""
 from __future__ import annotations
 
 import importlib
@@ -22,8 +22,8 @@ class InstallGrok(unittest.TestCase):
         # 直接调 main 的核心步骤：copy + skills
         src = ROOT / "plugins" / mod.PLUGIN_NAME
         dst = home / "plugins" / mod.PLUGIN_NAME
-        mod.copy_plugin(src, dst, force=False)
-        installed = mod.install_skills(dst, home, force=False)
+        mod.copy_plugin(src, dst)
+        installed = mod.install_skills(dst, home)
         self.assertTrue((dst / ".grok-plugin" / "plugin.json").exists())
         self.assertTrue((dst / "scripts" / "aip_init.py").exists())
         self.assertEqual(
@@ -40,24 +40,23 @@ class InstallGrok(unittest.TestCase):
         mod = _load("install_grok_plugin")
         src = ROOT / "plugins" / mod.PLUGIN_NAME
         dst = home / "plugins" / mod.PLUGIN_NAME
-        mod.copy_plugin(src, dst, force=False)
-        mod.install_skills(dst, home, force=False)
-        grok_plugin = mod.install_user_plugin(dst, home, force=False)
+        mod.copy_plugin(src, dst)
+        mod.install_skills(dst, home)
+        grok_plugin = mod.install_user_plugin(dst, home)
         self.assertTrue((grok_plugin / ".grok-plugin" / "plugin.json").exists())
         self.assertTrue((grok_plugin / "skills" / "aip" / "SKILL.md").exists())
 
-    def test_force_replaces_existing_skill(self):
+    def test_reinstall_overwrites_existing_skill(self):
+        # 默认覆盖：重跑安装直接替换旧 SKILL.md，无需 --force。
         home = Path(tempfile.mkdtemp())
         mod = _load("install_grok_plugin")
         src = ROOT / "plugins" / mod.PLUGIN_NAME
         dst = home / "plugins" / mod.PLUGIN_NAME
-        mod.copy_plugin(src, dst, force=False)
-        mod.install_skills(dst, home, force=False)
+        mod.copy_plugin(src, dst)
+        mod.install_skills(dst, home)
         skill = home / ".grok" / "skills" / "aip" / "SKILL.md"
         skill.write_text("stale", encoding="utf-8")
-        with self.assertRaises(SystemExit):
-            mod.install_skills(dst, home, force=False)
-        mod.install_skills(dst, home, force=True)
+        mod.install_skills(dst, home)
         self.assertNotEqual(skill.read_text(encoding="utf-8"), "stale")
 
 
@@ -115,7 +114,7 @@ class InstallAll(unittest.TestCase):
     def test_installs_all_runtimes_once(self):
         home = Path(tempfile.mkdtemp())
         mod = _load("install_all")
-        rc = mod.main(["--repo-root", str(ROOT), "--home", str(home), "--force"])
+        rc = mod.main(["--repo-root", str(ROOT), "--home", str(home)])
         self.assertEqual(rc, 0)
         engine = home / "plugins" / mod.PLUGIN_NAME
         self.assertTrue((engine / "scripts" / "aip_init.py").exists())
@@ -125,12 +124,14 @@ class InstallAll(unittest.TestCase):
         self.assertTrue((home / ".agents" / "plugins" / "marketplace.json").exists())
         # 默认不装 grok user plugin
         self.assertFalse((home / ".grok" / "plugins" / mod.PLUGIN_NAME).exists())
+        # 覆盖安装：重跑不因目标已存在而报错
+        self.assertEqual(mod.main(["--repo-root", str(ROOT), "--home", str(home)]), 0)
 
     def test_targets_subset(self):
         home = Path(tempfile.mkdtemp())
         mod = _load("install_all")
         rc = mod.main(
-            ["--repo-root", str(ROOT), "--home", str(home), "--force", "--targets", "grok"]
+            ["--repo-root", str(ROOT), "--home", str(home), "--targets", "grok"]
         )
         self.assertEqual(rc, 0)
         self.assertTrue((home / ".grok" / "skills" / "aip" / "SKILL.md").exists())

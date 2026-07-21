@@ -29,7 +29,7 @@ Codex also updates:
 Grok optional user-plugin registration:
 
 ```bash
-python scripts/install_grok_plugin.py --force --user-plugin
+python scripts/install_grok_plugin.py --user-plugin
 # → ~/.grok/plugins/ai-implementation-protocol/
 ```
 

@@ -23,7 +23,7 @@ PLUGIN_NAME = "ai-implementation-protocol"
 SUPPORTED = ("claude", "codex", "grok")
 
 
-def copy_engine(source: Path, destination: Path, force: bool) -> None:
+def copy_engine(source: Path, destination: Path) -> None:
     manifests = [
         source / ".claude-plugin" / "plugin.json",
         source / ".codex-plugin" / "plugin.json",
@@ -34,11 +34,8 @@ def copy_engine(source: Path, destination: Path, force: bool) -> None:
             f"Plugin package incomplete under {source}: need at least one of "
             ".claude-plugin / .codex-plugin / .grok-plugin plugin.json"
         )
+    # 安装即覆盖：重跑一键脚本直接替换旧引擎包，不设开关。
     if destination.exists():
-        if not force:
-            raise SystemExit(
-                f"Destination exists: {destination}. Re-run with --force to replace it."
-            )
         shutil.rmtree(destination)
     shutil.copytree(
         source,
@@ -73,13 +70,13 @@ def install_one(
     name: str,
     destination_plugin: Path,
     home: Path,
-    force: bool,
     user_plugin: bool,
 ) -> list[str]:
-    """装一端，返回给人看的落点说明行。"""
+    """装一端，返回给人看的落点说明行。一键脚本一律覆盖安装。"""
     lines: list[str] = []
     if name == "claude":
-        installed = claude.install_skills(destination_plugin, home, force)
+        # claude 分装器仍保留 force 开关；一键脚本按覆盖语义传 True。
+        installed = claude.install_skills(destination_plugin, home, force=True)
         purged = claude.purge_obsolete_commands(home)
         lines.append(f"[claude] skills → {home / '.claude' / 'skills'}")
         for p in installed:
@@ -102,12 +99,12 @@ def install_one(
             lines.append(f"  removed obsolete: {p}")
         lines.append(f"  marketplace: {marketplace_path}")
     elif name == "grok":
-        installed = grok.install_skills(destination_plugin, home, force)
+        installed = grok.install_skills(destination_plugin, home)
         lines.append(f"[grok] skills → {home / '.grok' / 'skills'}")
         for p in installed:
             lines.append(f"  skill: {p}")
         if user_plugin:
-            path = grok.install_user_plugin(destination_plugin, home, force)
+            path = grok.install_user_plugin(destination_plugin, home)
             lines.append(f"  user plugin: {path}")
     else:
         raise SystemExit(f"Internal error: unhandled target {name!r}")
@@ -134,11 +131,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Home directory for plugins/ and runtime skill dirs. Defaults to the current user home.",
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace existing engine package and skill directories.",
-    )
-    parser.add_argument(
         "--targets",
         default="all",
         help=f"Comma-separated subset of {{{','.join(SUPPORTED)}}} or 'all' (default).",
@@ -159,12 +151,12 @@ def main(argv: list[str] | None = None) -> int:
     if not source_plugin.is_dir():
         raise SystemExit(f"Plugin package not found: {source_plugin}")
 
-    copy_engine(source_plugin, destination_plugin, args.force)
+    copy_engine(source_plugin, destination_plugin)
 
     all_lines: list[str] = [f"Engine package: {destination_plugin}"]
     for name in targets:
         all_lines.extend(
-            install_one(name, destination_plugin, home, args.force, args.user_plugin)
+            install_one(name, destination_plugin, home, args.user_plugin)
         )
 
     # 自检：引擎脚本在，且每个目标至少有 aip skill

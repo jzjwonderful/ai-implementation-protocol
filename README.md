@@ -27,24 +27,24 @@ cd ai-implementation-protocol
 python scripts/install_all.py
 ```
 
-Update an existing install:
+Update an existing install (re-running always overwrites):
 
 ```bash
 git pull
-python scripts/install_all.py --force
+python scripts/install_all.py
 ```
 
 Only some runtimes:
 
 ```bash
-python scripts/install_all.py --force --targets claude,grok
+python scripts/install_all.py --targets claude,grok
 # legal names: claude, codex, grok, or all
 ```
 
 Optional Grok user-plugin registration (`~/.grok/plugins/`):
 
 ```bash
-python scripts/install_all.py --force --user-plugin
+python scripts/install_all.py --user-plugin
 ```
 
 Engine package always lands at:
@@ -86,7 +86,7 @@ Skills → `~/.claude/skills/`. `aip` routes `$aip` commands; `root-cause` auto-
 
 ```bash
 python scripts/install_codex_plugin.py
-# update: python scripts/install_codex_plugin.py --force
+# update: re-run the same command (existing files are replaced)
 ```
 
 Skills → `~/.agents/skills/`, and to `$CODEX_HOME/skills` (or `~/.codex/skills` when `CODEX_HOME` is unset); also updates `~/.agents/plugins/marketplace.json`. Existing AIP install files are replaced by default.
@@ -95,8 +95,8 @@ Skills → `~/.agents/skills/`, and to `$CODEX_HOME/skills` (or `~/.codex/skills
 
 ```bash
 python scripts/install_grok_plugin.py
-# update: python scripts/install_grok_plugin.py --force
-# optional user plugin: python scripts/install_grok_plugin.py --force --user-plugin
+# update: re-run the same command (existing files are replaced)
+# optional user plugin: python scripts/install_grok_plugin.py --user-plugin
 ```
 
 Skills → `~/.grok/skills/`. Optional `--user-plugin` also copies to `~/.grok/plugins/`.

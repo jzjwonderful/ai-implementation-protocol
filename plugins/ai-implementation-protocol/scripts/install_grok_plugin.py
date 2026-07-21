@@ -8,13 +8,12 @@ from pathlib import Path
 PLUGIN_NAME = "ai-implementation-protocol"
 
 
-def copy_plugin(source: Path, destination: Path, force: bool) -> None:
+def copy_plugin(source: Path, destination: Path) -> None:
     if not (source / ".grok-plugin" / "plugin.json").exists():
         raise SystemExit(f"Plugin manifest not found: {source / '.grok-plugin' / 'plugin.json'}")
 
+    # 安装即覆盖：已有旧包直接清掉再拷，不设开关。
     if destination.exists():
-        if not force:
-            raise SystemExit(f"Destination exists: {destination}. Re-run with --force to replace it.")
         shutil.rmtree(destination)
 
     shutil.copytree(
@@ -25,7 +24,7 @@ def copy_plugin(source: Path, destination: Path, force: bool) -> None:
     )
 
 
-def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
+def install_skills(source_plugin: Path, home: Path) -> list[Path]:
     skills_root = source_plugin / "skills"
     if not skills_root.exists():
         raise SystemExit(f"Plugin skills dir not found: {skills_root}")
@@ -34,10 +33,6 @@ def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
     for src in sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists()):
         destination_skill_dir = home / ".grok" / "skills" / src.name
         if destination_skill_dir.exists():
-            if not force:
-                raise SystemExit(
-                    f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it."
-                )
             shutil.rmtree(destination_skill_dir)
         destination_skill_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
@@ -45,7 +40,7 @@ def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
     return installed
 
 
-def install_user_plugin(source_plugin: Path, home: Path, force: bool) -> Path:
+def install_user_plugin(source_plugin: Path, home: Path) -> Path:
     """可选：把插件包装进 ~/.grok/plugins/，便于 `grok plugin list` 发现。
 
     默认不装：用户 skill（~/.grok/skills/）始终会被加载，足够日常使用。
@@ -53,10 +48,6 @@ def install_user_plugin(source_plugin: Path, home: Path, force: bool) -> Path:
     """
     destination = home / ".grok" / "plugins" / PLUGIN_NAME
     if destination.exists():
-        if not force:
-            raise SystemExit(
-                f"Grok plugin destination exists: {destination}. Re-run with --force to replace it."
-            )
         shutil.rmtree(destination)
     shutil.copytree(
         source_plugin,
@@ -81,11 +72,6 @@ def main() -> int:
         help="Home directory that contains .grok/skills/ and plugins/. Defaults to the current user home.",
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace an existing installed plugin directory or skill.",
-    )
-    parser.add_argument(
         "--user-plugin",
         action="store_true",
         help="Also copy the package under ~/.grok/plugins/ (Grok plugin discovery). Skills still go to ~/.grok/skills/.",
@@ -97,11 +83,11 @@ def main() -> int:
     source_plugin = repo_root / "plugins" / PLUGIN_NAME
     destination_plugin = home / "plugins" / PLUGIN_NAME
 
-    copy_plugin(source_plugin, destination_plugin, args.force)
-    installed = install_skills(destination_plugin, home, args.force)
+    copy_plugin(source_plugin, destination_plugin)
+    installed = install_skills(destination_plugin, home)
     grok_plugin: Path | None = None
     if args.user_plugin:
-        grok_plugin = install_user_plugin(destination_plugin, home, args.force)
+        grok_plugin = install_user_plugin(destination_plugin, home)
 
     # 安装后自检：关键文件真落盘了才算装好。
     missing = [

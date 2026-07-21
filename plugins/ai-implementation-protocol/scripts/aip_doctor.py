@@ -105,7 +105,7 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
     installed = home / "plugins" / PLUGIN_NAME
-    reinstall = f"python {engine}/scripts/install_all.py --force（或分端 install_claude/codex/grok_plugin.py）"
+    reinstall = f"python {engine}/scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
     if not installed.is_dir():
         out.append(("WARN", f"未找到已安装的插件包：{installed}", reinstall))
         return out
@@ -119,7 +119,7 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
                         f"python {engine}/scripts/install_codex_plugin.py"))
         if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
             out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
-                        f"python {engine}/scripts/install_grok_plugin.py --force"))
+                        f"python {engine}/scripts/install_grok_plugin.py"))
     engine_ver = _read_version(engine / "VERSION")
     installed_ver = _read_version(installed / "VERSION")
     if installed_ver is None:
