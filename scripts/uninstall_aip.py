@@ -4,10 +4,10 @@ from __future__ import annotations
 
 清理范围（缺啥跳啥，幂等）：
 - 引擎包         ~/plugins/ai-implementation-protocol/
-- Claude 技能    ~/.claude/skills/{aip,root-cause}/
+- Claude 技能    ~/.claude/skills/{aip,root-cause,aip-brainstorm}/
 - Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
-- Codex 技能     ~/.agents/skills/{aip,root-cause}/
-- Codex home 技能 $CODEX_HOME/skills/{aip,root-cause}/（默认 ~/.codex/skills）
+- Codex 技能     ~/.agents/skills/{aip,root-cause,aip-brainstorm}/
+- Codex home 技能 $CODEX_HOME/skills/{aip,root-cause,aip-brainstorm}/（默认 ~/.codex/skills）
 - Codex 旧命令   ~/.agents/commands/aip/
 - Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
 - Grok 技能      ~/.grok/skills/{aip,root-cause}/
@@ -25,7 +25,8 @@ import sys
 from pathlib import Path
 
 PLUGIN_NAME = "ai-implementation-protocol"
-SKILL_NAMES = ["aip", "root-cause"]
+
+from _aip_common import SKILL_NAMES  # noqa: E402  唯一真源，新增技能只改 _aip_common
 
 
 def _utf8() -> None:

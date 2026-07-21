@@ -19,7 +19,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import aip_check
-from _aip_common import aip_root, force_utf8, read_text
+from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
 from aip_knowledge import parse_entries
 from install_hooks import PRE_COMMIT_MARK
 
@@ -109,7 +109,7 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
     if not installed.is_dir():
         out.append(("WARN", f"未找到已安装的插件包：{installed}", reinstall))
         return out
-    for skill in ["aip", "root-cause"]:
+    for skill in SKILL_NAMES:
         if not (home / ".claude" / "skills" / skill / "SKILL.md").exists():
             out.append(("WARN", f"Claude 技能未安装：~/.claude/skills/{skill}/SKILL.md", reinstall))
         paths = codex_skill_paths(home, skill, codex_home)

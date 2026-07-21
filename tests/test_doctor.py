@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import aip_doctor as doc, aip_init
+from _aip_common import SKILL_NAMES
 
 
 def levels(items):
@@ -69,7 +70,7 @@ class InstallHealth(unittest.TestCase):
         installed = home/"plugins"/doc.PLUGIN_NAME
         installed.mkdir(parents=True)
         (installed/"VERSION").write_text("0.0.1\n", encoding="utf-8")
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             for base in [".claude", ".agents", ".grok"]:
                 p = home/base/"skills"/skill
                 p.mkdir(parents=True)
@@ -84,7 +85,7 @@ class InstallHealth(unittest.TestCase):
         installed = home/"plugins"/doc.PLUGIN_NAME
         installed.mkdir(parents=True)
         (installed/"VERSION").write_text((ROOT/"VERSION").read_text(encoding="utf-8"), encoding="utf-8")
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             claude = home/".claude"/"skills"/skill
             claude.mkdir(parents=True)
             (claude/"SKILL.md").write_text("x", encoding="utf-8")

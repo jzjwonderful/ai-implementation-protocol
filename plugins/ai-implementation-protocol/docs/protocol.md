@@ -100,6 +100,15 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 
 Exit 0 = pass; non-zero = violations listed on stdout.
 
+## Multi-AI brainstorm (`aip-brainstorm`)
+
+AIs running in separate terminals can hold a structured discussion about one topic through a single **topic document** under `.aip/brainstorm/<slug>.md`. AIs never talk to each other directly — every position, user interjection, and conclusion passes through the document.
+
+- **Roles by argument** — the first AI starts the topic (`aip_brainstorm.py start`, writing its opening position); each later AI just checks the document (`status`) and speaks (`say`) when the header field `当前轮到` names it. There is no real polling: the user relays "your turn" between terminals, or an AI self-schedules a wake-up if its CLI supports one.
+- **Deterministic state machine** — all document mutations go through `scripts/aip_brainstorm.py` (`start/say/note/conclude/escalate/abort/status`); the AI never edits the document by hand. The script enforces turn order, counts rounds, evaluates convergence, and validates document structure (`status` doubles as the document health check).
+- **User participation** — anything the user types into any participating session is immediately recorded as a `【用户】` entry (`note`), which costs no turn; that is how user input syncs to the other AIs.
+- **Convergence (no endless discussion)** — every speech ends with a stance: `继续` / `同意收敛` / `需要用户裁决`. All-agree flips the topic to `converged` (a conclusion is written); any `需要用户裁决` or exceeding the round cap flips it to `need-user` (a question list is written and discussion pauses until the user answers); the initiator may `abort` anytime.
+
 ## `aip doctor` (diagnosis, non-blocking)
 
 `aip doctor` (`python scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (including knowledge entries whose `最后复核` is >90 days old — WARN only), install health (plugin package, skill files, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo dual-copy sync. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.

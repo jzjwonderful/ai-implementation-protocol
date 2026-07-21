@@ -7,6 +7,7 @@ It includes:
 - `.claude-plugin/plugin.json` / `.codex-plugin/plugin.json` / `.grok-plugin/plugin.json`
 - `skills/aip/SKILL.md` — the `aip` engine skill (AI-autonomous; the human only runs `$aip init`)
 - `skills/root-cause/SKILL.md` — root-cause investigation + knowledge sedimentation
+- `skills/aip-brainstorm/SKILL.md` — multi-terminal multi-AI discussion through a shared topic document (turn-taking, convergence, user input relay)
 - `scripts/` CLI tools
 - `docs/` and `templates/` resources used by the scripts
 - `VERSION` — the packaged engine version
@@ -41,4 +42,4 @@ After installation, run `$aip init` once per repository. Everything else — cap
 $aip init
 ```
 
-The skill drives the CLI scripts (`aip_init.py`, `aip_check.py`, `aip_knowledge.py`, `aip_overview.py`, `aip_doctor.py`) inside the installed plugin package. The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`.
+The skill drives the CLI scripts (`aip_init.py`, `aip_check.py`, `aip_knowledge.py`, `aip_overview.py`, `aip_doctor.py`) inside the installed plugin package. The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`. The `aip-brainstorm` skill drives `aip_brainstorm.py`: AIs in separate terminals discuss one topic through a shared document in `.aip/brainstorm/`, with enforced turn-taking, user-input relay, and convergence exits (consensus / user arbitration / round cap).

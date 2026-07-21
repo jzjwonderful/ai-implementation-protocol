@@ -24,10 +24,10 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 
 ## K-001: 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py
 - 分类: process-lifecycle
-- 状态: draft
+- 状态: active
 - 症状: 改了 root `scripts/` 下的文件，执行 `install_claude_plugin.py --force` 后到其他仓库跑 `aip init`，CLAUDE.md 没有更新，仍是旧内容
 - 根因: `install_claude_plugin.py` 复制的是 `plugins/ai-implementation-protocol/scripts/`（plugin 副本），不是 root `scripts/`。root `scripts/` 是唯一真源，必须先用 `sync_plugin.py` 把改动同步到 plugin 副本，再安装
-- 证据: 改了 `scripts/aip_discovery.py` 后直接跑 install，发现 `plugins/ai-implementation-protocol/scripts/aip_discovery.py` 仍是旧内容；跑 `sync_plugin.py` 后两边一致。二次踩坑：AI 把改动写进了 `~/plugins/`（已安装路径），sync 时反被 repo root 旧内容覆盖，改动消失
-- 适用范围: 凡改动 `scripts/`、`docs/`、`templates/`、`schemas/` 任意文件后想让安装生效，均需此顺序；AI 辅助改动时须确认落点是 repo root `scripts/`，不是 `~/plugins/`
-- 最后复核: 2026-06-27
+- 证据: 改了 `scripts/aip_discovery.py` 后直接跑 install，发现 `plugins/ai-implementation-protocol/scripts/aip_discovery.py` 仍是旧内容；跑 `sync_plugin.py` 后两边一致。二次踩坑：AI 把改动写进了 `~/plugins/`（已安装路径），sync 时反被 repo root 旧内容覆盖，改动消失。三次验证（2026-07-21）：改 `scripts/aip_brainstorm.py` 后忘重跑 sync，`tests/test_doctor.py::test_own_repo_is_clean` 立刻报副本漂移；sync + 两个 install 重装后 `aip check` 与 62 个测试全绿——漂移有自动化兜底（sync --check / doctor / aip check），Codex 侧同理需跑 install_codex_plugin.py
+- 适用范围: 凡改动 `scripts/`、`docs/`、`templates/`、`schemas/` 任意文件后想让安装生效，均需此顺序（Claude 与 Codex 两个安装器同）；AI 辅助改动时须确认落点是 repo root `scripts/`，不是 `~/plugins/`
+- 最后复核: 2026-07-21
 - 关联:

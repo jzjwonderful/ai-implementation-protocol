@@ -12,7 +12,7 @@
 <!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->
 ### 自动摘要（派生，勿手改）
 **知识（1 条）**
-- K-001 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py [draft]
+- K-001 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py [active]
 
 **近期决策**
 - ADR-1：本仓库自举——从旧 `project_docs/` 迁入 `.aip/`

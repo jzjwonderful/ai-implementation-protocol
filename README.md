@@ -56,12 +56,12 @@ Engine package always lands at:
 Skills land at:
 
 ```text
-~/.claude/skills/{aip,root-cause}/   # Claude Code
-~/.agents/skills/{aip,root-cause}/   # Codex
-~/.grok/skills/{aip,root-cause}/     # Grok
+~/.claude/skills/{aip,root-cause,aip-brainstorm}/   # Claude Code
+~/.agents/skills/{aip,root-cause,aip-brainstorm}/   # Codex
+~/.grok/skills/{aip,root-cause,aip-brainstorm}/     # Grok
 ```
 
-Codex also updates `~/.agents/plugins/marketplace.json`.
+Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks and deposits verified causes into `.aip/knowledge.md`; `aip-brainstorm` lets AIs in multiple terminals hold a turn-based discussion through a shared topic document in `.aip/brainstorm/`.
 
 > **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules.
 

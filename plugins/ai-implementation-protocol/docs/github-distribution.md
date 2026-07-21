@@ -50,9 +50,9 @@ Skill destinations:
 
 | Runtime | Skills | Extra |
 |---------|--------|--------|
-| Claude Code | `~/.claude/skills/{aip,root-cause}/` | — |
-| Codex | `~/.agents/skills/{aip,root-cause}/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
-| Grok | `~/.grok/skills/{aip,root-cause}/` | optional `--user-plugin` → `~/.grok/plugins/` |
+| Claude Code | `~/.claude/skills/{aip,root-cause,aip-brainstorm}/` | — |
+| Codex | `~/.agents/skills/{aip,root-cause,aip-brainstorm}/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
+| Grok | `~/.grok/skills/{aip,root-cause,aip-brainstorm}/` | optional `--user-plugin` → `~/.grok/plugins/` |
 
 ## Updating An Existing Install
 
@@ -95,6 +95,7 @@ Codex users should also confirm the Codex home skill files exist:
 ```text
 $CODEX_HOME/skills/aip/SKILL.md
 $CODEX_HOME/skills/root-cause/SKILL.md
+$CODEX_HOME/skills/aip-brainstorm/SKILL.md
 ```
 
 Then restart the tool (or open a new session) and use the `aip` skill.
