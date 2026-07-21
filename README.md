@@ -14,96 +14,92 @@ This repository contains:
 - the protocol itself
 - project templates
 - local validation scripts
-- a Codex plugin package (also usable as a Claude Code skill)
+- a plugin package for Claude Code, Codex, and Grok
 - optional adapters such as Nexus integration
 
-## Install For Claude Code
+## Install (all supported AIs)
 
-Install from GitHub:
+One command installs the shared engine plus skills for **Claude Code, Codex, and Grok**:
 
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 cd ai-implementation-protocol
+python scripts/install_all.py
+```
+
+Update an existing install:
+
+```bash
+git pull
+python scripts/install_all.py --force
+```
+
+Only some runtimes:
+
+```bash
+python scripts/install_all.py --force --targets claude,grok
+# legal names: claude, codex, grok, or all
+```
+
+Optional Grok user-plugin registration (`~/.grok/plugins/`):
+
+```bash
+python scripts/install_all.py --force --user-plugin
+```
+
+Engine package always lands at:
+
+```text
+~/plugins/ai-implementation-protocol/
+```
+
+Skills land at:
+
+```text
+~/.claude/skills/{aip,root-cause}/   # Claude Code
+~/.agents/skills/{aip,root-cause}/   # Codex
+~/.grok/skills/{aip,root-cause}/     # Grok
+```
+
+Codex also updates `~/.agents/plugins/marketplace.json`.
+
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules.
+
+Open a new session in each tool after installation. `$aip init` is the only command a human types — everything else is AI-triggered:
+
+```text
+$aip init
+```
+
+Per-runtime installers below are still available if you only want one tool.
+
+## Install For Claude Code Only
+
+```bash
 python scripts/install_claude_plugin.py
+# update: python scripts/install_claude_plugin.py --force
 ```
 
-Update an existing local install:
+Skills → `~/.claude/skills/`. `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks.
+
+## Install For Codex Only
 
 ```bash
-git pull
-python scripts/install_claude_plugin.py --force
-```
-
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
-
-The installer copies the plugin package to:
-
-```text
-~/plugins/ai-implementation-protocol/
-```
-
-and installs the bundled skills to:
-
-```text
-~/.claude/skills/aip/SKILL.md
-~/.claude/skills/root-cause/SKILL.md
-```
-
-`aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks to drive root-cause investigation and deposit verified causes into `.aip/knowledge.md`.
-
-Open a new Claude Code session after installation. `$aip init` is the only command a human types — everything else (capture, checks, index rebuilds, resuming from the OVERVIEW board) is triggered by the AI at the right moment:
-
-```text
-$aip init
-```
-
-## Install The Codex Plugin
-
-Install from GitHub:
-
-```bash
-git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
-cd ai-implementation-protocol
 python scripts/install_codex_plugin.py
+# update: python scripts/install_codex_plugin.py --force
 ```
 
-Update an existing local install:
+Skills → `~/.agents/skills/`, and to `$CODEX_HOME/skills` (or `~/.codex/skills` when `CODEX_HOME` is unset); also updates `~/.agents/plugins/marketplace.json`. Existing AIP install files are replaced by default.
+
+## Install For Grok Only
 
 ```bash
-git pull
-python scripts/install_codex_plugin.py
+python scripts/install_grok_plugin.py
+# update: python scripts/install_grok_plugin.py --force
+# optional user plugin: python scripts/install_grok_plugin.py --force --user-plugin
 ```
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
-
-The installer copies the plugin package to:
-
-```text
-~/plugins/ai-implementation-protocol/
-```
-
-and creates or updates:
-
-```text
-~/.agents/plugins/marketplace.json
-```
-
-It also installs the bundled skill entries to:
-
-```text
-~/.agents/skills/aip/SKILL.md
-~/.agents/skills/root-cause/SKILL.md
-```
-
-The installer also writes the same skills to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
-
-Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` and `root-cause` skills.
-
-Use it from Codex the same way — `$aip init` once per repo, the rest is AI-triggered:
-
-```text
-$aip init
-```
+Skills → `~/.grok/skills/`. Optional `--user-plugin` also copies to `~/.grok/plugins/`.
 
 ## Core Ideas
 
@@ -129,7 +125,7 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 - `templates/`: reusable project files
 - `scripts/`: local CLI scripts
 - `tests/`: unit tests for the scripts
-- `plugins/ai-implementation-protocol/`: installable plugin package (Codex + Claude Code)
+- `plugins/ai-implementation-protocol/`: installable plugin package (Claude Code + Codex + Grok)
 - `.agents/plugins/marketplace.json`: repo-local Codex marketplace entry
 - `adapters/`: optional integrations
 - `examples/`: sample project layouts

@@ -40,6 +40,8 @@ Key scripts:
 - `aip_knowledge.py` — rebuild the knowledge index
 - `aip_overview.py` — rebuild the OVERVIEW digest
 - `install_hooks.py` — install the git pre-commit (+ optional Claude Stop) hook
+- `install_all.py` — one-shot install for all supported runtimes (Claude Code + Codex + Grok)
+- `install_claude_plugin.py` / `install_codex_plugin.py` / `install_grok_plugin.py` — per-runtime installers
 - `sync_plugin.py` — regenerate the plugin copies from the top-level sources
 
 ### 4. Adapter Layer

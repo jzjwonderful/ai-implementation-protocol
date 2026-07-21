@@ -105,7 +105,7 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
     installed = home / "plugins" / PLUGIN_NAME
-    reinstall = f"python {engine}/scripts/install_claude_plugin.py --force（Codex 用 install_codex_plugin.py）"
+    reinstall = f"python {engine}/scripts/install_all.py --force（或分端 install_claude/codex/grok_plugin.py）"
     if not installed.is_dir():
         out.append(("WARN", f"未找到已安装的插件包：{installed}", reinstall))
         return out
@@ -117,6 +117,9 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
             pretty = " 或 ".join(str(path) for path in paths)
             out.append(("INFO", f"Codex 技能未安装：{pretty}（不用 Codex 可忽略）",
                         f"python {engine}/scripts/install_codex_plugin.py"))
+        if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
+            out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
+                        f"python {engine}/scripts/install_grok_plugin.py --force"))
     engine_ver = _read_version(engine / "VERSION")
     installed_ver = _read_version(installed / "VERSION")
     if installed_ver is None:
@@ -170,7 +173,7 @@ def main() -> int:
     force_utf8()
     ap = argparse.ArgumentParser(description="AIP install/environment health check.")
     ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--home", default=str(Path.home()), help="含 plugins/、.claude/、.agents/ 的主目录。")
+    ap.add_argument("--home", default=str(Path.home()), help="含 plugins/、.claude/、.agents/、.grok/ 的主目录。")
     ap.add_argument("--codex-home", default=None,
                     help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))

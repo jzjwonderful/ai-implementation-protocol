@@ -70,12 +70,14 @@ class InstallHealth(unittest.TestCase):
         installed.mkdir(parents=True)
         (installed/"VERSION").write_text("0.0.1\n", encoding="utf-8")
         for skill in ["aip", "root-cause"]:
-            for base in [".claude", ".agents"]:
+            for base in [".claude", ".agents", ".grok"]:
                 p = home/base/"skills"/skill
                 p.mkdir(parents=True)
                 (p/"SKILL.md").write_text("x", encoding="utf-8")
         items = doc.check_install(home, ROOT)
         self.assertTrue(any("版本不一致" in msg and lv == "WARN" for lv, msg, _ in items))
+        # 三端技能都装了时，不应再提示某端 skill 缺失
+        self.assertFalse(any("技能未安装" in msg for _, msg, _ in items))
 
     def test_codex_home_skill_counts_as_installed(self):
         home = Path(tempfile.mkdtemp())

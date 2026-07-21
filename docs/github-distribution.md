@@ -1,6 +1,6 @@
 # GitHub Distribution
 
-This repository can be published to a personal or organization GitHub repository and used as the distribution source for the AIP Codex plugin.
+This repository can be published to a personal or organization GitHub repository and used as the distribution source for the AIP plugin (Claude Code, Codex, and Grok).
 
 ## Publisher Flow
 
@@ -26,78 +26,75 @@ git push origin v0.1.0
 
 ## User Install Flow
 
-Users install the plugin by cloning the repository and running the installer:
+Users install by cloning the repository and running the **all-in-one** installer (recommended):
 
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 cd ai-implementation-protocol
-python scripts/install_codex_plugin.py
+python scripts/install_all.py
 ```
 
-On Windows PowerShell, the same flow is:
+On Windows PowerShell:
 
 ```powershell
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 Set-Location ai-implementation-protocol
-python .\scripts\install_codex_plugin.py
+python .\scripts\install_all.py
 ```
 
-The installer copies:
+`install_all.py` copies the engine once to `~/plugins/ai-implementation-protocol/` and installs skills for Claude Code, Codex, and Grok. Subset with `--targets claude,grok` (names: `claude`, `codex`, `grok`, or `all`).
 
-```text
-plugins/ai-implementation-protocol/
-```
+Per-runtime installers remain available: `install_claude_plugin.py`, `install_codex_plugin.py`, `install_grok_plugin.py`.
 
-to:
+Skill destinations:
 
-```text
-~/plugins/ai-implementation-protocol/
-```
-
-and updates:
-
-```text
-~/.agents/plugins/marketplace.json
-```
-
-It also installs:
-
-```text
-~/.agents/skills/aip/SKILL.md
-~/.agents/skills/root-cause/SKILL.md
-```
-
-for Codex versions that discover user skills from `.agents/skills`.
-
-The installer also writes the same skill files to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`.
-
-The installer also writes a local marketplace entry for the plugin.
+| Runtime | Skills | Extra |
+|---------|--------|--------|
+| Claude Code | `~/.claude/skills/{aip,root-cause}/` | — |
+| Codex | `~/.agents/skills/{aip,root-cause}/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
+| Grok | `~/.grok/skills/{aip,root-cause}/` | optional `--user-plugin` → `~/.grok/plugins/` |
 
 ## Updating An Existing Install
 
-After pulling a newer version, users can replace the installed plugin:
+After pulling a newer version:
 
 ```bash
 git pull
-python scripts/install_codex_plugin.py
+python scripts/install_all.py --force
+# or one runtime:
+# python scripts/install_claude_plugin.py --force
+# python scripts/install_codex_plugin.py --force
+# python scripts/install_grok_plugin.py --force
 ```
 
 ## Verification
 
-After installation, confirm these files exist:
+After installation, confirm these files exist for your runtime:
 
 ```text
+# shared engine
+~/plugins/ai-implementation-protocol/scripts/aip_init.py
+
+# Claude Code
+~/plugins/ai-implementation-protocol/.claude-plugin/plugin.json
+~/.claude/skills/aip/SKILL.md
+
+# Codex
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
 ~/.agents/skills/aip/SKILL.md
 ~/.agents/skills/root-cause/SKILL.md
 ~/.agents/plugins/marketplace.json
+
+# Grok
+~/plugins/ai-implementation-protocol/.grok-plugin/plugin.json
+~/.grok/skills/aip/SKILL.md
 ```
 
-Also confirm the Codex home skill files exist:
+Codex users should also confirm the Codex home skill files exist:
 
 ```text
 $CODEX_HOME/skills/aip/SKILL.md
 $CODEX_HOME/skills/root-cause/SKILL.md
 ```
 
-Then restart Codex or refresh the plugin list and use the `aip` skill.
+Then restart the tool (or open a new session) and use the `aip` skill.
