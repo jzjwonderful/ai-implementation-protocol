@@ -1,7 +1,7 @@
 import sys, tempfile, unittest
 from pathlib import Path
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+from _engine import ROOT, ENGINE, SCRIPTS
+sys.path.insert(0, str(SCRIPTS))
 import aip_knowledge as k
 
 SAMPLE = """# 知识库

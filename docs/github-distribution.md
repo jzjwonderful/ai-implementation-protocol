@@ -60,16 +60,16 @@ and updates:
 ~/.agents/plugins/marketplace.json
 ```
 
-It also installs:
+It also installs the whole skill directories (SKILL.md plus the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION`):
 
 ```text
-~/.agents/skills/aip/SKILL.md
-~/.agents/skills/root-cause/SKILL.md
+~/.agents/skills/aip/
+~/.agents/skills/root-cause/
 ```
 
 for Codex versions that discover user skills from `.agents/skills`.
 
-The installer also writes the same skill files to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`.
+The installer also writes the same skill directories to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`.
 
 The installer also writes a local marketplace entry for the plugin.
 
@@ -89,6 +89,7 @@ After installation, confirm these files exist:
 ```text
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
 ~/.agents/skills/aip/SKILL.md
+~/.agents/skills/aip/scripts/aip_init.py
 ~/.agents/skills/root-cause/SKILL.md
 ~/.agents/plugins/marketplace.json
 ```
@@ -101,3 +102,7 @@ $CODEX_HOME/skills/root-cause/SKILL.md
 ```
 
 Then restart Codex or refresh the plugin list and use the `aip` skill.
+
+## Claude Code
+
+Claude Code users run `python scripts/install_claude_plugin.py` instead. It copies the same skill directories to `~/.claude/skills/aip/` and `~/.claude/skills/root-cause/`; nothing goes to `~/plugins/`.

@@ -3,7 +3,7 @@ from __future__ import annotations
 """把 AIP 从本机彻底卸载（Claude Code 与 Codex 两套落点都清）。
 
 清理范围（缺啥跳啥，幂等）：
-- 引擎包         ~/plugins/ai-implementation-protocol/
+- Codex 插件包   ~/plugins/ai-implementation-protocol/（旧版 Claude 安装也落在这里）
 - Claude 技能    ~/.claude/skills/{aip,root-cause}/
 - Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
 - Codex 技能     ~/.agents/skills/{aip,root-cause}/

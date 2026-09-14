@@ -79,12 +79,13 @@ def install_skills(source_plugin: Path, skill_roots: list[Path]) -> list[Path]:
     sources = sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists())
     planned = [(src, skill_root / src.name) for skill_root in skill_roots for src in sources]
 
+    # 整份技能目录一起拷（scripts/ templates/ reference/ 随 SKILL.md 走），
+    # 这样无论 Codex 从哪个目录加载技能，脚本都在技能旁边。
     installed: list[Path] = []
     for src, destination_skill_dir in planned:
         if destination_skill_dir.exists():
             shutil.rmtree(destination_skill_dir)
-        destination_skill_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
+        shutil.copytree(src, destination_skill_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
         installed.append(destination_skill_dir / "SKILL.md")
     return installed
 
@@ -172,7 +173,7 @@ def main() -> int:
 
     # 安装后自检：关键文件真落盘了才算装好。
     missing = [p for p in [destination_plugin / ".codex-plugin" / "plugin.json",
-                           destination_plugin / "scripts" / "aip_init.py",
+                           destination_plugin / "skills" / "aip" / "scripts" / "aip_init.py",
                            marketplace_path] if not p.exists()]
     if missing or not installed:
         raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
@@ -183,7 +184,7 @@ def main() -> int:
     for path in purged:
         print(f"Removed obsolete commands: {path}")
     print(f"Updated marketplace: {marketplace_path}")
-    print(f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+    print(f"Health check any time: python {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0
 

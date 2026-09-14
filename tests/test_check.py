@@ -1,7 +1,7 @@
 import sys, tempfile, unittest
 from pathlib import Path
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+from _engine import ROOT, ENGINE, SCRIPTS
+sys.path.insert(0, str(SCRIPTS))
 import aip_check as chk, aip_knowledge as k
 
 def make_repo() -> Path:
@@ -28,9 +28,10 @@ class KnowledgeFields(unittest.TestCase):
     def test_missing_field(self):
         d = make_repo()
         (d/".aip"/"knowledge.md").write_text(
-            "# k\n\n## 类目\nother\n\n## K-001: 缺字段\n- 分类: other\n- 状态: draft\n", encoding="utf-8")
-        self.assertTrue(any("K-001" in v and "适用范围" in v for v in chk.check_knowledge_fields(d)))
-    def test_full_entry_ok(self):
+            "# k\n\n## 类目\nother\n\n## K-001: 缺\n- 分类: other\n- 状态: active\n", encoding="utf-8")
+        viol = chk.check_knowledge_fields(d)
+        self.assertTrue(any("症状" in v for v in viol))
+    def test_complete_ok(self):
         d = make_repo()
         (d/".aip"/"knowledge.md").write_text(
             "# k\n\n## 类目\nother\n\n## K-001: 全\n- 分类: other\n- 状态: active\n- 症状: x\n"
@@ -44,21 +45,28 @@ class OrphanSlots(unittest.TestCase):
     def test_clean_ok(self):
         self.assertEqual(chk.check_no_orphan_slots(make_repo()), [])
 
-class DualCopy(unittest.TestCase):
-    def _mk(self):
-        d = make_repo(); (d/"scripts").mkdir()
-        (d/"scripts"/"a.py").write_text("print(1)\n", encoding="utf-8")
-        pl = d/"plugins"/"ai-implementation-protocol"/"scripts"; pl.mkdir(parents=True)
-        (pl/"a.py").write_text("print(1)\n", encoding="utf-8"); return d
-    def test_match_ok(self):
-        self.assertEqual(chk.check_dual_copy(self._mk()), [])
-    def test_drift(self):
-        d = self._mk()
-        (d/"plugins"/"ai-implementation-protocol"/"scripts"/"a.py").write_text("print(2)\n", encoding="utf-8")
-        self.assertTrue(any("a.py" in v for v in chk.check_dual_copy(d)))
-    def test_missing_mirror(self):
-        d = self._mk(); (d/"scripts"/"b.py").write_text("x\n", encoding="utf-8")
-        self.assertTrue(any("b.py" in v for v in chk.check_dual_copy(d)))
+class EngineVersions(unittest.TestCase):
+    def _mk(self, claude="0.3.0", codex="0.3.0", version="0.3.0"):
+        d = make_repo(); pkg = d/"plugins"/"ai-implementation-protocol"
+        (pkg/"skills"/"aip").mkdir(parents=True)
+        (pkg/"skills"/"aip"/"VERSION").write_text(version + "\n", encoding="utf-8")
+        for sub, ver in [(".claude-plugin", claude), (".codex-plugin", codex)]:
+            (pkg/sub).mkdir()
+            (pkg/sub/"plugin.json").write_text('{"name": "x", "version": "%s"}\n' % ver, encoding="utf-8")
+        return d
+    def test_consistent_ok(self):
+        self.assertEqual(chk.check_engine_versions(self._mk()), [])
+    def test_manifest_drift(self):
+        viol = chk.check_engine_versions(self._mk(codex="0.2.1"))
+        self.assertTrue(any(".codex-plugin" in v for v in viol))
+    def test_missing_version_file(self):
+        d = self._mk(); (d/"plugins"/"ai-implementation-protocol"/"skills"/"aip"/"VERSION").unlink()
+        self.assertTrue(any("VERSION" in v for v in chk.check_engine_versions(d)))
+    def test_consumer_repo_skipped(self):
+        self.assertEqual(chk.check_engine_versions(make_repo()), [])
+    def test_own_repo_consistent(self):
+        # 引擎仓库自身：两份 plugin.json 必须和 skills/aip/VERSION 一致。
+        self.assertEqual(chk.check_engine_versions(ROOT), [])
 
 if __name__ == "__main__":
     unittest.main()

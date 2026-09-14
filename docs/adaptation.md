@@ -30,17 +30,19 @@ protocol or script changes.
 ## Install Targets
 
 - **Codex**: `python scripts/install_codex_plugin.py` (installs the plugin and skills to both `~/.agents/skills` and `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced by default).
-- **Claude Code**: `python scripts/install_claude_plugin.py` (installs the `aip` skill to `~/.claude/skills/aip/`
-  and the plugin package to `~/plugins/`).
+- **Claude Code**: `python scripts/install_claude_plugin.py` (installs the whole `aip` and `root-cause` skill directories to `~/.claude/skills/`; scripts and templates travel inside the `aip` skill; existing install files are replaced).
 
-The same plugin package serves both runtimes; both drive the same tool-agnostic CLI under `scripts/`.
+The same plugin package serves both runtimes; both drive the same tool-agnostic CLI under the installed skill's `scripts/`.
 
 ### Enforcement hooks (make `aip check` automatic)
 
 ```bash
-python scripts/install_hooks.py --repo-root <target>            # git pre-commit gate
-python scripts/install_hooks.py --repo-root <target> --claude-stop  # + non-blocking Claude Stop hook
+python <skill>/scripts/install_hooks.py --repo-root <target>                  # git pre-commit gate
+python <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (OVERVIEW into context, also after compaction)
+python <skill>/scripts/install_hooks.py --repo-root <target> --claude-stop    # + non-blocking Claude Stop hook
 ```
+
+`<skill>` is the installed `aip` skill directory (`~/.claude/skills/aip` for Claude Code). `aip init` already installs the pre-commit and SessionStart hooks.
 
 The git pre-commit hook blocks commits when `aip check` fails (bypass once with `git commit --no-verify`).
 This is the level that turns "the AI should" into "the commit is blocked unless." Load-bearing rules are

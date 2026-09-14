@@ -24,13 +24,12 @@ Reusable markdown, JSON, and YAML templates that seed a target repository.
 
 Key files:
 
-- `templates/*.md`
-- `templates/*.json`
-- `templates/*.yaml`
+- `plugins/ai-implementation-protocol/skills/aip/templates/*.md`
+- `plugins/ai-implementation-protocol/skills/aip/templates/*.yaml`
 
 ### 3. Tooling Layer
 
-Local scripts that enforce protocol correctness.
+Local scripts that enforce protocol correctness. They live inside the `aip` skill directory (`plugins/ai-implementation-protocol/skills/aip/scripts/`) and are installed together with it, so the skill can always find them next to itself.
 
 Key scripts:
 
@@ -39,8 +38,10 @@ Key scripts:
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
 - `aip_knowledge.py` — rebuild the knowledge index
 - `aip_overview.py` — rebuild the OVERVIEW digest
-- `install_hooks.py` — install the git pre-commit (+ optional Claude Stop) hook
-- `sync_plugin.py` — regenerate the plugin copies from the top-level sources
+- `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
+- `aip_session_start.py` — SessionStart hook entry: prints the OVERVIEW, with an extra reminder after context compaction
+
+Installers (`scripts/install_claude_plugin.py`, `scripts/install_codex_plugin.py`, `scripts/uninstall_aip.py`) stay at the repository root; they only copy the package.
 
 ### 4. Adapter Layer
 

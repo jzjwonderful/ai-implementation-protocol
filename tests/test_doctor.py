@@ -1,8 +1,8 @@
 import sys, tempfile, unittest
 from datetime import date
 from pathlib import Path
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+from _engine import ROOT, ENGINE, SCRIPTS
+sys.path.insert(0, str(SCRIPTS))
 import aip_doctor as doc, aip_init
 
 
@@ -13,16 +13,16 @@ def levels(items):
 class ProjectHealth(unittest.TestCase):
     def test_uninitialized_repo_is_info_not_error(self):
         d = Path(tempfile.mkdtemp())
-        items = doc.check_project(d, ROOT)
+        items = doc.check_project(d, ENGINE)
         self.assertEqual(levels(items), ["INFO"])
 
     def test_missing_living_doc_is_error_with_fix(self):
         d = Path(tempfile.mkdtemp())
-        aip_init.scaffold(d, ROOT)
+        aip_init.scaffold(d, ENGINE)
         import aip_knowledge, aip_overview
         aip_knowledge.rebuild_index(d); aip_overview.rebuild_overview(d)
         (d/".aip"/"decisions.md").unlink()
-        items = doc.check_project(d, ROOT)
+        items = doc.check_project(d, ENGINE)
         self.assertIn("ERROR", levels(items))
         self.assertTrue(any("decisions.md" in msg for _, msg, _ in items))
 
@@ -59,43 +59,60 @@ class Freshness(unittest.TestCase):
 
 
 class InstallHealth(unittest.TestCase):
+    def _skill(self, base: Path, name: str, version: str | None = None, scripts: bool = True) -> Path:
+        p = base/"skills"/name
+        p.mkdir(parents=True, exist_ok=True)
+        (p/"SKILL.md").write_text("x", encoding="utf-8")
+        if scripts:
+            (p/"scripts").mkdir(exist_ok=True)
+            (p/"scripts"/"aip_init.py").write_text("x", encoding="utf-8")
+        if version is not None:
+            (p/"VERSION").write_text(version + "\n", encoding="utf-8")
+        return p
+
+    def _engine_version(self) -> str:
+        return (ENGINE/"VERSION").read_text(encoding="utf-8").strip()
+
     def test_missing_install_is_warn(self):
         home = Path(tempfile.mkdtemp())
-        items = doc.check_install(home, ROOT)
-        self.assertEqual(levels(items), ["WARN"])
+        items = doc.check_install(home, ENGINE)
+        self.assertIn("WARN", levels(items))
+        self.assertTrue(any("Claude 技能未安装" in msg for _, msg, _ in items))
+
+    def test_old_layout_without_scripts_is_warn(self):
+        home = Path(tempfile.mkdtemp())
+        for skill in ["aip", "root-cause"]:
+            self._skill(home/".claude", skill, version=self._engine_version(), scripts=False)
+        items = doc.check_install(home, ENGINE)
+        self.assertTrue(any("旧版布局" in msg and lv == "WARN" for lv, msg, _ in items))
 
     def test_version_mismatch_is_warn(self):
         home = Path(tempfile.mkdtemp())
-        installed = home/"plugins"/doc.PLUGIN_NAME
-        installed.mkdir(parents=True)
-        (installed/"VERSION").write_text("0.0.1\n", encoding="utf-8")
         for skill in ["aip", "root-cause"]:
-            for base in [".claude", ".agents"]:
-                p = home/base/"skills"/skill
-                p.mkdir(parents=True)
-                (p/"SKILL.md").write_text("x", encoding="utf-8")
-        items = doc.check_install(home, ROOT)
+            self._skill(home/".claude", skill, version="0.0.1")
+            self._skill(home/".agents", skill, version="0.0.1")
+        items = doc.check_install(home, ENGINE)
         self.assertTrue(any("版本不一致" in msg and lv == "WARN" for lv, msg, _ in items))
+
+    def test_matching_install_is_clean(self):
+        home = Path(tempfile.mkdtemp())
+        for skill in ["aip", "root-cause"]:
+            self._skill(home/".claude", skill, version=self._engine_version())
+            self._skill(home/".codex", skill, version=self._engine_version())
+        self.assertEqual(doc.check_install(home, ENGINE, codex_home=home/".codex"), [])
 
     def test_codex_home_skill_counts_as_installed(self):
         home = Path(tempfile.mkdtemp())
-        installed = home/"plugins"/doc.PLUGIN_NAME
-        installed.mkdir(parents=True)
-        (installed/"VERSION").write_text((ROOT/"VERSION").read_text(encoding="utf-8"), encoding="utf-8")
         for skill in ["aip", "root-cause"]:
-            claude = home/".claude"/"skills"/skill
-            claude.mkdir(parents=True)
-            (claude/"SKILL.md").write_text("x", encoding="utf-8")
-            codex = home/".codex"/"skills"/skill
-            codex.mkdir(parents=True)
-            (codex/"SKILL.md").write_text("x", encoding="utf-8")
-        items = doc.check_install(home, ROOT, codex_home=home/".codex")
+            self._skill(home/".claude", skill, version=self._engine_version())
+            self._skill(home/".codex", skill, version=self._engine_version())
+        items = doc.check_install(home, ENGINE, codex_home=home/".codex")
         self.assertFalse(any("Codex 技能未安装" in msg for _, msg, _ in items))
 
 
 class EngineRepoHealth(unittest.TestCase):
     def test_own_repo_is_clean(self):
-        # 引擎仓库自身：双副本与 VERSION 必须同步（红了说明忘跑 sync_plugin.py）。
+        # 引擎仓库自身：两份 plugin.json 的 version 必须和 skills/aip/VERSION 一致。
         self.assertEqual(doc.check_engine_repo(ROOT), [])
 
     def test_non_engine_repo_skipped(self):

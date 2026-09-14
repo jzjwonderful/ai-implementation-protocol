@@ -1,47 +1,31 @@
-# AI Implementation Protocol Codex Plugin
+# AI Implementation Protocol Plugin
 
-This plugin packages AIP as a repo-local Codex plugin.
+This directory is the installable package for both Codex and Claude Code.
 
-It includes:
+It contains:
 
-- `.codex-plugin/plugin.json`
-- `skills/aip/SKILL.md` — the `aip` engine skill (AI-autonomous; the human only runs `$aip init`)
+- `.codex-plugin/plugin.json` and `.claude-plugin/plugin.json` — manifests (their `version` must match `skills/aip/VERSION`)
+- `skills/aip/` — the `aip` engine skill. **Everything the skill needs travels with it**:
+  - `SKILL.md` — the always-loaded core (short)
+  - `reference/` — the review checklist, completion check and init details, read on demand
+  - `scripts/` — the CLI tools (`aip_init.py`, `aip_check.py`, `aip_knowledge.py`, `aip_overview.py`, `aip_doctor.py`, `install_hooks.py`, `aip_session_start.py`)
+  - `templates/` — the living-doc templates `aip_init.py` scaffolds from
+  - `VERSION` — the engine version (single source)
 - `skills/root-cause/SKILL.md` — root-cause investigation + knowledge sedimentation
-- `scripts/` CLI tools
-- `docs/` and `templates/` resources used by the scripts
-- `VERSION` — the packaged engine version
 
-The repository marketplace entry lives at:
+There is no separate copy of scripts or templates anywhere else in the repository, so nothing needs syncing.
 
-```text
-.agents/plugins/marketplace.json
-```
+## Where it lands
 
-The installer also writes compatibility skill entries to:
+Claude Code (`python scripts/install_claude_plugin.py` from the repository root):
 
 ```text
-~/.agents/skills/aip/SKILL.md
-~/.agents/skills/root-cause/SKILL.md
+~/.claude/skills/aip/        (SKILL.md + reference/ + scripts/ + templates/ + VERSION)
+~/.claude/skills/root-cause/
 ```
 
-This makes the `aip` and `root-cause` skills visible in Codex versions that load user skills directly from `.agents/skills`.
+Codex (`python scripts/install_codex_plugin.py`): the whole package goes to `~/plugins/ai-implementation-protocol/`, a local marketplace entry is written to `~/.agents/plugins/marketplace.json`, and the same whole skill directories are copied to `~/.agents/skills/` and `$CODEX_HOME/skills` (default `~/.codex/skills`). Existing AIP install files are replaced.
 
-The installer also writes the same skills to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
+After installation, run `/aip init` (Claude Code) or `$aip init` (Codex) once per repository. Everything else — capturing knowledge, running `aip check`, rebuilding the index/digest, resuming from the OVERVIEW board — is triggered by the AI at the right moment.
 
-After installation, run `$aip init` once per repository. Everything else — capturing knowledge, running `aip check`, rebuilding the index/digest, resuming from the OVERVIEW board — is triggered by the AI at the right moment, not typed by the human.
-
-Codex skill example:
-
-```text
-$aip init
-```
-
-The skill drives the CLI scripts (`aip_init.py`, `aip_check.py`, `aip_knowledge.py`, `aip_overview.py`, `aip_doctor.py`) inside the installed plugin package. The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`.
-
-For GitHub distribution, publish the repository and ask users to run:
-
-```bash
-python scripts/install_codex_plugin.py
-```
-
-from the cloned repository root. The installer copies this plugin to the user's home-local plugin directory and updates `~/.agents/plugins/marketplace.json`.
+The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge_index.md`, digs past the symptom, hands the cause to you, then deposits verified causes into `.aip/knowledge.md`.

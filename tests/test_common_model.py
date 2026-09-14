@@ -1,6 +1,7 @@
 import sys, unittest
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+from _engine import ROOT, ENGINE, SCRIPTS
+sys.path.insert(0, str(SCRIPTS))
 import _aip_common as c
 
 class CommonModel(unittest.TestCase):

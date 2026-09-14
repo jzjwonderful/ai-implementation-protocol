@@ -11,13 +11,15 @@
 
 <!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->
 ### 自动摘要（派生，勿手改）
-**知识（1 条）**
-- K-001 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py [draft]
+**知识（2 条）**
+- K-001 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py [superseded(by K-002)]
+- K-002 改引擎要改仓库里的技能目录，不是已安装的副本 [active]
 
 **近期决策**
 - ADR-1：本仓库自举——从旧 `project_docs/` 迁入 `.aip/`
 - ADR-2：协议文档从 per-feature/bug 轨道模型迁到扁平活文档模型
 - ADR-3：捕获纪律从「draft 等人确认」改为「自主修改 + 事后审计」
+- ADR-4：引擎并入 `aip` 技能目录，单副本分发；技能正文拆成核心 + 按需参考
 
 **核心概念**
 - （空）

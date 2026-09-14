@@ -12,9 +12,8 @@ Its purpose is simple:
 This repository contains:
 
 - the protocol itself
-- project templates
+- a plugin package that ships two skills (`aip`, `root-cause`) for Claude Code and Codex — scripts and templates travel inside the `aip` skill
 - local validation scripts
-- a Codex plugin package (also usable as a Claude Code skill)
 - optional adapters such as Nexus integration
 
 ## Install For Claude Code
@@ -31,30 +30,26 @@ Update an existing local install:
 
 ```bash
 git pull
-python scripts/install_claude_plugin.py --force
+python scripts/install_claude_plugin.py
 ```
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+> **Upgrading from an older AIP?** After updating, run `/aip init` (or `python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs and refresh the hooks. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
 
-The installer copies the plugin package to:
+The installer copies the whole skill directories to:
 
 ```text
-~/plugins/ai-implementation-protocol/
+~/.claude/skills/aip/          # SKILL.md + reference/ + scripts/ + templates/ + VERSION
+~/.claude/skills/root-cause/
 ```
 
-and installs the bundled skills to:
+Existing AIP install files are replaced. Nothing is written to `~/plugins/` any more; an old copy there is harmless and can be deleted if you only use Claude Code.
+
+`aip` routes `/aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks to drive root-cause investigation and deposit verified causes into `.aip/knowledge.md`.
+
+Open a new Claude Code session after installation. `/aip init` is the only command a human types — everything else (capture, checks, index rebuilds, resuming from the OVERVIEW board) is triggered by the AI at the right moment:
 
 ```text
-~/.claude/skills/aip/SKILL.md
-~/.claude/skills/root-cause/SKILL.md
-```
-
-`aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks to drive root-cause investigation and deposit verified causes into `.aip/knowledge.md`.
-
-Open a new Claude Code session after installation. `$aip init` is the only command a human types — everything else (capture, checks, index rebuilds, resuming from the OVERVIEW board) is triggered by the AI at the right moment:
-
-```text
-$aip init
+/aip init
 ```
 
 ## Install The Codex Plugin
@@ -74,7 +69,7 @@ git pull
 python scripts/install_codex_plugin.py
 ```
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository to scaffold any missing living docs. `aip init` is idempotent and preserves your existing files; until you do, `aip check` reports them as missing.
+> **Upgrading from an older AIP?** After updating, run `$aip init` once in each AIP-enabled repository, as above.
 
 The installer copies the plugin package to:
 
@@ -88,14 +83,14 @@ and creates or updates:
 ~/.agents/plugins/marketplace.json
 ```
 
-It also installs the bundled skill entries to:
+It also installs the whole skill directories to:
 
 ```text
-~/.agents/skills/aip/SKILL.md
-~/.agents/skills/root-cause/SKILL.md
+~/.agents/skills/aip/
+~/.agents/skills/root-cause/
 ```
 
-The installer also writes the same skills to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
+The installer also writes the same skill directories to `$CODEX_HOME/skills` when `CODEX_HOME` is set, otherwise `~/.codex/skills`. Existing AIP install files are replaced by default.
 
 Restart Codex or refresh the plugin list after installation. The installed plugin provides the `aip` and `root-cause` skills.
 
@@ -123,38 +118,40 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 └── config.yaml               # project adaptation (truth sources / gates / lenses)
 ```
 
+The AIP docs are project-level and committed. The AI's own cross-session memory (e.g. Claude Code's) is personal and stays on one machine; project facts go to `.aip/` only, user preferences stay in the tool's memory. Only the main agent writes `.aip/`; subagents report back. See `docs/protocol.md`.
+
 ## Repository Layout
 
 - `docs/`: protocol and product docs
-- `templates/`: reusable project files
-- `scripts/`: local CLI scripts
+- `plugins/ai-implementation-protocol/`: the installable package (Codex + Claude Code)
+  - `skills/aip/`: the engine skill — `SKILL.md`, `reference/` (details loaded on demand), `scripts/` (CLI), `templates/`, `VERSION`
+  - `skills/root-cause/`: the root-cause investigation skill
+- `scripts/`: installers and uninstaller only
 - `tests/`: unit tests for the scripts
-- `plugins/ai-implementation-protocol/`: installable plugin package (Codex + Claude Code)
 - `.agents/plugins/marketplace.json`: repo-local Codex marketplace entry
 - `adapters/`: optional integrations
 - `examples/`: sample project layouts
 
-## Why The Plugin Directory Duplicates Files
-
-`plugins/ai-implementation-protocol/` is the package that gets installed. It intentionally contains its own `docs/`, `templates/`, and `scripts/` copies so the installed plugin can run from `~/plugins/ai-implementation-protocol/` without depending on the original cloned repository path.
-
-The top-level directories remain the single source of truth for developing AIP itself; after editing them, run `python scripts/sync_plugin.py` to regenerate the plugin copies. The plugin directory is the distributable package.
+There is exactly one copy of the engine (scripts + templates) in this repository: inside the `aip` skill. Edit it there — not in `~/.claude/skills/` or `~/plugins/` — and re-run the installer.
 
 ## First Commands
 
-Initialize a target repository (the only command a human runs):
+Initialize a target repository (the only command a human runs; in Claude Code just type `/aip init`):
 
 ```bash
-python scripts/aip_init.py --repo-root <target-project>
+python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target-project>
 ```
 
 The remaining scripts are triggered by the AI at the right moment, per the installed `aip` skill:
 
 ```bash
-python scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
-python scripts/aip_knowledge.py --repo-root <target-project>  # rebuild knowledge_index.md
-python scripts/aip_overview.py --repo-root <target-project>   # rebuild the OVERVIEW auto digest
+python ~/.claude/skills/aip/scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
+python ~/.claude/skills/aip/scripts/aip_knowledge.py --repo-root <target-project>  # rebuild knowledge_index.md
+python ~/.claude/skills/aip/scripts/aip_overview.py --repo-root <target-project>   # rebuild the OVERVIEW auto digest
+python ~/.claude/skills/aip/scripts/aip_doctor.py --repo-root <target-project>     # install/environment health check
 ```
+
+For Codex, replace `~/.claude/skills/aip` with `~/.agents/skills/aip` (or `$CODEX_HOME/skills/aip`).
 
 ## Codex Plugin Internals
 
@@ -172,7 +169,7 @@ Repo-local marketplace:
 .agents/plugins/marketplace.json
 ```
 
-The plugin provides the `aip` skill and packages its own copy of the protocol docs, templates, and CLI scripts. See `docs/github-distribution.md` for publisher and user installation details.
+See `docs/github-distribution.md` for publisher and user installation details.
 
 ## Nexus Dependency
 
@@ -183,5 +180,4 @@ If `.nexus-map/` does not exist, AIP still works.
 
 ## Current State
 
-The engine runs on the flat living-doc model (see `.aip/decisions.md`, ADR-2): eight living docs under `.aip/`, an OVERVIEW board for task lines, and `aip check` as the one blocking machine gate.
-The next conversation can continue from here without re-deciding the basic architecture.
+The engine runs on the flat living-doc model (see `.aip/decisions.md`, ADR-2): eight living docs under `.aip/`, an OVERVIEW board for task lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.

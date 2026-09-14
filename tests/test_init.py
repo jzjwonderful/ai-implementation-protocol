@@ -1,32 +1,32 @@
 import sys, tempfile, unittest
 from pathlib import Path
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+from _engine import ROOT, ENGINE, SCRIPTS
+sys.path.insert(0, str(SCRIPTS))
 import aip_init, aip_discovery as disc, _aip_common as c
 
 class Init(unittest.TestCase):
     def test_scaffold_creates_living_docs_no_prompt(self):
         d = Path(tempfile.mkdtemp())
-        aip_init.scaffold(d, ROOT)
+        aip_init.scaffold(d, ENGINE)
         for n in c.PROJECT_LIVING_FILES:
             self.assertTrue((d/".aip"/n).exists(), f"{n} 未建")
         # 零配置：config 存在但不含被追问的工程信息（留空骨架）
         self.assertTrue((d/".aip"/"config.yaml").exists())
     def test_idempotent(self):
         d = Path(tempfile.mkdtemp())
-        aip_init.scaffold(d, ROOT)
+        aip_init.scaffold(d, ENGINE)
         (d/".aip"/"OVERVIEW.md").write_text("# 我改过\n", encoding="utf-8")
-        aip_init.scaffold(d, ROOT)  # 再跑不应覆盖已存在的
+        aip_init.scaffold(d, ENGINE)  # 再跑不应覆盖已存在的
         self.assertIn("我改过", (d/".aip"/"OVERVIEW.md").read_text(encoding="utf-8"))
 
 class UpgradeSafety(unittest.TestCase):
     def test_refill_never_overwrites_any_living_doc(self):
         # 模拟「AI 阶段 B 已填充过」的项目再跑 init：每个活文档都不许被打回模板。
         d = Path(tempfile.mkdtemp())
-        aip_init.scaffold(d, ROOT)
+        aip_init.scaffold(d, ENGINE)
         for n in c.PROJECT_LIVING_FILES:
             (d/".aip"/n).write_text(f"# 用户内容 {n}\n", encoding="utf-8")
-        aip_init.scaffold(d, ROOT)
+        aip_init.scaffold(d, ENGINE)
         for n in c.PROJECT_LIVING_FILES:
             self.assertEqual((d/".aip"/n).read_text(encoding="utf-8"),
                              f"# 用户内容 {n}\n", f"{n} 被覆盖")

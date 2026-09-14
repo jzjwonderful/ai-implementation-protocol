@@ -64,7 +64,7 @@ Run the review checklist (next section) → write → notify the user in-session
 
 ### Review checklist (`aip review`, soft quality)
 
-The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. **The default action is delete or merge, not add**: every addition must first clear the necessity bar below, or it doesn't get written. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `$aip review`:
+The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. **The default action is delete or merge, not add**: every addition must first clear the necessity bar below, or it doesn't get written. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `/aip review` (`$aip review` in Codex):
 
 1. Read the target doc in full (not just the tail); merge or cross-link near-duplicates instead of adding.
 2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox.md`. Promote an entry to `active` only after every checklist item passes, and only with the evidence stated in the notification.
@@ -73,7 +73,7 @@ The goal is always **doc quality**, never content volume: clear, accurate, neces
 5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
 6. Afterwards run `aip check` and rebuild the derived files (`aip knowledge` / `aip overview`).
 
-A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (per `.aip/` git history); the user runs `$aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
+A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (per `.aip/` git history); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
 
 ### Completion check (when a work line is done)
 
@@ -90,29 +90,31 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 
 ## `aip check` (the one machine check)
 
-`aip check` (`python scripts/aip_check.py --repo-root .`) validates:
+`aip check` (`python <skill>/scripts/aip_check.py --repo-root .`, where `<skill>` is the installed `aip` skill directory) validates:
 
 1. **Living docs present** — the living docs above exist under `.aip/`.
 2. **Index consistent** — `knowledge_index.md` matches the current `knowledge.md` (rebuild with `aip knowledge` if not).
 3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty.
 4. **No legacy residue** — none of the forbidden filenames appear in the repo.
-5. **Dual-copy sync** (engine repo only) — the synced top-level sources (`scripts/`, `docs/`, `templates/`, `VERSION`) match the `plugins/ai-implementation-protocol/` copies byte-for-byte, with no stale extras on the plugin side (rebuild with `sync_plugin.py` if not; the compare logic lives once, in `sync_plugin.drift`, which `sync_plugin.py --check` also runs).
+5. **Engine version consistency** (engine repo only) — both plugin manifests' `version` match `skills/aip/VERSION`, the single version source.
 
 Exit 0 = pass; non-zero = violations listed on stdout.
 
 ## `aip doctor` (diagnosis, non-blocking)
 
-`aip doctor` (`python scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (including knowledge entries whose `最后复核` is >90 days old — WARN only), install health (plugin package, skill files, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo dual-copy sync. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
+`aip doctor` (`python <skill>/scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (including knowledge entries whose `最后复核` is >90 days old — WARN only), install health (skill directories complete, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo version consistency. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
 
 ## Commands (AI-autonomous; the human only runs init)
 
 Day-to-day actions (capture, check, review, rebuild index/digest, read OVERVIEW to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
 
 ```
-python scripts/aip_init.py --repo-root .
+python <skill>/scripts/aip_init.py --repo-root .
 ```
 
-`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, upgrade the marked AIP guide blocks, install hooks, rebuild derived files — idempotent, existing living docs and user content are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
+In Claude Code the human types `/aip init`; in Codex `$aip init`. The skill runs the script.
+
+`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, upgrade the marked AIP guide blocks, install hooks (git pre-commit plus a Claude Code SessionStart hook that re-injects the OVERVIEW on startup, resume and after context compaction), rebuild derived files — idempotent, existing living docs and user content are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
 
 **Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the OVERVIEW active line on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
 
@@ -144,6 +146,14 @@ AIP doesn't record which external tools are installed (the platform lists what's
 - **Conditional domain lenses** — when a change touches a domain declared in `config.yaml`
   `lenses` (e.g. frontend, industrial client), mount that expert checklist during design and review.
 
+### Boundary with the AI's own memory
+
+Tools like Claude Code keep a personal, per-machine memory that only that AI sees. AIP docs are project-level: committed, shared by every person and every tool. Facts, decisions, pitfalls and conventions **about the project** go to `.aip/` only; the user's own preferences and habits stay in the tool's memory. On conflict `.aip/` wins — fix it there rather than keeping two versions.
+
+### Multi-agent and parallel branches
+
+Only the **main agent** writes `.aip/`; subagents report findings and never write living docs. Feed relevant knowledge/reference entries to subagents when delegating. The OVERVIEW board is maintained on the main branch only; parallel lines each use a `tracks/<id>.md` file with a one-line pointer on the board, so merges rarely conflict. Knowledge/decision entries made on a branch merge with it; run `aip check` after merging.
+
 ### Process-skill integration (optional method layer)
 
 AIP owns the **slots** (living docs, state, checks); an external process-skill framework, when present, owns the **methods** (how to fill each slot well). They compose:
@@ -158,7 +168,7 @@ AIP owns the **slots** (living docs, state, checks); an external process-skill f
 What is load-bearing is enforced by **deterministic checks that block**, not prose:
 
 - **Scaffold** (`aip init`) creates the living docs in the one correct place — no location drift.
-- **`aip check`** is a blocking check: living docs present, knowledge index consistent and fields complete, no forbidden legacy files, dual-copy synced. A hook runs it automatically.
+- **`aip check`** is a blocking check: living docs present, knowledge index consistent and fields complete, no forbidden legacy files, engine versions consistent. A hook runs it automatically.
 - **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` so it can't be forgotten.
 
 Method *quality* (was the investigation deep, the review real) can't be machine-forced — the checks verify the *residue* a method must leave (verified causes, sources cited, in-session notification of every doc edit, the git trail). Beyond residue it is best-effort by design: a poorly executed method leaves an incomplete slot the check rejects.

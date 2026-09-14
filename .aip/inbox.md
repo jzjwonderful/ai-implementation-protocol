@@ -5,3 +5,4 @@
 
 ## 条目
 - 已关闭：命令不写死解释器名。gate/文档统一写 `python` 并注明「解释器名按本机、需 Python 3.9+」；强制闸门（pre-commit）本就烧 install_hooks 装钩子时的 `sys.executable` 绝对路径，不受名字影响。（早先"统一成 python3"的结论作废——Windows 上常只有 `python`、没有 `python3`，反而跑不起来。）
+- 待处理：`install_hooks.py` 把 Claude SessionStart/Stop 钩子写进项目的 `.claude/settings.json`，命令里烧了本机 Python 和技能目录的绝对路径。这个文件通常会进 git，换机器或换人就失效。候选做法：改写到 `.claude/settings.local.json`（不进 git，每台机器各自 `aip init`），或命令里用 `$HOME`/`%USERPROFILE%` 相对写法。本次重构没动这一点，只把脚本名换了。
