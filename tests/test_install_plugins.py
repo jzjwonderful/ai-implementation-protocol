@@ -1,4 +1,7 @@
-"""安装器冒烟：Claude / Codex / Grok 三端 skills 落点与覆盖安装行为。"""
+"""安装器冒烟：Grok 分端、一键安装、卸载。
+
+Claude / Codex 两端各有专门的测试文件（test_install_claude_plugin.py / test_install_codex_plugin.py）。
+"""
 from __future__ import annotations
 
 import importlib
@@ -7,8 +10,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from _engine import ROOT, SCRIPTS
+
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(SCRIPTS))
+from _aip_common import SKILL_NAMES  # noqa: E402
 
 
 def _load(name: str):
@@ -25,13 +31,18 @@ class InstallGrok(unittest.TestCase):
         mod.copy_plugin(src, dst)
         installed = mod.install_skills(dst, home)
         self.assertTrue((dst / ".grok-plugin" / "plugin.json").exists())
-        self.assertTrue((dst / "scripts" / "aip_init.py").exists())
+        self.assertTrue((dst / "skills" / "aip" / "scripts" / "aip_init.py").exists())
         self.assertEqual(
             {p.name for p in installed},
             {"SKILL.md"},
         )
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             self.assertTrue((home / ".grok" / "skills" / skill / "SKILL.md").exists())
+        # 引擎随技能走：技能正文里写的 <skill>/scripts/... 必须在安装后成立
+        grok_aip = home / ".grok" / "skills" / "aip"
+        self.assertTrue((grok_aip / "scripts" / "aip_init.py").exists())
+        self.assertTrue((grok_aip / "templates" / "overview-template.md").exists())
+        self.assertTrue((grok_aip / "VERSION").exists())
         # 默认不装 ~/.grok/plugins/
         self.assertFalse((home / ".grok" / "plugins" / mod.PLUGIN_NAME).exists())
 
@@ -60,36 +71,13 @@ class InstallGrok(unittest.TestCase):
         self.assertNotEqual(skill.read_text(encoding="utf-8"), "stale")
 
 
-class InstallClaudeAndCodexSmoke(unittest.TestCase):
-    def test_claude_skill_dest(self):
-        home = Path(tempfile.mkdtemp())
-        mod = _load("install_claude_plugin")
-        src = ROOT / "plugins" / mod.PLUGIN_NAME
-        dst = home / "plugins" / mod.PLUGIN_NAME
-        mod.copy_plugin(src, dst, force=False)
-        installed = mod.install_skills(dst, home, force=False)
-        self.assertTrue(any(".claude" in str(p) for p in installed))
-        self.assertTrue((home / ".claude" / "skills" / "aip" / "SKILL.md").exists())
-
-    def test_codex_skill_dest(self):
-        home = Path(tempfile.mkdtemp())
-        mod = _load("install_codex_plugin")
-        src = ROOT / "plugins" / mod.PLUGIN_NAME
-        dst = home / "plugins" / mod.PLUGIN_NAME
-        mod.copy_plugin(src, dst)
-        skill_roots = mod.codex_skill_roots(home, mod.default_codex_home(home), "agents")
-        installed = mod.install_skills(dst, skill_roots)
-        self.assertTrue(any(".agents" in str(p) for p in installed))
-        self.assertTrue((home / ".agents" / "skills" / "aip" / "SKILL.md").exists())
-
-
 class UninstallGrok(unittest.TestCase):
     def test_removes_grok_paths(self):
         home = Path(tempfile.mkdtemp())
         plugin = home / "plugins" / "ai-implementation-protocol"
         plugin.mkdir(parents=True)
         for base in [".claude", ".agents", ".grok"]:
-            for skill in ["aip", "root-cause"]:
+            for skill in SKILL_NAMES:
                 p = home / base / "skills" / skill
                 p.mkdir(parents=True)
                 (p / "SKILL.md").write_text("x", encoding="utf-8")
@@ -105,9 +93,69 @@ class UninstallGrok(unittest.TestCase):
             sys.argv = old
         self.assertEqual(rc, 0)
         self.assertFalse(plugin.exists())
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             self.assertFalse((home / ".grok" / "skills" / skill).exists())
         self.assertFalse((home / ".grok" / "plugins" / "ai-implementation-protocol").exists())
+
+
+class InstallIntoProject(unittest.TestCase):
+    """项目级安装：技能落进指定仓库，随仓库走，不碰用户主目录。"""
+
+    def _project(self) -> Path:
+        d = Path(tempfile.mkdtemp())
+        (d / ".gitignore").write_text("build/\n", encoding="utf-8")
+        return d
+
+    def test_claude_installs_under_project(self):
+        project = self._project()
+        mod = _load("install_claude_plugin")
+        self.assertEqual(mod.install_into_project(ROOT, project), 0)
+        for skill in SKILL_NAMES:
+            self.assertTrue((project / ".claude" / "skills" / skill / "SKILL.md").exists())
+        # 引擎随技能走，装到项目里也一样
+        aip = project / ".claude" / "skills" / "aip"
+        self.assertTrue((aip / "scripts" / "aip_init.py").exists())
+        self.assertTrue((aip / "templates" / "overview-template.md").exists())
+
+    def test_codex_installs_under_project_without_marketplace(self):
+        project = self._project()
+        mod = _load("install_codex_plugin")
+        self.assertEqual(mod.install_into_project(ROOT, project), 0)
+        self.assertTrue((project / ".codex" / "skills" / "aip" / "scripts" / "aip_init.py").exists())
+        # 项目级不写市场条目、不拷插件包
+        self.assertFalse((project / ".agents").exists())
+        self.assertFalse((project / "plugins").exists())
+
+    def test_project_install_overwrites(self):
+        project = self._project()
+        mod = _load("install_claude_plugin")
+        mod.install_into_project(ROOT, project)
+        skill = project / ".claude" / "skills" / "aip" / "SKILL.md"
+        skill.write_text("stale", encoding="utf-8")
+        mod.install_into_project(ROOT, project)
+        self.assertNotEqual(skill.read_text(encoding="utf-8"), "stale")
+
+    def test_missing_project_fails(self):
+        mod = _load("install_claude_plugin")
+        with self.assertRaises(SystemExit):
+            mod.install_into_project(ROOT, Path(tempfile.mkdtemp()) / "nope")
+
+    def test_project_and_home_are_exclusive(self):
+        mod = _load("install_claude_plugin")
+        with self.assertRaises(SystemExit):
+            mod.main(["--project", str(self._project()), "--home", str(Path(tempfile.mkdtemp()))])
+
+    def test_install_all_project_covers_claude_and_codex(self):
+        project = self._project()
+        mod = _load("install_all")
+        self.assertEqual(mod.main(["--repo-root", str(ROOT), "--project", str(project)]), 0)
+        self.assertTrue((project / ".claude" / "skills" / "aip" / "SKILL.md").exists())
+        self.assertTrue((project / ".codex" / "skills" / "aip" / "SKILL.md").exists())
+
+    def test_install_all_project_rejects_grok(self):
+        mod = _load("install_all")
+        with self.assertRaises(SystemExit):
+            mod.parse_targets("grok", mod.PROJECT_SUPPORTED)
 
 
 class InstallAll(unittest.TestCase):
@@ -117,9 +165,9 @@ class InstallAll(unittest.TestCase):
         rc = mod.main(["--repo-root", str(ROOT), "--home", str(home)])
         self.assertEqual(rc, 0)
         engine = home / "plugins" / mod.PLUGIN_NAME
-        self.assertTrue((engine / "scripts" / "aip_init.py").exists())
+        self.assertTrue((engine / "skills" / "aip" / "scripts" / "aip_init.py").exists())
         for base in [".claude", ".agents", ".grok"]:
-            for skill in ["aip", "root-cause"]:
+            for skill in SKILL_NAMES:
                 self.assertTrue((home / base / "skills" / skill / "SKILL.md").exists())
         self.assertTrue((home / ".agents" / "plugins" / "marketplace.json").exists())
         # 默认不装 grok user plugin

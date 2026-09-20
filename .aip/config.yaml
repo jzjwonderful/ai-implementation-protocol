@@ -4,7 +4,7 @@
 # 本项目 = AIP 自身：零依赖的 Python CLI + 可分发插件包（Codex/Claude Code）。
 
 # 真理源：本项目的权威文档。AIP 把它们加进 must_read。
-# docs/protocol.md 是协议唯一真源（plugins/ 副本由 sync_plugin.py 再生，不手改）。
+# docs/protocol.md 是协议的英文真源；技能正文（skills/aip/SKILL.md + reference/）是 AI 实际读的版本，二者同次改。
 truth_sources:
   - docs/protocol.md
   - docs/architecture.md
@@ -19,7 +19,7 @@ gates:
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
-    cmd: "python scripts/sync_plugin.py --check"   # 根/插件副本逐字节比对（含 VERSION），不一致退出码 1
+    # cmd: ""              # 无 lint；版本一致性（两份 plugin.json 对 skills/aip/VERSION）由 aip check 覆盖
   e2e:
     # cmd: ""              # 无 e2e 场景
 
@@ -36,8 +36,9 @@ indexes:
 iron_rules:
   - "未授权不提交：git add/commit/push 需用户明确指示"
   - "新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变"
-  - "顶层 scripts/docs/templates 为唯一真源；改后必须跑 `python scripts/sync_plugin.py` 再生 plugins/ 副本，二者须逐字节一致"
-  - "协议是真源：行为/规则变更同次更新 docs/protocol.md，并经 sync_plugin 同步进插件副本"
+  - "引擎只有一份：plugins/ai-implementation-protocol/skills/aip/ 下的 scripts/ 与 templates/；改动落这里，不改 ~/.claude/skills 或 ~/plugins 里的安装副本"
+  - "协议是真源：行为/规则变更同次更新 docs/protocol.md 与技能正文（SKILL.md / reference/）"
+  - "版本只有一处：skills/aip/VERSION；改版本同次改两份 plugin.json 的 version"
   - "行为/架构变更同次更新 .aip/OVERVIEW.md 看板"
   - "所有编码任务宣布完成前，必须对照适用的 plan/需求、测试和其他约束完成验证闭环；无法闭环时至少执行相关 lint/build，并明确列出未验证项和风险"
   - "重新执行 aip init 必须升级 AGENTS.md/CLAUDE.md 中带 AIP managed 标记的规则块；不得覆盖已有活文档或项目自有内容"

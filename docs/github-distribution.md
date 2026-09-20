@@ -50,9 +50,22 @@ Skill destinations:
 
 | Runtime | Skills | Extra |
 |---------|--------|--------|
-| Claude Code | `~/.claude/skills/{aip,root-cause,aip-brainstorm}/` | — |
+| Claude Code | `~/.claude/skills/{aip,root-cause,aip-brainstorm}/` | nothing goes to `~/plugins/` |
 | Codex | `~/.agents/skills/{aip,root-cause,aip-brainstorm}/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
 | Grok | `~/.grok/skills/{aip,root-cause,aip-brainstorm}/` | optional `--user-plugin` → `~/.grok/plugins/` |
+
+Every installer copies the **whole** skill directory, so the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION` always sit next to its `SKILL.md`. The `~/plugins/` copy that Codex and Grok keep is the packaged source they install from; the single-runtime Claude installer does not use it.
+
+## Installing Into One Project
+
+```bash
+python scripts/install_all.py --project /path/to/repo
+```
+
+The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/` and are committed with that
+repository, so everyone who clones it gets the same engine version without a personal install. Nothing
+is written to `~/plugins/` or the marketplace. Grok has no project-level skill directory, so this
+covers Claude Code and Codex only.
 
 ## Updating An Existing Install
 
@@ -62,7 +75,7 @@ After pulling a newer version:
 git pull
 python scripts/install_all.py            # overwrites every installed runtime
 # or one runtime:
-# python scripts/install_claude_plugin.py --force   # Claude still needs --force to overwrite
+# python scripts/install_claude_plugin.py
 # python scripts/install_codex_plugin.py
 # python scripts/install_grok_plugin.py
 ```
@@ -72,22 +85,24 @@ python scripts/install_all.py            # overwrites every installed runtime
 After installation, confirm these files exist for your runtime:
 
 ```text
-# shared engine
-~/plugins/ai-implementation-protocol/scripts/aip_init.py
+# packaged engine (Codex / Grok install from here)
+~/plugins/ai-implementation-protocol/skills/aip/scripts/aip_init.py
 
 # Claude Code
-~/plugins/ai-implementation-protocol/.claude-plugin/plugin.json
 ~/.claude/skills/aip/SKILL.md
+~/.claude/skills/aip/scripts/aip_init.py
 
 # Codex
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
 ~/.agents/skills/aip/SKILL.md
+~/.agents/skills/aip/scripts/aip_init.py
 ~/.agents/skills/root-cause/SKILL.md
 ~/.agents/plugins/marketplace.json
 
 # Grok
 ~/plugins/ai-implementation-protocol/.grok-plugin/plugin.json
 ~/.grok/skills/aip/SKILL.md
+~/.grok/skills/aip/scripts/aip_init.py
 ```
 
 Codex users should also confirm the Codex home skill files exist:

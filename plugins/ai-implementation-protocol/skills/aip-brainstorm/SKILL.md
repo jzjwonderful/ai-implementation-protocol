@@ -7,7 +7,9 @@ description: Use when 用户要跨终端多 AI 讨论/头脑风暴/发起议题�
 
 多个终端各开一个 AI，围绕同一个**议题文档**接力讨论。AI 之间不直接通信，一切观点、用户插话、结论都只通过文档传递。文档落 `.aip/brainstorm/<议题>.md`。
 
-**分工**：AI 负责读文档、想观点、写文本；**文档的一切改动只调脚本** `python <engine>/scripts/aip_brainstorm.py`（`<engine>` 含义见 aip 技能），脚本确定性维护：谁能发言（`当前轮到`）、轮次计数、收敛判定、状态检查。**禁止**用编辑工具直接改议题文档。
+**脚本在哪**：本技能自己没有 scripts/，`aip_brainstorm.py` 随 `aip` 技能走，两个技能装在同一个 skills 目录下、互为同级。下文 `<aip>` 指那个 `aip` 技能目录（也就是本技能目录旁边的 `aip/`），命令一律写全路径。
+
+**分工**：AI 负责读文档、想观点、写文本；**文档的一切改动只调脚本** `python <aip>/scripts/aip_brainstorm.py`，脚本确定性维护：谁能发言（`当前轮到`）、轮次计数、收敛判定、状态检查。**禁止**用编辑工具直接改议题文档。
 
 ## 你的角色（看用户怎么叫你）
 
@@ -20,7 +22,7 @@ description: Use when 用户要跨终端多 AI 讨论/头脑风暴/发起议题�
 **1. 发起议题（发起者，只做一次）**
 
 ```
-python <engine>/scripts/aip_brainstorm.py start \
+python <aip>/scripts/aip_brainstorm.py start \
   --topic "议题标题" --as 甲 --participants 甲,乙 \
   --opening "你的开场立场全文" --stance 继续
 ```
@@ -33,7 +35,7 @@ python <engine>/scripts/aip_brainstorm.py start \
 **2. 参与讨论（讨论者，每次被叫来都走这两步）**
 
 ```
-python <engine>/scripts/aip_brainstorm.py status --doc <议题或路径> --as 乙
+python <aip>/scripts/aip_brainstorm.py status --doc <议题或路径> --as 乙
 ```
 
 - 输出：状态 / 轮次 / 当前轮到谁（带 `--as` 会标明是否轮到你）/ 本轮各立场 / 用户插话数 / 结构检查。
@@ -42,7 +44,7 @@ python <engine>/scripts/aip_brainstorm.py status --doc <议题或路径> --as �
 - **轮到你**：先用 Read 通读文档全文（所有发言 + 用户插话），想好观点再发言：
 
 ```
-python <engine>/scripts/aip_brainstorm.py say --doc <议题> --as 乙 \
+python <aip>/scripts/aip_brainstorm.py say --doc <议题> --as 乙 \
   --text "你的观点全文" --stance 继续
 ```
 
@@ -57,7 +59,7 @@ python <engine>/scripts/aip_brainstorm.py say --doc <议题> --as 乙 \
 用户在某个 AI 会话里说了与议题相关的话（尤其是直接输入的观点/决定），听到的那个 AI **必须当场**记进文档，这是用户输入同步给其他 AI 的唯一通道：
 
 ```
-python <engine>/scripts/aip_brainstorm.py note --doc <议题> --text "用户原话或忠实转述"
+python <aip>/scripts/aip_brainstorm.py note --doc <议题> --text "用户原话或忠实转述"
 ```
 
 - 不占轮次、不改 `当前轮到`。

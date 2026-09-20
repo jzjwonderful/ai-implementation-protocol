@@ -40,3 +40,10 @@
 - 决策：AI 写活文档前逐条过 review 自检清单，通过后可直接写（含直接标 active），但必须当场知会用户 + 随本次工作同一次 git 提交留痕；推翻决策/规约只许追加取代（注明「取代 ADR-N」），删除/合并只认「已被证明错误」「与另一条重复」两个理由。配套：`aip review` 软质量自检（不卡 CI）、`aip doctor` 安装健康检查、`aip init` 两阶段（脚本建骨架 + AI 只填模板原样/空的文件）。
 - 理由：把事前闸门换成事后可审计——git diff 就是审计日志，坏改动可回滚、可抽查，而流程不再阻塞；「充分 review」落成可执行清单而非「质量优先」这类口号，避免不同 AI 各自理解。放弃了「人逐条确认」的强保证，代价是坏改动要靠事后抽查发现。
 - 影响：SKILL.md（捕获纪律 / review 清单 / 完成检查 / init 两阶段）与 `docs/protocol.md` 同步改写；knowledge 模板的状态语义更新（active=已按清单核过）；新增 `aip_doctor.py` 与 `VERSION`；`sync_plugin.py --check` 改真实比对且比对逻辑单源化进 `sync_plugin.drift`。
+
+## ADR-4：引擎并入 `aip` 技能目录，单副本分发；技能正文拆成核心 + 按需参考
+- 日期 / 状态：2026-09-14 / 采纳（取代 ADR-3 里"插件副本经 sync_plugin 再生"的分发方式）
+- 背景：仓库里 `scripts/`、`templates/`、`docs/`、`VERSION` 各有两份（顶层 + `plugins/` 副本），靠 `sync_plugin.py` 手动同步；K-001 记的坑就是忘同步。Claude Code 安装器只拷 SKILL.md 一个文件，脚本另放 `~/plugins/`，技能里得专门解释"路径要写全"。同时 Claude Code 技能规范已支持技能目录内带 `scripts/` 和参考文件、按需加载，也有了个人级跨会话记忆、子代理、worktree、上下文压缩等机制，技能正文没覆盖这些。
+- 决策：(1) 引擎（8 个 CLI 脚本 + 模板 + VERSION）只保留一份，放在 `plugins/ai-implementation-protocol/skills/aip/` 下；顶层 `scripts/` 只留安装/卸载器；删 `sync_plugin.py`、顶层 `templates/`、插件内 `docs/` 副本和插件内 `VERSION`。两个安装器都整目录拷技能。`aip check` 的双副本比对改为"两份 plugin.json 的 version 与 skills/aip/VERSION 一致"。(2) SKILL.md 只留时机与去向，review 清单、完成检查、init 阶段 B 拆到 `reference/` 按需读；捕获回扫的逐项 yes/no 只对改代码/文档结构的任务做。(3) 技能新增三条规则：AIP 文档与 AI 个人记忆的边界、多代理只有主代理写 `.aip/`、worktree 并行线用 `tracks/<id>.md`。(4) SessionStart 钩子换成 `aip_session_start.py`，识别 `source == compact` 时加一句"以看板为准、没写回的先补"。(5) 命令写法 Claude 用 `/aip`，Codex 用 `$aip`，文档两种都写。版本升到 0.3.0。
+- 理由：单副本消灭一整类"忘同步"的坑，也让技能里的路径说明变成一句话。压缩前的钩子输出到不了模型，所以补救只能放压缩后的 SessionStart，这是能做到的最接近"压缩前提醒"的方案。技能正文缩短是为了每次会话的固定开销；强度降一档是因为当前模型跟指令很紧，满篇"禁止跳过"会让小任务也走全套。放弃的：`~/plugins/` 不再是 Claude 的安装位（Codex 仍用）；插件包不再自带协议英文文档（README 指向仓库）。
+- 影响：仓库布局（见 README「Repository Layout」）、两个安装器、`aip_check`/`aip_doctor`/`install_hooks`、全部测试的导入路径、`docs/protocol.md` 新增"记忆边界""多代理"两节、`.aip/config.yaml` 铁律与 gates、K-001 标 superseded。老用户重跑安装器后需在各项目 `/aip init` 一次刷新钩子路径。

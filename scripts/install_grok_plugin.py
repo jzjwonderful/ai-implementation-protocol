@@ -29,13 +29,15 @@ def install_skills(source_plugin: Path, home: Path) -> list[Path]:
     if not skills_root.exists():
         raise SystemExit(f"Plugin skills dir not found: {skills_root}")
 
+    # 整份技能目录一起拷（scripts/ templates/ reference/ 随 SKILL.md 走），
+    # 技能正文里写的 <skill>/scripts/... 才成立。
     installed: list[Path] = []
     for src in sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists()):
         destination_skill_dir = home / ".grok" / "skills" / src.name
         if destination_skill_dir.exists():
             shutil.rmtree(destination_skill_dir)
-        destination_skill_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
+        shutil.copytree(src, destination_skill_dir,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
         installed.append(destination_skill_dir / "SKILL.md")
     return installed
 
@@ -94,7 +96,7 @@ def main() -> int:
         p
         for p in [
             destination_plugin / ".grok-plugin" / "plugin.json",
-            destination_plugin / "scripts" / "aip_init.py",
+            destination_plugin / "skills" / "aip" / "scripts" / "aip_init.py",
         ]
         if not p.exists()
     ]
@@ -108,7 +110,7 @@ def main() -> int:
         print(f"Installed Grok user plugin: {grok_plugin}")
         print("If the plugin is listed but inactive, run: grok plugin enable ai-implementation-protocol")
     print(
-        f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
+        f"Health check any time: python {home / '.grok' / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
     )
     print("Restart Grok or open a new session for the skills to be picked up.")
     return 0

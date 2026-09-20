@@ -24,13 +24,12 @@ Reusable markdown, JSON, and YAML templates that seed a target repository.
 
 Key files:
 
-- `templates/*.md`
-- `templates/*.json`
-- `templates/*.yaml`
+- `plugins/ai-implementation-protocol/skills/aip/templates/*.md`
+- `plugins/ai-implementation-protocol/skills/aip/templates/*.yaml`
 
 ### 3. Tooling Layer
 
-Local scripts that enforce protocol correctness.
+Local scripts that enforce protocol correctness. They live inside the `aip` skill directory (`plugins/ai-implementation-protocol/skills/aip/scripts/`) and are installed together with it, so the skill can always find them next to itself.
 
 Key scripts:
 
@@ -39,10 +38,13 @@ Key scripts:
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
 - `aip_knowledge.py` — rebuild the knowledge index
 - `aip_overview.py` — rebuild the OVERVIEW digest
-- `install_hooks.py` — install the git pre-commit (+ optional Claude Stop) hook
-- `install_all.py` — one-shot install for all supported runtimes (Claude Code + Codex + Grok)
-- `install_claude_plugin.py` / `install_codex_plugin.py` / `install_grok_plugin.py` — per-runtime installers
-- `sync_plugin.py` — regenerate the plugin copies from the top-level sources
+- `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
+- `aip_session_start.py` — SessionStart hook entry: prints the OVERVIEW, with an extra reminder after context compaction
+- `aip_brainstorm.py` — the shared-topic-document state machine behind the `aip-brainstorm` skill
+
+Installers stay at the repository root and only copy the package: `scripts/install_all.py` (all runtimes at
+once), `scripts/install_claude_plugin.py`, `scripts/install_codex_plugin.py`, `scripts/install_grok_plugin.py`
+and `scripts/uninstall_aip.py`.
 
 ### 4. Adapter Layer
 

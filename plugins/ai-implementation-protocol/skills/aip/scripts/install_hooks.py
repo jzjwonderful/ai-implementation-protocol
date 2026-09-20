@@ -3,6 +3,8 @@ from __future__ import annotations
 """把 `aip check` 挂成自动检查——"没法忘"那一级。
 
 - git pre-commit（主检查，硬挡）：每次提交前跑 `aip check`，红了挡住提交。
+- Claude Code SessionStart 钩子（--session-start，aip init 默认装）：新会话、恢复会话、
+  以及上下文被压缩之后，把 OVERVIEW 打进上下文；压缩后多提醒一句"以看板为准"。
 - 可选 Claude Code Stop 钩子（--claude-stop，非阻塞）：每轮结束跑一次 check 把状态摆出来。
 
 git 钩子放 .git/hooks/pre-commit（即时生效、无框架依赖）。bypass 用 `git commit --no-verify`。
@@ -71,7 +73,7 @@ def install_claude_session_start(repo_root: Path, engine_root: Path) -> None:
         except json.JSONDecodeError:
             raise SystemExit(f"Cannot parse {settings}; fix it manually.")
     py = Path(sys.executable).as_posix()
-    cmd = f'"{py}" "{engine_root.as_posix()}/scripts/aip_overview.py" --repo-root . --print'
+    cmd = f'"{py}" "{engine_root.as_posix()}/scripts/aip_session_start.py" --repo-root .'
     hooks = data.setdefault("hooks", {})
     starts = hooks.setdefault("SessionStart", [])
     for group in starts:
@@ -112,7 +114,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".", type=Path, help="目标仓库根。默认当前目录。")
     parser.add_argument("--engine-root", default=ENGINE_ROOT, type=Path, help="AIP 引擎根。默认本仓库。")
     parser.add_argument("--claude-stop", action="store_true", help="额外装非阻塞的 Claude Code Stop 钩子。")
-    parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（输出 OVERVIEW 到上下文）。")
+    parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（新会话/恢复/压缩后把 OVERVIEW 打进上下文）。")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的非 AIP pre-commit 钩子。")
     args = parser.parse_args()
 

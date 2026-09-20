@@ -3,14 +3,14 @@ from __future__ import annotations
 """把 AIP 从本机彻底卸载（Claude Code / Codex / Grok 三套落点都清）。
 
 清理范围（缺啥跳啥，幂等）：
-- 引擎包         ~/plugins/ai-implementation-protocol/
+- 引擎包         ~/plugins/ai-implementation-protocol/（Codex / Grok 用；旧版 Claude 安装也落在这里）
 - Claude 技能    ~/.claude/skills/{aip,root-cause,aip-brainstorm}/
 - Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
 - Codex 技能     ~/.agents/skills/{aip,root-cause,aip-brainstorm}/
 - Codex home 技能 $CODEX_HOME/skills/{aip,root-cause,aip-brainstorm}/（默认 ~/.codex/skills）
 - Codex 旧命令   ~/.agents/commands/aip/
 - Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
-- Grok 技能      ~/.grok/skills/{aip,root-cause}/
+- Grok 技能      ~/.grok/skills/{aip,root-cause,aip-brainstorm}/
 - Grok 用户插件  ~/.grok/plugins/ai-implementation-protocol/
 
 装进各业务仓库 .git/hooks/pre-commit 的 AIP 检查是逐仓库的、无法在这里枚举，
@@ -26,7 +26,10 @@ from pathlib import Path
 
 PLUGIN_NAME = "ai-implementation-protocol"
 
-from _aip_common import SKILL_NAMES  # noqa: E402  唯一真源，新增技能只改 _aip_common
+# 技能清单的唯一真源在引擎里（aip 技能的 scripts/_aip_common.py）；新增技能只改那一处。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]
+                       / "plugins" / PLUGIN_NAME / "skills" / "aip" / "scripts"))
+from _aip_common import SKILL_NAMES  # noqa: E402
 
 
 def _utf8() -> None:

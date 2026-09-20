@@ -79,12 +79,13 @@ def install_skills(source_plugin: Path, skill_roots: list[Path]) -> list[Path]:
     sources = sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists())
     planned = [(src, skill_root / src.name) for skill_root in skill_roots for src in sources]
 
+    # 整份技能目录一起拷（scripts/ templates/ reference/ 随 SKILL.md 走），
+    # 这样无论 Codex 从哪个目录加载技能，脚本都在技能旁边。
     installed: list[Path] = []
     for src, destination_skill_dir in planned:
         if destination_skill_dir.exists():
             shutil.rmtree(destination_skill_dir)
-        destination_skill_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
+        shutil.copytree(src, destination_skill_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
         installed.append(destination_skill_dir / "SKILL.md")
     return installed
 
@@ -125,6 +126,32 @@ def upsert_marketplace_entry(marketplace: dict[str, Any], plugin_path: str) -> N
     plugins.append(entry)
 
 
+def install_into_project(repo_root: Path, project: Path) -> int:
+    """项目级安装：技能落 <project>/.codex/skills/，随仓库走。
+
+    不拷插件包、也不写市场条目——那两样是个人级安装才有的东西，放进别人的仓库没有意义。
+    """
+    project = project.resolve()
+    if not project.is_dir():
+        raise SystemExit(f"Project not found: {project}")
+    source_plugin = repo_root / "plugins" / PLUGIN_NAME
+    installed = install_skills(source_plugin, [project / ".codex" / "skills"])
+    aip_dir = project / ".codex" / "skills" / "aip"
+    if not (aip_dir / "scripts" / "aip_init.py").exists() or not installed:
+        raise SystemExit(f"Install incomplete under {project}")
+    for path in installed:
+        print(f"Installed skill: {path}")
+    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
+    print("")
+    print("项目级安装。接下来：")
+    print(f"  1. 让本仓库的钩子指向这份副本："
+          f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
+          f" --engine-root {aip_dir} --force")
+    print("  2. 在这个仓库开新会话，用 $aip init（幂等）。")
+    print("  3. 技能目录会进版本库（随仓库分发给所有人）。不想进就加进 .gitignore。")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install the AIP Codex plugin into the current user's local plugin directory.")
     parser.add_argument(
@@ -152,9 +179,18 @@ def main() -> int:
         type=Path,
         help="Codex home used when --skill-scope includes codex-home. Defaults to CODEX_HOME or <home>/.codex.",
     )
+    parser.add_argument(
+        "--project",
+        default=None,
+        type=Path,
+        help="Install into this project instead of the user home: <project>/.codex/skills/. "
+             "The skills then travel with that repository; no package copy, no marketplace entry.",
+    )
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
+    if args.project is not None:
+        return install_into_project(repo_root, args.project)
     home = args.home.resolve()
     codex_home = args.codex_home.expanduser().resolve() if args.codex_home else default_codex_home(home)
     skill_roots = codex_skill_roots(home, codex_home, args.skill_scope)
@@ -172,7 +208,7 @@ def main() -> int:
 
     # 安装后自检：关键文件真落盘了才算装好。
     missing = [p for p in [destination_plugin / ".codex-plugin" / "plugin.json",
-                           destination_plugin / "scripts" / "aip_init.py",
+                           destination_plugin / "skills" / "aip" / "scripts" / "aip_init.py",
                            marketplace_path] if not p.exists()]
     if missing or not installed:
         raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
@@ -183,7 +219,7 @@ def main() -> int:
     for path in purged:
         print(f"Removed obsolete commands: {path}")
     print(f"Updated marketplace: {marketplace_path}")
-    print(f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+    print(f"Health check any time: python {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0
 

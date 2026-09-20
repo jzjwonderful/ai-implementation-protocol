@@ -4,9 +4,9 @@ from __future__ import annotations
 
 四类检查：
 1. 项目 .aip/ 健康（活文档齐全、索引一致、无旧机制残留、knowledge 复核超期）
-2. 安装健康（~/plugins 下的插件包、skills 文件、装的版本 vs 引擎版本）
+2. 安装健康（~/.claude/skills 与 Codex 技能目录里的 aip 技能是否完整、装的版本 vs 引擎版本）
 3. hook 健康（pre-commit 是否在、是否 AIP 管理、指向的引擎还在不在）
-4. 引擎仓库健康（root 与 plugins/ 副本逐字节一致、VERSION 同步）
+4. 引擎仓库健康（两份 plugin.json 的 version 与技能目录 VERSION 一致）
 
 输出分级：ERROR（AIP 用不了）/ WARN（体验差或有漂移风险）/ INFO（可选建议），
 每条带修复命令；有 ERROR 时退出码 1，否则 0。
@@ -23,6 +23,7 @@ from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
 from aip_knowledge import parse_entries
 from install_hooks import PRE_COMMIT_MARK
 
+# 引擎根 = aip 技能目录（scripts/ 与 templates/ 都在它下面），装到哪都成立。
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "ai-implementation-protocol"
 # knowledge 条目复核超过这个天数只提醒（WARN），不判死刑。
@@ -104,28 +105,36 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
 
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
-    installed = home / "plugins" / PLUGIN_NAME
-    reinstall = f"python {engine}/scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
-    if not installed.is_dir():
-        out.append(("WARN", f"未找到已安装的插件包：{installed}", reinstall))
-        return out
+    # 安装器只在 AIP 仓库里，不随技能分发，所以这里不能写 engine 的路径。
+    reinstall = "在 AIP 仓库根跑 python scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
+    claude_skills = home / ".claude" / "skills"
     for skill in SKILL_NAMES:
-        if not (home / ".claude" / "skills" / skill / "SKILL.md").exists():
+        if not (claude_skills / skill / "SKILL.md").exists():
             out.append(("WARN", f"Claude 技能未安装：~/.claude/skills/{skill}/SKILL.md", reinstall))
+    claude_aip = claude_skills / "aip"
+    if (claude_aip / "SKILL.md").exists() and not (claude_aip / "scripts" / "aip_init.py").exists():
+        out.append(("WARN", "Claude 的 aip 技能是旧版布局（技能目录里没有 scripts/），脚本路径会找不到", reinstall))
+    for skill in SKILL_NAMES:
         paths = codex_skill_paths(home, skill, codex_home)
         if not any(path.exists() for path in paths):
             pretty = " 或 ".join(str(path) for path in paths)
             out.append(("INFO", f"Codex 技能未安装：{pretty}（不用 Codex 可忽略）",
-                        f"python {engine}/scripts/install_codex_plugin.py"))
+                        "在 AIP 仓库根跑 python scripts/install_codex_plugin.py"))
         if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
             out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
-                        f"python {engine}/scripts/install_grok_plugin.py"))
+                        "在 AIP 仓库根跑 python scripts/install_grok_plugin.py"))
     engine_ver = _read_version(engine / "VERSION")
-    installed_ver = _read_version(installed / "VERSION")
-    if installed_ver is None:
-        out.append(("WARN", "已安装的插件包没有 VERSION（旧版安装）", reinstall))
-    elif engine_ver and installed_ver != engine_ver:
-        out.append(("WARN", f"版本不一致：引擎 {engine_ver}，已安装 {installed_ver}", reinstall))
+    installs = ([("Claude", claude_aip)]
+                + [("Codex", p.parent) for p in codex_skill_paths(home, "aip", codex_home)]
+                + [("Grok", home / ".grok" / "skills" / "aip")])
+    for label, skill_dir in installs:
+        if not (skill_dir / "SKILL.md").exists():
+            continue
+        installed_ver = _read_version(skill_dir / "VERSION")
+        if installed_ver is None:
+            out.append(("WARN", f"{label} 已装的 aip 技能没有 VERSION（旧版安装）：{skill_dir}", reinstall))
+        elif engine_ver and installed_ver != engine_ver:
+            out.append(("WARN", f"{label} 技能版本不一致：引擎 {engine_ver}，已安装 {installed_ver}（{skill_dir}）", reinstall))
     return out
 
 
@@ -151,16 +160,9 @@ def check_hooks(repo: Path, engine: Path) -> list[Item]:
 
 
 def check_engine_repo(repo: Path) -> list[Item]:
-    plugin_root = repo / "plugins" / PLUGIN_NAME
-    if not plugin_root.is_dir():
-        return []
-    sync_fix = f"python {repo}/scripts/sync_plugin.py"
-    out: list[Item] = [("ERROR", v, sync_fix) for v in aip_check.check_dual_copy(repo)]
-    root_ver = _read_version(repo / "VERSION")
-    plugin_ver = _read_version(plugin_root / "VERSION")
-    if root_ver != plugin_ver:
-        out.append(("ERROR", f"VERSION 不同步：根 {root_ver!r}，插件副本 {plugin_ver!r}", sync_fix))
-    return out
+    # 只在 AIP 引擎自身仓库里有意义；消费方项目直接返回空。
+    return [("ERROR", v, "让各端 plugin.json 的 version 与 skills/aip/VERSION 一致")
+            for v in aip_check.check_engine_versions(repo)]
 
 
 def run_all(repo: Path, home: Path, engine: Path, stale_days: int = STALE_DAYS,
@@ -173,7 +175,7 @@ def main() -> int:
     force_utf8()
     ap = argparse.ArgumentParser(description="AIP install/environment health check.")
     ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--home", default=str(Path.home()), help="含 plugins/、.claude/、.agents/、.grok/ 的主目录。")
+    ap.add_argument("--home", default=str(Path.home()), help="含 .claude/、.agents/、.codex/、.grok/ 的用户主目录。")
     ap.add_argument("--codex-home", default=None,
                     help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))

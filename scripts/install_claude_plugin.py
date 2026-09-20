@@ -1,60 +1,97 @@
 from __future__ import annotations
 
+"""把 AIP 装进 Claude Code：整份技能目录（SKILL.md + scripts/ + templates/ + reference/）拷到
+`<落点>/.claude/skills/<skill>/`。脚本随技能走，技能里写的相对路径装到哪都成立。
+
+两种落点：
+- 默认「个人级」：落在用户主目录，本机所有项目都能用。
+- `--project <仓库>`「项目级」：落在那个仓库里，随仓库走，别人 clone 下来就有。
+  项目级技能会进版本库，本脚本装完会把该说的提醒印出来（钩子重指、要不要提交）。
+
+安装即覆盖：装过就先清掉旧目录再拷（和 Codex 安装器一致）。
+"""
+
 import argparse
 import shutil
 from pathlib import Path
 
 
 PLUGIN_NAME = "ai-implementation-protocol"
+IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
 
 
-def copy_plugin(source: Path, destination: Path, force: bool) -> None:
-    if not (source / ".claude-plugin" / "plugin.json").exists():
-        raise SystemExit(f"Plugin manifest not found: {source / '.claude-plugin' / 'plugin.json'}")
-
-    if destination.exists():
-        if not force:
-            raise SystemExit(f"Destination exists: {destination}. Re-run with --force to replace it.")
-        shutil.rmtree(destination)
-
-    shutil.copytree(
-        source,
-        destination,
-        # 新模型不分发任何斜杠命令；即使源里残留 commands/ 也不带进安装目录。
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "commands"),
-    )
-
-
-def install_skills(source_plugin: Path, home: Path, force: bool) -> list[Path]:
-    skills_root = source_plugin / "skills"
-    if not skills_root.exists():
-        raise SystemExit(f"Plugin skills dir not found: {skills_root}")
-
+def install_skills(source_skills: Path, home: Path) -> list[Path]:
+    if not source_skills.is_dir():
+        raise SystemExit(f"Plugin skills dir not found: {source_skills}")
     installed: list[Path] = []
-    for src in sorted(p for p in skills_root.iterdir() if (p / "SKILL.md").exists()):
-        destination_skill_dir = home / ".claude" / "skills" / src.name
-        if destination_skill_dir.exists():
-            if not force:
-                raise SystemExit(f"Skill destination exists: {destination_skill_dir}. Re-run with --force to replace it.")
-            shutil.rmtree(destination_skill_dir)
-        destination_skill_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src / "SKILL.md", destination_skill_dir / "SKILL.md")
-        installed.append(destination_skill_dir / "SKILL.md")
+    for src in sorted(p for p in source_skills.iterdir() if (p / "SKILL.md").exists()):
+        dst = home / ".claude" / "skills" / src.name
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, ignore=IGNORE)
+        installed.append(dst)
     return installed
 
 
-def purge_obsolete_commands(home: Path) -> list[Path]:
-    # 新模型只有技能、没有斜杠命令。清掉旧 per-command 模型在 ~/.claude/commands/aip
-    # 留下的命令文件，避免升级后 Claude 里还冒出 check/resume/start 等旧命令。
+def purge_obsolete(home: Path) -> list[Path]:
+    # 旧 per-command 模型留在 ~/.claude/commands/aip 的命令文件：清掉，免得旧命令还冒出来。
+    purged: list[Path] = []
     obsolete = home / ".claude" / "commands" / "aip"
     if obsolete.is_dir():
         shutil.rmtree(obsolete)
-        return [obsolete]
-    return []
+        purged.append(obsolete)
+    return purged
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Install the AIP plugin for Claude Code.")
+def install_into_project(repo_root: Path, project: Path) -> int:
+    """项目级安装：技能落 <project>/.claude/skills/，随仓库走。"""
+    project = project.resolve()
+    if not project.is_dir():
+        raise SystemExit(f"Project not found: {project}")
+    installed = install_skills(repo_root / "plugins" / PLUGIN_NAME / "skills", project)
+    aip_dir = project / ".claude" / "skills" / "aip"
+    _verify(aip_dir, installed)
+    for path in installed:
+        print(f"Installed skill: {path}")
+    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
+    for line in project_notes(project, aip_dir):
+        print(line)
+    print("Open a new Claude Code session in that project for the skills to be picked up.")
+    return 0
+
+
+def _verify(aip_dir: Path, installed: list[Path]) -> None:
+    """安装后自检：关键文件真落盘了才算装好。"""
+    missing = [p for p in [aip_dir / "SKILL.md",
+                           aip_dir / "VERSION",
+                           aip_dir / "scripts" / "aip_init.py",
+                           aip_dir / "templates" / "overview-template.md"] if not p.exists()]
+    if missing or not installed:
+        raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
+
+
+def project_notes(project: Path, aip_dir: Path) -> list[str]:
+    """项目级安装装完要交代的事：钩子指哪、这些文件会不会进版本库。"""
+    notes = [
+        "",
+        "项目级安装。接下来：",
+        f"  1. 让本仓库的钩子指向这份副本（老仓库的钩子可能还指着已经搬走的路径）："
+        f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
+        f" --engine-root {aip_dir} --session-start --force",
+        "  2. 在这个仓库开新会话，用 /aip init（已初始化过的仓库跑一次也是幂等的）。",
+    ]
+    gitignore = project / ".gitignore"
+    tracked_hint = "  3. 技能目录会进版本库（随仓库分发给所有人）。不想进就加进 .gitignore。"
+    if gitignore.is_file():
+        text = gitignore.read_text(encoding="utf-8", errors="ignore")
+        if ".claude/skills" in text:
+            tracked_hint = "  3. 注意：本仓库 .gitignore 里排除了 .claude/skills，这份副本不会随仓库分发。"
+    notes.append(tracked_hint)
+    return notes
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Install the AIP skills for Claude Code.")
     parser.add_argument(
         "--repo-root",
         default=Path(__file__).resolve().parents[1],
@@ -63,34 +100,43 @@ def main() -> int:
     )
     parser.add_argument(
         "--home",
-        default=Path.home(),
+        default=None,
         type=Path,
-        help="Home directory that contains .claude/skills/ and plugins/. Defaults to the current user home.",
+        help="Home directory that contains .claude/skills/. Defaults to the current user home.",
     )
-    parser.add_argument("--force", action="store_true", help="Replace an existing installed plugin directory or skill.")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--project",
+        default=None,
+        type=Path,
+        help="Install into this project instead of the user home: <project>/.claude/skills/. "
+             "The skills then travel with that repository.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.project is not None and args.home is not None:
+        raise SystemExit("--project 和 --home 只能给一个：前者装进项目，后者装进主目录。")
 
     repo_root = args.repo_root.resolve()
-    home = args.home.resolve()
-    source_plugin = repo_root / "plugins" / PLUGIN_NAME
-    destination_plugin = home / "plugins" / PLUGIN_NAME
+    if args.project is not None:
+        return install_into_project(repo_root, args.project)
 
-    copy_plugin(source_plugin, destination_plugin, args.force)
-    installed = install_skills(destination_plugin, home, args.force)
-    purged = purge_obsolete_commands(home)
+    home = (args.home or Path.home()).resolve()
+    installed = install_skills(repo_root / "plugins" / PLUGIN_NAME / "skills", home)
+    purged = purge_obsolete(home)
 
-    # 安装后自检：关键文件真落盘了才算装好。
-    missing = [p for p in [destination_plugin / ".claude-plugin" / "plugin.json",
-                           destination_plugin / "scripts" / "aip_init.py"] if not p.exists()]
-    if missing or not installed:
-        raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
+    aip_dir = home / ".claude" / "skills" / "aip"
+    _verify(aip_dir, installed)
 
-    print(f"Installed Claude Code plugin: {destination_plugin}")
     for path in installed:
         print(f"Installed skill: {path}")
     for path in purged:
         print(f"Removed obsolete commands: {path}")
-    print(f"Health check any time: python {destination_plugin / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+
+    legacy = home / "plugins" / PLUGIN_NAME
+    if legacy.is_dir():
+        print(f"Note: {legacy} is no longer used by Claude Code (Codex still installs there); "
+              "remove it if you only use Claude Code.")
     print("Restart Claude Code or open a new session for the skills to be picked up.")
     return 0
 

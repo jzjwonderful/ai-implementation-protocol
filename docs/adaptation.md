@@ -32,19 +32,27 @@ protocol or script changes.
 - **All at once (recommended)**: `python scripts/install_all.py` — one engine copy under `~/plugins/` plus
   skills for Claude Code, Codex, and Grok. Subset with `--targets claude,grok` (or `codex`, or `all`).
 - **Codex only**: `python scripts/install_codex_plugin.py` (skills to `~/.agents/skills` and
-  `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced by default).
+  `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced).
 - **Claude Code only**: `python scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
 - **Grok only**: `python scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
   optional `--user-plugin` → `~/.grok/plugins/`).
+- **Into one project**: add `--project <repo>` to `install_all.py`, `install_claude_plugin.py` or
+  `install_codex_plugin.py`. The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/`
+  and travel with that repository instead of the machine. Grok has no project-level skill directory,
+  so `--project` covers Claude Code and Codex only.
 
-The same plugin package serves all three runtimes; they drive the same tool-agnostic CLI under `scripts/`.
+The same plugin package serves all three runtimes. Each installer copies whole skill directories, so every
+runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `scripts/`.
 
 ### Enforcement hooks (make `aip check` automatic)
 
 ```bash
-python scripts/install_hooks.py --repo-root <target>            # git pre-commit gate
-python scripts/install_hooks.py --repo-root <target> --claude-stop  # + non-blocking Claude Stop hook
+python <skill>/scripts/install_hooks.py --repo-root <target>                  # git pre-commit gate
+python <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (OVERVIEW into context, also after compaction)
+python <skill>/scripts/install_hooks.py --repo-root <target> --claude-stop    # + non-blocking Claude Stop hook
 ```
+
+`<skill>` is the installed `aip` skill directory (`~/.claude/skills/aip` for Claude Code). `aip init` already installs the pre-commit and SessionStart hooks.
 
 The git pre-commit hook blocks commits when `aip check` fails (bypass once with `git commit --no-verify`).
 This is the level that turns "the AI should" into "the commit is blocked unless." Load-bearing rules are

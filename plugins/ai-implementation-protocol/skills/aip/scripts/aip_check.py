@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+import json
 from pathlib import Path
 from _aip_common import (
     FORBIDDEN_SLOT_FILENAMES, PROJECT_LIVING_FILES, REQUIRED_KNOWLEDGE_FIELDS,
@@ -44,19 +45,33 @@ def check_no_orphan_slots(repo: Path) -> list[str]:
             out.append(f"发现旧机制残留/未迁移文件: {path.relative_to(repo)}")
     return out
 
-PLUGIN_ROOT = "plugins/ai-implementation-protocol"
+ENGINE_PKG = "plugins/ai-implementation-protocol"
+ENGINE_MANIFESTS = [".claude-plugin/plugin.json", ".codex-plugin/plugin.json",
+                    ".grok-plugin/plugin.json"]
 
-def check_dual_copy(repo: Path) -> list[str]:
-    # 镜像比对只对 AIP 引擎自身仓库有意义。消费方项目没有这个插件包，
-    # 否则项目自带的 scripts/、templates/ 会被逐个误判成"副本缺失"。
-    # 比对实现只有一份，在 sync_plugin.drift（覆盖全部同步目录 + VERSION）。
-    if not (repo / PLUGIN_ROOT).is_dir():
+def check_engine_versions(repo: Path) -> list[str]:
+    # 只对 AIP 引擎自身仓库有意义：技能目录里的 VERSION 是唯一版本源，
+    # 各端 plugin.json 的 version 必须与它一致（历史上这里漂过 0.2.0/0.2.1）。
+    pkg = repo / ENGINE_PKG
+    if not pkg.is_dir():
         return []
-    import sync_plugin
-    return [f"plugins {v}（跑 sync_plugin.py）" for v in sync_plugin.drift(repo)]
+    ver_file = pkg / "skills" / "aip" / "VERSION"
+    if not ver_file.is_file():
+        return [f"引擎版本文件缺失: {ENGINE_PKG}/skills/aip/VERSION"]
+    ver = read_text(ver_file).strip()
+    out = []
+    for manifest in ENGINE_MANIFESTS:
+        path = pkg / manifest
+        if not path.is_file():
+            out.append(f"插件清单缺失: {ENGINE_PKG}/{manifest}")
+            continue
+        got = json.loads(read_text(path)).get("version")
+        if got != ver:
+            out.append(f"版本不一致: {manifest} 写的是 {got!r}，VERSION 是 {ver!r}")
+    return out
 
 def run_all(repo: Path) -> list[str]:
-    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_dual_copy(repo)
+    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_engine_versions(repo)
 
 def main() -> int:
     force_utf8()

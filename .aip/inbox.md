@@ -5,3 +5,5 @@
 
 ## 条目
 - 已关闭：命令不写死解释器名。gate/文档统一写 `python` 并注明「解释器名按本机、需 Python 3.9+」；强制闸门（pre-commit）本就烧 install_hooks 装钩子时的 `sys.executable` 绝对路径，不受名字影响。（早先"统一成 python3"的结论作废——Windows 上常只有 `python`、没有 `python3`，反而跑不起来。）
+- 待处理：`install_hooks.py` 把 Claude SessionStart/Stop 钩子写进项目的 `.claude/settings.json`，命令里烧了本机 Python 和技能目录的绝对路径。这个文件通常会进 git，换机器或换人就失效。候选做法：改写到 `.claude/settings.local.json`（不进 git，每台机器各自 `aip init`），或命令里用 `$HOME`/`%USERPROFILE%` 相对写法。本次重构没动这一点，只把脚本名换了。
+- 已关闭：0.3.0 与 master 的分叉已合并（本次）。实际合的时候 git 的目录改名识别是管用的——master 新增在 `plugins/.../scripts/` 的文件被报成 file-location 冲突并放到了 `skills/aip/scripts/`，不是我原先担心的「静默合出坏树」。真正要手工订正的是内容层面的 0.2.x 假设：Grok 安装器只拷 SKILL.md（引擎不随技能走）、三个脚本的自检路径、`install_all` 调的 claude 接口已改签名、`.grok-plugin/plugin.json` 的版本没进一致性检查。教训进 K-004。
