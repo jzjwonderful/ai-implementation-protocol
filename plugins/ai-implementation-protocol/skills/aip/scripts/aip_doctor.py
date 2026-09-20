@@ -19,14 +19,13 @@ from datetime import date, datetime
 from pathlib import Path
 
 import aip_check
-from _aip_common import aip_root, force_utf8, read_text
+from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
 from aip_knowledge import parse_entries
 from install_hooks import PRE_COMMIT_MARK
 
 # 引擎根 = aip 技能目录（scripts/ 与 templates/ 都在它下面），装到哪都成立。
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "ai-implementation-protocol"
-SKILL_NAMES = ["aip", "root-cause"]
 # knowledge 条目复核超过这个天数只提醒（WARN），不判死刑。
 STALE_DAYS = 90
 
@@ -106,7 +105,8 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
 
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
-    reinstall = "在 AIP 仓库根跑 python scripts/install_claude_plugin.py（Codex 用 install_codex_plugin.py）"
+    # 安装器只在 AIP 仓库里，不随技能分发，所以这里不能写 engine 的路径。
+    reinstall = "在 AIP 仓库根跑 python scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
     claude_skills = home / ".claude" / "skills"
     for skill in SKILL_NAMES:
         if not (claude_skills / skill / "SKILL.md").exists():
@@ -120,8 +120,13 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
             pretty = " 或 ".join(str(path) for path in paths)
             out.append(("INFO", f"Codex 技能未安装：{pretty}（不用 Codex 可忽略）",
                         "在 AIP 仓库根跑 python scripts/install_codex_plugin.py"))
+        if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
+            out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
+                        "在 AIP 仓库根跑 python scripts/install_grok_plugin.py"))
     engine_ver = _read_version(engine / "VERSION")
-    installs = [("Claude", claude_aip)] + [("Codex", p.parent) for p in codex_skill_paths(home, "aip", codex_home)]
+    installs = ([("Claude", claude_aip)]
+                + [("Codex", p.parent) for p in codex_skill_paths(home, "aip", codex_home)]
+                + [("Grok", home / ".grok" / "skills" / "aip")])
     for label, skill_dir in installs:
         if not (skill_dir / "SKILL.md").exists():
             continue
@@ -156,7 +161,7 @@ def check_hooks(repo: Path, engine: Path) -> list[Item]:
 
 def check_engine_repo(repo: Path) -> list[Item]:
     # 只在 AIP 引擎自身仓库里有意义；消费方项目直接返回空。
-    return [("ERROR", v, "让两份 plugin.json 的 version 与 skills/aip/VERSION 一致")
+    return [("ERROR", v, "让各端 plugin.json 的 version 与 skills/aip/VERSION 一致")
             for v in aip_check.check_engine_versions(repo)]
 
 
@@ -170,7 +175,7 @@ def main() -> int:
     force_utf8()
     ap = argparse.ArgumentParser(description="AIP install/environment health check.")
     ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--home", default=str(Path.home()), help="含 .claude/、.agents/、.codex/ 的用户主目录。")
+    ap.add_argument("--home", default=str(Path.home()), help="含 .claude/、.agents/、.codex/、.grok/ 的用户主目录。")
     ap.add_argument("--codex-home", default=None,
                     help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))

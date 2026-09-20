@@ -11,9 +11,11 @@
 
 <!-- AIP:AUTO-DIGEST:BEGIN (勿手改) -->
 ### 自动摘要（派生，勿手改）
-**知识（2 条）**
+**知识（4 条）**
 - K-001 改完 scripts/ 必须先跑 sync_plugin.py，再跑 install_claude_plugin.py [superseded(by K-002)]
 - K-002 改引擎要改仓库里的技能目录，不是已安装的副本 [active]
+- K-003 把 AIP 装成项目级技能：`--home` 指项目根，钩子得另外重指 [active]
+- K-004 引擎搬家后合并旧分支，危险的不是 git 冲突而是没冲突的路径假设 [active]
 
 **近期决策**
 - ADR-1：本仓库自举——从旧 `project_docs/` 迁入 `.aip/`

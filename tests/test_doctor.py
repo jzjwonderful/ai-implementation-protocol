@@ -4,6 +4,7 @@ from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
 import aip_doctor as doc, aip_init
+from _aip_common import SKILL_NAMES
 
 
 def levels(items):
@@ -81,29 +82,32 @@ class InstallHealth(unittest.TestCase):
 
     def test_old_layout_without_scripts_is_warn(self):
         home = Path(tempfile.mkdtemp())
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             self._skill(home/".claude", skill, version=self._engine_version(), scripts=False)
         items = doc.check_install(home, ENGINE)
         self.assertTrue(any("旧版布局" in msg and lv == "WARN" for lv, msg, _ in items))
 
     def test_version_mismatch_is_warn(self):
         home = Path(tempfile.mkdtemp())
-        for skill in ["aip", "root-cause"]:
-            self._skill(home/".claude", skill, version="0.0.1")
-            self._skill(home/".agents", skill, version="0.0.1")
+        for skill in SKILL_NAMES:
+            for base in [".claude", ".agents", ".grok"]:
+                self._skill(home/base, skill, version="0.0.1")
         items = doc.check_install(home, ENGINE)
         self.assertTrue(any("版本不一致" in msg and lv == "WARN" for lv, msg, _ in items))
+        # 三端技能都装了时，不应再提示某端 skill 缺失
+        self.assertFalse(any("技能未安装" in msg for _, msg, _ in items))
 
     def test_matching_install_is_clean(self):
         home = Path(tempfile.mkdtemp())
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             self._skill(home/".claude", skill, version=self._engine_version())
             self._skill(home/".codex", skill, version=self._engine_version())
+            self._skill(home/".grok", skill, version=self._engine_version())
         self.assertEqual(doc.check_install(home, ENGINE, codex_home=home/".codex"), [])
 
     def test_codex_home_skill_counts_as_installed(self):
         home = Path(tempfile.mkdtemp())
-        for skill in ["aip", "root-cause"]:
+        for skill in SKILL_NAMES:
             self._skill(home/".claude", skill, version=self._engine_version())
             self._skill(home/".codex", skill, version=self._engine_version())
         items = doc.check_install(home, ENGINE, codex_home=home/".codex")

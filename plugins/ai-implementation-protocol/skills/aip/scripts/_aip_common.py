@@ -35,6 +35,10 @@ FORBIDDEN_SLOT_FILENAMES = [
 # knowledge.md 每条目必填字段（check 校验）。
 REQUIRED_KNOWLEDGE_FIELDS = ["分类", "状态", "症状", "根因", "适用范围", "最后复核"]
 
+# 插件包携带的全部技能（plugins/.../skills/ 下应有同名目录）。
+# 安装器按目录遍历不读这个清单；doctor/uninstall 靠它逐个点名，新增技能只改这里。
+SKILL_NAMES = ["aip", "root-cause", "aip-brainstorm"]
+
 # 扫描"无并行产物"时跳过的重目录。
 SCAN_PRUNE_DIRS = {
     ".git", "node_modules", ".venv", "venv", "dist", "build",

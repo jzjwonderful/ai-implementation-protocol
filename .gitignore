@@ -11,3 +11,6 @@ __pycache__/
 
 # Nexus 代码地图的本地索引缓存（生成物，勿提交）
 .nexus-map/
+
+# codex CLI 的本机状态（绝对路径/PID/会话ID，勿提交）
+.omc/

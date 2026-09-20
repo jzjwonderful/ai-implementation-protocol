@@ -46,11 +46,11 @@ class OrphanSlots(unittest.TestCase):
         self.assertEqual(chk.check_no_orphan_slots(make_repo()), [])
 
 class EngineVersions(unittest.TestCase):
-    def _mk(self, claude="0.3.0", codex="0.3.0", version="0.3.0"):
+    def _mk(self, claude="0.3.0", codex="0.3.0", grok="0.3.0", version="0.3.0"):
         d = make_repo(); pkg = d/"plugins"/"ai-implementation-protocol"
         (pkg/"skills"/"aip").mkdir(parents=True)
         (pkg/"skills"/"aip"/"VERSION").write_text(version + "\n", encoding="utf-8")
-        for sub, ver in [(".claude-plugin", claude), (".codex-plugin", codex)]:
+        for sub, ver in [(".claude-plugin", claude), (".codex-plugin", codex), (".grok-plugin", grok)]:
             (pkg/sub).mkdir()
             (pkg/sub/"plugin.json").write_text('{"name": "x", "version": "%s"}\n' % ver, encoding="utf-8")
         return d
@@ -59,13 +59,16 @@ class EngineVersions(unittest.TestCase):
     def test_manifest_drift(self):
         viol = chk.check_engine_versions(self._mk(codex="0.2.1"))
         self.assertTrue(any(".codex-plugin" in v for v in viol))
+    def test_grok_manifest_drift(self):
+        viol = chk.check_engine_versions(self._mk(grok="0.2.1"))
+        self.assertTrue(any(".grok-plugin" in v for v in viol))
     def test_missing_version_file(self):
         d = self._mk(); (d/"plugins"/"ai-implementation-protocol"/"skills"/"aip"/"VERSION").unlink()
         self.assertTrue(any("VERSION" in v for v in chk.check_engine_versions(d)))
     def test_consumer_repo_skipped(self):
         self.assertEqual(chk.check_engine_versions(make_repo()), [])
     def test_own_repo_consistent(self):
-        # 引擎仓库自身：两份 plugin.json 必须和 skills/aip/VERSION 一致。
+        # 引擎仓库自身：各端 plugin.json 必须和 skills/aip/VERSION 一致。
         self.assertEqual(chk.check_engine_versions(ROOT), [])
 
 if __name__ == "__main__":

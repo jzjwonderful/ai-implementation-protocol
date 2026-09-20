@@ -46,11 +46,12 @@ def check_no_orphan_slots(repo: Path) -> list[str]:
     return out
 
 ENGINE_PKG = "plugins/ai-implementation-protocol"
-ENGINE_MANIFESTS = [".claude-plugin/plugin.json", ".codex-plugin/plugin.json"]
+ENGINE_MANIFESTS = [".claude-plugin/plugin.json", ".codex-plugin/plugin.json",
+                    ".grok-plugin/plugin.json"]
 
 def check_engine_versions(repo: Path) -> list[str]:
     # 只对 AIP 引擎自身仓库有意义：技能目录里的 VERSION 是唯一版本源，
-    # 两份 plugin.json 的 version 必须与它一致（历史上这里漂过 0.2.0/0.2.1）。
+    # 各端 plugin.json 的 version 必须与它一致（历史上这里漂过 0.2.0/0.2.1）。
     pkg = repo / ENGINE_PKG
     if not pkg.is_dir():
         return []

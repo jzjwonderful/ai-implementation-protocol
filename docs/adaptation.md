@@ -29,10 +29,16 @@ protocol or script changes.
 
 ## Install Targets
 
-- **Codex**: `python scripts/install_codex_plugin.py` (installs the plugin and skills to both `~/.agents/skills` and `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced by default).
-- **Claude Code**: `python scripts/install_claude_plugin.py` (installs the whole `aip` and `root-cause` skill directories to `~/.claude/skills/`; scripts and templates travel inside the `aip` skill; existing install files are replaced).
+- **All at once (recommended)**: `python scripts/install_all.py` — one engine copy under `~/plugins/` plus
+  skills for Claude Code, Codex, and Grok. Subset with `--targets claude,grok` (or `codex`, or `all`).
+- **Codex only**: `python scripts/install_codex_plugin.py` (skills to `~/.agents/skills` and
+  `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced).
+- **Claude Code only**: `python scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
+- **Grok only**: `python scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
+  optional `--user-plugin` → `~/.grok/plugins/`).
 
-The same plugin package serves both runtimes; both drive the same tool-agnostic CLI under the installed skill's `scripts/`.
+The same plugin package serves all three runtimes. Each installer copies whole skill directories, so every
+runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `scripts/`.
 
 ### Enforcement hooks (make `aip check` automatic)
 
