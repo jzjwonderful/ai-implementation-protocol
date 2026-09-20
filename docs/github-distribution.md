@@ -56,6 +56,17 @@ Skill destinations:
 
 Every installer copies the **whole** skill directory, so the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION` always sit next to its `SKILL.md`. The `~/plugins/` copy that Codex and Grok keep is the packaged source they install from; the single-runtime Claude installer does not use it.
 
+## Installing Into One Project
+
+```bash
+python scripts/install_all.py --project /path/to/repo
+```
+
+The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/` and are committed with that
+repository, so everyone who clones it gets the same engine version without a personal install. Nothing
+is written to `~/plugins/` or the marketplace. Grok has no project-level skill directory, so this
+covers Claude Code and Codex only.
+
 ## Updating An Existing Install
 
 After pulling a newer version:

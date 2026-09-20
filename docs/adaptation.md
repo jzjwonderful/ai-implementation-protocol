@@ -36,6 +36,10 @@ protocol or script changes.
 - **Claude Code only**: `python scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
 - **Grok only**: `python scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
   optional `--user-plugin` → `~/.grok/plugins/`).
+- **Into one project**: add `--project <repo>` to `install_all.py`, `install_claude_plugin.py` or
+  `install_codex_plugin.py`. The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/`
+  and travel with that repository instead of the machine. Grok has no project-level skill directory,
+  so `--project` covers Claude Code and Codex only.
 
 The same plugin package serves all three runtimes. Each installer copies whole skill directories, so every
 runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `scripts/`.

@@ -72,6 +72,21 @@ $aip init
 
 Per-runtime installers below are still available if you only want one tool.
 
+## Install Into One Project
+
+Instead of the user home, the skills can live inside a single repository and travel with it:
+
+```bash
+python scripts/install_all.py --project /path/to/repo     # Claude Code + Codex
+python scripts/install_claude_plugin.py --project /path/to/repo   # → <repo>/.claude/skills/
+python scripts/install_codex_plugin.py --project /path/to/repo    # → <repo>/.codex/skills/
+```
+
+Everyone who clones that repository then gets the same engine version, with no personal install. The
+installer prints the follow-up steps: repoint that repository's hooks at the in-repo copy, then run
+`/aip init` (or `$aip init`) once. Grok has no established project-level skill directory, so
+`--project` covers Claude Code and Codex only.
+
 ## Install For Claude Code Only
 
 ```bash

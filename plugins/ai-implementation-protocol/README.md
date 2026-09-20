@@ -39,6 +39,12 @@ Codex and Grok also keep the packaged source under `~/plugins/ai-implementation-
 there; Codex additionally writes a local marketplace entry to `~/.agents/plugins/marketplace.json`. The
 single-runtime Claude installer writes nothing to `~/plugins/`. Existing AIP install files are replaced.
 
+Project-level install (the skills travel with one repository instead of the machine):
+
+```bash
+python scripts/install_all.py --project /path/to/repo   # → <repo>/.claude/skills/ + <repo>/.codex/skills/
+```
+
 Grok optional user-plugin registration:
 
 ```bash

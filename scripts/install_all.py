@@ -7,6 +7,10 @@ from __future__ import annotations
 
 本脚本只拷一次引擎包到 ~/plugins/，再按目标写各端 skills，避免连跑三端时
 第二次因「目标已存在」失败。
+
+`--project <仓库>` 改成项目级安装：技能落进那个仓库（Claude 走 .claude/skills/，
+Codex 走 .codex/skills/），随仓库走，不碰 ~/plugins 也不写市场条目。
+Grok 没有约定俗成的项目级技能目录，所以项目级安装不含 Grok。
 """
 
 import argparse
@@ -27,6 +31,8 @@ from _aip_common import SKILL_NAMES  # noqa: E402
 
 # 有新运行时就加进这里；--targets 的合法名也来自这张表。
 SUPPORTED = ("claude", "codex", "grok")
+# 有项目级技能目录约定的运行时。Grok 没有，所以 --project 不支持它。
+PROJECT_SUPPORTED = ("claude", "codex")
 
 
 def copy_engine(source: Path, destination: Path) -> None:
@@ -50,15 +56,15 @@ def copy_engine(source: Path, destination: Path) -> None:
     )
 
 
-def parse_targets(raw: str) -> list[str]:
+def parse_targets(raw: str, supported: tuple[str, ...] = SUPPORTED) -> list[str]:
     text = (raw or "all").strip().lower()
     if text in ("all", "*"):
-        return list(SUPPORTED)
+        return list(supported)
     parts = [p.strip() for p in text.replace(" ", ",").split(",") if p.strip()]
-    bad = [p for p in parts if p not in SUPPORTED]
+    bad = [p for p in parts if p not in supported]
     if bad:
         raise SystemExit(
-            f"Unknown target(s): {', '.join(bad)}. Supported: {', '.join(SUPPORTED)}, or all"
+            f"Unknown target(s): {', '.join(bad)}. Supported: {', '.join(supported)}, or all"
         )
     # 去重且保序
     seen: set[str] = set()
@@ -117,6 +123,23 @@ def install_one(
     return lines
 
 
+def install_into_project(repo_root: Path, project: Path, raw_targets: str) -> int:
+    """项目级安装：把技能装进指定仓库，交给各端分装器自己处理落点差异。"""
+    project = project.resolve()
+    if not project.is_dir():
+        raise SystemExit(f"Project not found: {project}")
+    targets = parse_targets(raw_targets, PROJECT_SUPPORTED)
+    for name in targets:
+        print(f"=== {name} ===")
+        if name == "claude":
+            rc = claude.install_into_project(repo_root, project)
+        else:
+            rc = codex.install_into_project(repo_root, project)
+        if rc != 0:
+            return rc
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -146,9 +169,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="When installing grok, also copy package under ~/.grok/plugins/.",
     )
+    parser.add_argument(
+        "--project",
+        default=None,
+        type=Path,
+        help="Install into this project instead of the user home "
+             f"({' + '.join(PROJECT_SUPPORTED)} only; the skills travel with that repository).",
+    )
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
+    if args.project is not None:
+        return install_into_project(repo_root, args.project, args.targets)
     home = args.home.resolve()
     targets = parse_targets(args.targets)
     source_plugin = repo_root / "plugins" / PLUGIN_NAME
