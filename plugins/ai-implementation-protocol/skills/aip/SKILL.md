@@ -43,7 +43,8 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 - **造新前先查**：有 LSP 用 findReferences；否则 grep + 读候选 + 查 reference；大工程用 nexus-query/CodeGraph（若装）。命中就复用；确需造新且该成权威件的，记进 reference。
 - **改接口前先查引用**：LSP findReferences/incomingCalls，否则 grep；不盲改。
 - **用到即核**：读到的 `.aip/` 条目、项目规约、项目技能、说明文件（`CLAUDE.md` / `AGENTS.md`）和代码或现状对不上，当场改：knowledge 重验后更新「最后复核」，不再成立的改 `fixed` 或标 `superseded(by K-N)`；规约、技能、说明文件改正文；要人拍板的投 inbox。随本次工作同一次提交并知会。知道错了不改，比没写更糟。
-- **到期提醒**：会话开始和 `aip_check` 会列出超过 90 天没复核的 knowledge、还是 draft 的条目、逾期的整份 review（脚本 `aip_upkeep.py`，只提醒不挡提交）。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
+- **到期提醒**：会话开始和 `aip_check` 列出该复核的内容（脚本 `aip_upkeep.py`，只提醒不挡提交）：active 知识引用的代码在「最后复核」之后改过；引用的文件或代码名字复核那天还在、现在没了（reference 同样按上次整份 review 查）；没写代码位置的条目满 90 天、写了但代码一直没动的满一年；draft 条目；逾期的整份 review。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
+- **有更新先说**：会话开始会查一次 AIP 引擎有没有新版本（查不了就不出声）。打出「AIP 有更新」时，先告诉用户，用户同意再跑 `/aip update`，然后继续当前任务。
 - **撞见无关问题**：先在 knowledge + inbox 检索，没有再整理投 inbox；不无脑 append。
 - **验证出根因**：用 root-cause 技能沉淀进 knowledge，按捕获纪律定 draft/active。
 - **多代理/子代理**：只有**主代理**写 `.aip/`；子代理只汇报发现，不落盘。派活时把相关的 knowledge/reference 条目喂给子代理，别让它重新踩坑。
@@ -53,6 +54,7 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 动笔前过一遍 review 自检清单（见 `reference/review-checklist.md`）→ 通过才写 → 当场知会用户（改了哪些文档、每处一句话理由）→ 随本次工作同一次 git 提交留痕。
 - `状态: draft` = 证据不足、自己拿不准；`active` = 已按自检清单核过；`fixed` = 缺陷已修、教训仍有用；`superseded(by K-N)` = 被取代。AI 可以直接写 active，但要在知会里给依据。状态只用这四个词开头、「最后复核」只写 `YYYY-MM-DD`，`aip_check` 会查。
 - 只收**已验证**的进 knowledge；推测投 inbox。琐碎且同文件的顺手修、不登记。
+- 知识条目里把相关代码的文件路径和类名、函数名用反引号写出来（如 `src/foo.py`、`FooService.Load`）：到期提醒靠它们判断代码改没改、名字还在不在；没写的只能按时间提醒。
 - **推翻决策/规约**：追加新条目并注明「取代 ADR-N + 理由」，旧条目标记已取代；不原地改写或删除。
 - **删除/合并**：只认两个理由——已被证明错误、或与另一条重复。知会里写明删了什么、依据是什么。
 
@@ -63,6 +65,9 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 
 ## `/aip init`（唯一人敲的命令，两阶段）
 阶段 A 跑脚本 `python <skill>/scripts/aip_init.py --repo-root .`（建骨架、装钩子、刷新引导块，幂等不覆盖）；阶段 B 由 AI 自己看项目填空白文件，不向用户提问。细节见 `reference/init.md`。
+
+## `/aip update`（更新已装的 AIP 技能）
+查：`python <skill>/scripts/aip_update.py --repo-root .`。更新：加 `--apply`，从远端浅克隆最新版、核对齐全后原地替换本机装的 aip / root-cause / aip-brainstorm（项目级安装时 `.claude/skills` 和 `.codex/skills` 两份一起换），失败会换回原样；不需要本机有 AIP 仓库，也不走安装器。远端地址默认取安装时记下的（技能目录里的 `SOURCE.json`），项目 `config.yaml` 写了 `aip_remote` / `aip_remote_branch` 就用它们。项目级安装更新完要把技能目录的变化提交进仓库。
 
 ## 不做
 - 不探查/记录本机装了哪些外部工具（平台每会话已给可用清单）。

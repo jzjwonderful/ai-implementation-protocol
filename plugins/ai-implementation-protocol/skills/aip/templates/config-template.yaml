@@ -59,3 +59,7 @@ process_skills: ""   # 例：superpowers
 # 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
 # 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
 review_last_full: ""
+
+# /aip update 对比哪个远端（可选）。留空就用安装时记下的来源（aip 技能目录里的 SOURCE.json）。
+aip_remote: ""          # 例：https://github.com/<you>/ai-implementation-protocol.git
+aip_remote_branch: ""   # 例：master

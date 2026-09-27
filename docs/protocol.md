@@ -80,7 +80,7 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 Docs rot unless something makes them get re-checked. Two mechanisms:
 
 - **Check on use.** Whenever the AI reads a `.aip/` entry, a convention, a project skill or an instruction file (`CLAUDE.md` / `AGENTS.md`) and finds it no longer matches the code, it fixes it in the same commit: a still-valid knowledge entry gets today's `最后复核`; one whose defect is fixed becomes `fixed`; one replaced by a newer mechanism becomes `superseded(by K-N)`; conventions, skills and instruction files get their text corrected; anything needing a human decision goes to the inbox. The completion check's capture sweep asks about this explicitly.
-- **Due reminders.** `aip_upkeep.py` lists active knowledge not re-checked in 90 days, entries still in `draft`, and a full review overdue by 30 days. The SessionStart hook prints them on startup and resume (not right after a compaction, mid-task), and `aip check` prints them after its verdict. They never block a commit; the AI handles them when it touches those entries or when the current line wraps up, or tells the user it is deferring them.
+- **Due reminders.** `aip_upkeep.py` decides what is due from what actually changed, not only from the calendar. For each active knowledge entry it reads the file paths and code names the entry cites in backticks: if any cited code file (docs and `.aip/` don't count) has a commit after the entry's `最后复核`, the entry is due; if a cited file or name existed in the repo on the review date and is gone now, it is due (names that were never in the repo — external APIs, env vars, server paths — are ignored, so they never cause noise). Entries that cite no code fall back to 90 days; entries whose code never moved get a one-year ceiling. The same "was there, now gone" check runs over `reference.md` against the last full review date. It also lists entries still in `draft` and a full review overdue by 30 days. Without git it falls back to the 90-day rule. The SessionStart hook prints them on startup and resume (not right after a compaction, mid-task), and `aip check` prints them after its verdict. They never block a commit; the AI handles them when it touches those entries or when the current line wraps up, or tells the user it is deferring them.
 
 ### Completion check (when a work line is done)
 
@@ -94,6 +94,12 @@ Docs rot unless something makes them get re-checked. Two mechanisms:
 6. Move the line off the OVERVIEW board.
 
 **Tier 2 (on an architecture/trade-off decision):** append one record to `decisions.md` (context, decision, rationale, impact) so it isn't re-litigated later.
+
+### Updating an installed engine (`/aip update`)
+
+Installers write `SOURCE.json` into the installed `aip` skill: remote URL, branch, installed commit, scope (user / project) and target. At session start (not after a compaction) the hook runs a quiet check — `git ls-remote` against the remote branch, 5-second timeout, no credential prompts — and prints a notice only when the remote has a newer commit; a missing record, no network, or an unknown remote stay silent. If the machine happens to hold the source repo and the remote commit is an ancestor of the installed one, the install is ahead (unpushed work) and nothing is shown. A project can pin the remote with `aip_remote` / `aip_remote_branch` in `config.yaml`.
+
+`aip_update.py --apply` updates in place without the source repo or the installers: shallow-clone the remote branch into a temp dir, verify the package is complete, then swap each installed skill directory (for a project install, both `.claude/skills` and `.codex/skills`) by staging the new copy beside it and renaming; any failure renames the old copies back. `SOURCE.json` is rewritten with the new commit. Project installs then commit the changed skill directories.
 
 ## `aip check` (the one machine check)
 

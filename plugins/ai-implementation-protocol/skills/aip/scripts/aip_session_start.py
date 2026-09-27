@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from _aip_common import force_utf8, project_living_path, read_text
+from aip_update import update_notice
 from aip_upkeep import reminders
 
 
@@ -45,8 +46,16 @@ def main() -> int:
     print(banner(source))
     print(read_text(overview))
     print("===================")
-    # 压缩后正在干活，不拿复核提醒打断；新会话 / 恢复会话才提。
-    due = [] if source == "compact" else reminders(repo)
+    # 压缩后正在干活，不拿更新和复核提醒打断；新会话 / 恢复会话才提。
+    if source == "compact":
+        return 0
+    notice = update_notice(repo)  # 查不了就是 None，不出声
+    if notice:
+        print(f"=== AIP 有更新 ===\n- {notice}")
+    try:
+        due = reminders(repo)
+    except Exception:  # 提醒出错不能挡住会话开始
+        due = []
     if due:
         print("=== AIP 到期提醒：用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声 ===")
         for line in due:

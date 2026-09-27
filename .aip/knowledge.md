@@ -39,8 +39,8 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 - 症状: 改了 AIP 脚本/模板/技能正文，重开会话后行为没变；或者改动过一阵子"消失"了
 - 根因: 改动写到了安装副本（`~/.claude/skills/aip/`、`~/plugins/ai-implementation-protocol/`、`~/.agents/skills/aip/`）。安装器是"整目录覆盖"，下一次安装会把副本打回仓库内容；而仓库里的源没改，git 里也没有痕迹
 - 证据: K-001 记录的第二次踩坑就是这样丢的改动（写进 `~/plugins/` 后被覆盖）。0.3.0 重构后安装器 `install_claude_plugin.py` 对 `~/.claude/skills/<skill>/` 先 rmtree 再 copytree（见 `tests/test_install_claude_plugin.py` 的 stale.txt 用例），任何副本内改动都会被清掉
-- 适用范围: 凡改 AIP 引擎本身（`plugins/ai-implementation-protocol/skills/` 下任何文件）。正确落点是仓库源；改完重跑安装器让副本更新
-- 最后复核: 2026-09-14
+- 适用范围: 凡改 AIP 引擎本身（`plugins/ai-implementation-protocol/skills/` 下任何文件）。正确落点是仓库源；改完重跑安装器让副本更新。0.4.0 起 `/aip update`（`aip_update.py --apply`）从远端取新版也会整目录替换已装副本，副本里的手改同样会被冲掉
+- 最后复核: 2026-09-27
 - 关联: K-001 / ADR-4
 
 ## K-003: 把 AIP 装成项目级技能：用 `--project`，钩子得另外重指
@@ -61,5 +61,5 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 - 根因: 布局改动（0.3.0 把引擎从 `plugins/.../scripts/` 搬进 `skills/aip/scripts/`）只改了文件位置，改不动另一侧新写的代码里对老位置的假设。git 只比对文本和路径：另一侧新增文件的位置冲突它会报，但「安装器自检 `<pkg>/scripts/aip_init.py`」「只拷 SKILL.md 不拷整个技能目录」「调用方按旧签名传参」这类假设它看不见，合完全绿
 - 证据: 本次合并 git 报了 3 个 file-location 冲突（aip_brainstorm/install_all/install_grok_plugin）并自动指向新目录，但同时静默合进了四处坏掉的假设：Grok 安装器 `copy2(SKILL.md)` 导致技能正文里的 `<skill>/scripts/` 落空；grok 与 install_all 的自检仍查 `<pkg>/scripts/aip_init.py`；`install_all` 调 `claude.install_skills(pkg, home, force=True)` 而 0.3.0 的签名是 `(skills_dir, home)`；新增的 `.grok-plugin/plugin.json` 停在 0.2.1 且不在 `ENGINE_MANIFESTS` 里，版本漂移检查查不到它
 - 适用范围: 任何「一侧改布局、另一侧加功能」的合并。解完冲突要额外做两件事：全库搜老路径字符串，以及把装/跑的全链路真跑一遍（本次是 install_all → aip_init → aip_check → aip_doctor）
-- 最后复核: 2026-09-20
+- 最后复核: 2026-09-27
 - 关联: K-002 / K-003 / ADR-4

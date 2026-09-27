@@ -18,6 +18,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import _install_source
 import install_claude_plugin as claude
 import install_codex_plugin as codex
 import install_grok_plugin as grok
@@ -89,6 +90,7 @@ def install_one(
     if name == "claude":
         # claude 安装器一律覆盖安装，入参是插件包里的 skills 目录。
         installed = claude.install_skills(destination_plugin / "skills", home)
+        _install_source.record(installed, "user")
         purged = claude.purge_obsolete(home)
         lines.append(f"[claude] skills → {home / '.claude' / 'skills'}")
         for p in installed:
@@ -99,6 +101,7 @@ def install_one(
         codex_home = codex.default_codex_home(home)
         skill_roots = codex.codex_skill_roots(home, codex_home, "both")
         installed = codex.install_skills(destination_plugin, skill_roots)
+        _install_source.record(installed, "user")
         purged = codex.purge_obsolete_commands(home)
         marketplace_path = home / ".agents" / "plugins" / "marketplace.json"
         marketplace = codex.load_marketplace(marketplace_path)
@@ -112,6 +115,7 @@ def install_one(
         lines.append(f"  marketplace: {marketplace_path}")
     elif name == "grok":
         installed = grok.install_skills(destination_plugin, home)
+        _install_source.record(installed, "user")
         lines.append(f"[grok] skills → {home / '.grok' / 'skills'}")
         for p in installed:
             lines.append(f"  skill: {p}")

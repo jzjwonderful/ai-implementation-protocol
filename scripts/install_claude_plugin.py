@@ -15,6 +15,8 @@ import argparse
 import shutil
 from pathlib import Path
 
+import _install_source
+
 
 PLUGIN_NAME = "ai-implementation-protocol"
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
@@ -49,6 +51,7 @@ def install_into_project(repo_root: Path, project: Path) -> int:
     if not project.is_dir():
         raise SystemExit(f"Project not found: {project}")
     installed = install_skills(repo_root / "plugins" / PLUGIN_NAME / "skills", project)
+    _install_source.record(installed, "project", project, repo_root)
     aip_dir = project / ".claude" / "skills" / "aip"
     _verify(aip_dir, installed)
     for path in installed:
@@ -124,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
 
     home = (args.home or Path.home()).resolve()
     installed = install_skills(repo_root / "plugins" / PLUGIN_NAME / "skills", home)
+    _install_source.record(installed, "user", None, repo_root)
     purged = purge_obsolete(home)
 
     aip_dir = home / ".claude" / "skills" / "aip"

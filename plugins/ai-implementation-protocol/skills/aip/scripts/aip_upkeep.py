@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -56,29 +57,235 @@ def _ids(ids: list[str]) -> str:
     return shown + (f" 等 {len(ids)} 条" if len(ids) > LIST_LIMIT else "")
 
 
+# ---------- 条目引用了哪些文件、哪些代码名字 ----------
+
+BACKTICK = re.compile(r"`([^`\n]+)`")
+ENTRY_HEAD = re.compile(r"^## (K-\d+):", re.M)
+PATH_EXTS = (".py", ".cs", ".ts", ".tsx", ".js", ".vue", ".ps1", ".bat", ".sh", ".md", ".json",
+             ".yml", ".yaml", ".toml", ".xaml", ".csproj", ".sln", ".go", ".rs", ".java", ".kt")
+# 代码名字：点分标识符；只拿最后一段去搜。要求像代码（驼峰或带下划线）、不是全大写常量
+# ——全大写多半是操作系统 / 框架的常量，本来就不在仓库里，查了只会误报。
+IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*(\(\))?$")
+# 代码名字在代码里找，不在文档里找：文档里提到不代表代码里还有。
+SYMBOL_PATHSPEC = [":(exclude)*.md", ":(exclude).aip/**", ":(exclude)docs/**"]
+LONG_CEILING_DAYS = 365
+
+
+def entry_blocks(text: str) -> dict[str, str]:
+    heads = list(ENTRY_HEAD.finditer(text))
+    return {m.group(1): text[m.start(): heads[i + 1].start() if i + 1 < len(heads) else len(text)]
+            for i, m in enumerate(heads)}
+
+
+def _clean_path(token: str) -> str | None:
+    t = token.strip()
+    if any(c in t for c in " <>*%~$") or t.startswith(("http", "-", "/")):
+        return None
+    t = re.split(r"::|:\d", t)[0].rstrip("/").replace("\\", "/")
+    name = t.rsplit("/", 1)[-1]
+    if not name or name.startswith(".") and name.count(".") == 1 and "/" not in t:
+        return None  # 裸扩展名，比如 `.ps1`
+    if "/" not in t and not t.endswith(PATH_EXTS):
+        return None
+    return t
+
+
+def _is_symbol(token: str) -> str | None:
+    t = token.strip()
+    if not IDENT.match(t):
+        return None
+    last = t.removesuffix("()").split(".")[-1]
+    if len(last) < 4 or last.isupper() or last.lower() in {"true", "false", "none", "null"}:
+        return None
+    camel = re.search(r"[a-z][A-Z]", last) or (last[0].isupper() and re.search(r"[a-z]", last))
+    if not (camel or "_" in last.strip("_")):
+        return None
+    return last
+
+
+def refs(block: str) -> tuple[list[str], list[str]]:
+    """一个条目里引用的（文件路径, 代码名字）。"""
+    paths, symbols = [], []
+    for tok in BACKTICK.findall(block):
+        p = _clean_path(tok)
+        if p:
+            paths.append(p)
+            continue
+        s = _is_symbol(tok)
+        if s:
+            symbols.append(s)
+    return list(dict.fromkeys(paths)), list(dict.fromkeys(symbols))
+
+
+# ---------- 用 git 看：文件在不在、改没改、名字还有没有 ----------
+
+def _git(repo: Path, args: list[str]) -> str | None:
+    try:
+        r = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=20, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout if r.returncode in (0, 1) else None
+
+
+def tracked_files(repo: Path) -> list[str] | None:
+    out = _git(repo, ["ls-files"])
+    return None if out is None else [l for l in out.splitlines() if l]
+
+
+def resolve_path(p: str, files: list[str]) -> list[str]:
+    """条目里写的路径 → 仓库里对应的文件（允许写部分路径，如 `routers/admin.py`；目录算它下面全部）。"""
+    exact = [f for f in files if f == p or f.startswith(p + "/")]
+    if exact:
+        return exact
+    return [f for f in files if f.endswith("/" + p) or ("/" + p + "/") in ("/" + f)]
+
+
+def commits_since(repo: Path, since: date) -> list[tuple[date, set[str]]] | None:
+    out = _git(repo, ["log", f"--since={since.isoformat()}", "--format=%x00%cs", "--name-only", "--relative"])
+    if out is None:
+        return None
+    commits = []
+    for chunk in out.split("\x00")[1:]:
+        lines = [l for l in chunk.splitlines() if l.strip()]
+        if lines:
+            d = parse_day(lines[0])
+            if d:
+                commits.append((d, set(lines[1:])))
+    return commits
+
+
+def symbols_in_code(repo: Path, symbols: list[str], rev: str | None = None) -> set[str] | None:
+    """这些名字里哪些在代码里出现（rev 给了就查那个提交时的代码）。"""
+    if not symbols:
+        return set()
+    args = ["grep", "-I", "-F", "-w", "-o", "-h"]
+    for s in symbols:
+        args += ["-e", s]
+    if rev:
+        args.append(rev)
+    out = _git(repo, args + ["--", ".", *SYMBOL_PATHSPEC])
+    return None if out is None else {l.strip().rsplit(":", 1)[-1] for l in out.splitlines()}
+
+
+def commit_at(repo: Path, day: date) -> str | None:
+    out = _git(repo, ["rev-list", "-1", f"--before={day.isoformat()} 23:59:59", "HEAD"])
+    return out.strip() or None if out else None
+
+
+def files_at(repo: Path, rev: str) -> list[str] | None:
+    out = _git(repo, ["ls-tree", "-r", "--name-only", rev])
+    return None if out is None else [l for l in out.splitlines() if l]
+
+
+def is_code(path: str) -> bool:
+    """「代码改没改」只看代码：文档和 .aip/ 改了不代表条目说的机制变了。"""
+    return not (path.endswith(".md") or path.startswith((".aip/", "docs/")))
+
+
+def knowledge_findings(repo: Path, today: date) -> dict[str, list[str]]:
+    """把 active 条目分成：代码改过、引用没了、按时间到期、一年兜底；外加 draft。
+
+    「引用没了」只认最后复核那天仓库里还有、现在没了的文件和代码名字——
+    外部接口名、环境变量、服务器路径这类本来就不在仓库里的，不会误报。
+    """
+    kn = project_living_path(repo, "knowledge.md")
+    found = {"changed": [], "missing": [], "stale": [], "ceiling": [], "drafts": []}
+    if not kn.exists():
+        return found
+    text = read_text(kn)
+    blocks = entry_blocks(text)
+    files = tracked_files(repo)
+    active = []
+    for e in parse_entries(text):
+        word = status_word(e["fields"].get("状态", ""))
+        if word == "draft":
+            found["drafts"].append(e["id"])
+        elif word == "active":
+            active.append((e["id"], parse_day(e["fields"].get("最后复核", "")), blocks.get(e["id"], "")))
+    if files is None:  # 不是 git 仓库或没装 git：只能按时间
+        for kid, seen, _ in active:
+            if seen is None or (today - seen).days > KNOWLEDGE_STALE_DAYS:
+                found["stale"].append(kid)
+        return found
+
+    dated = [seen for _, seen, _ in active if seen]
+    history = commits_since(repo, min(dated)) if dated else []
+    all_symbols = sorted({s for _, _, b in active for s in refs(b)[1]})
+    present_now = symbols_in_code(repo, all_symbols)
+    then: dict[date, tuple[list[str], set[str]] | None] = {}
+    for seen in set(dated):
+        rev = commit_at(repo, seen)
+        if not rev:
+            then[seen] = None
+            continue
+        syms = sorted({s for _, d, b in active if d == seen for s in refs(b)[1]})
+        then[seen] = (files_at(repo, rev) or [], symbols_in_code(repo, syms, rev) or set())
+
+    for kid, seen, block in active:
+        paths, symbols = refs(block)
+        hits = {p: resolve_path(p, files) for p in paths}
+        snapshot = then.get(seen) if seen else None
+        if snapshot:
+            files_then, syms_then = snapshot
+            gone = [p for p, h in hits.items() if not h and resolve_path(p, files_then)]
+            if present_now is not None:
+                gone += [s for s in symbols if s in syms_then and s not in present_now]
+            if gone:
+                found["missing"].append(f"{kid}（{'、'.join(gone[:3])}{' 等' if len(gone) > 3 else ''}）")
+        cited = sorted({f for h in hits.values() for f in h if is_code(f)})
+        if seen is None:
+            found["stale"].append(kid)
+        elif cited:
+            touched = sorted({f for d, names in (history or []) if d > seen for f in names if f in cited})
+            if touched:
+                found["changed"].append(f"{kid}（{touched[0]}{' 等' if len(touched) > 1 else ''}）")
+            elif (today - seen).days > LONG_CEILING_DAYS:
+                found["ceiling"].append(kid)
+        elif (today - seen).days > KNOWLEDGE_STALE_DAYS:
+            found["stale"].append(kid)
+    return found
+
+
+def reference_gone(repo: Path) -> list[str]:
+    """reference.md 里引用的文件和代码名字：上次整份 review 时还有、现在没了的。"""
+    ref = project_living_path(repo, "reference.md")
+    _, last = last_full_review(repo)
+    if not ref.exists() or last is None:
+        return []
+    files = tracked_files(repo)
+    rev = commit_at(repo, last) if files is not None else None
+    if not rev:
+        return []
+    paths, symbols = refs(read_text(ref))
+    files_then = files_at(repo, rev) or []
+    gone = [p for p in paths if not resolve_path(p, files) and resolve_path(p, files_then)]
+    syms_then = symbols_in_code(repo, symbols, rev) or set()
+    now = symbols_in_code(repo, symbols)
+    if now is not None:
+        gone += [s for s in symbols if s in syms_then and s not in now]
+    return gone
+
+
 def reminders(repo: Path, today: date | None = None) -> list[str]:
     today = today or date.today()
     out: list[str] = []
+    fix = "对照现状重验：仍成立就更新「最后复核」；缺陷已修改 fixed；被新机制取代标 superseded(by K-N)。"
 
-    kn = project_living_path(repo, "knowledge.md")
-    stale: list[str] = []
-    drafts: list[str] = []
-    if kn.exists():
-        for e in parse_entries(read_text(kn)):
-            word = status_word(e["fields"].get("状态", ""))
-            if word == "draft":
-                drafts.append(e["id"])
-            elif word == "active":
-                seen = parse_day(e["fields"].get("最后复核", ""))
-                if seen is None or (today - seen).days > KNOWLEDGE_STALE_DAYS:
-                    stale.append(e["id"])
-    if stale:
-        out.append(
-            f"知识 {len(stale)} 条超过 {KNOWLEDGE_STALE_DAYS} 天没复核：{_ids(stale)}。"
-            "对照现状重验：仍成立就更新「最后复核」；缺陷已修改 fixed；被新机制取代标 superseded(by K-N)。"
-        )
-    if drafts:
-        out.append(f"知识 {len(drafts)} 条还是 draft：{_ids(drafts)}。补齐证据改 active，证伪就删。")
+    f = knowledge_findings(repo, today)
+    if f["changed"]:
+        out.append(f"知识 {len(f['changed'])} 条引用的代码在最后复核之后改过：{_ids(f['changed'])}。{fix}")
+    if f["missing"]:
+        out.append(f"知识 {len(f['missing'])} 条引用的文件或代码名字在仓库里找不到了（可能改名、搬家或删了）：{_ids(f['missing'])}。{fix}")
+    if f["stale"]:
+        out.append(f"知识 {len(f['stale'])} 条超过 {KNOWLEDGE_STALE_DAYS} 天没复核（条目没写代码位置，只能按时间提醒）：{_ids(f['stale'])}。{fix}")
+    if f["ceiling"]:
+        out.append(f"知识 {len(f['ceiling'])} 条一年没复核（引用的代码没动过，按年兜底）：{_ids(f['ceiling'])}。{fix}")
+    if f["drafts"]:
+        out.append(f"知识 {len(f['drafts'])} 条还是 draft：{_ids(f['drafts'])}。补齐证据改 active，证伪就删。")
+    gone = reference_gone(repo)
+    if gone:
+        out.append(f"reference.md 引用的 {_ids(gone)} 在上次整份 review 后没了（改名、搬家或删了）：改成现在的名字，或删掉这项。")
 
     has_key, last = last_full_review(repo)
     if not has_key or last is None:

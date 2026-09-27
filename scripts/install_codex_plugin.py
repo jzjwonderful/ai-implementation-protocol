@@ -7,6 +7,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import _install_source
+
 
 PLUGIN_NAME = "ai-implementation-protocol"
 PLUGIN_CATEGORY = "Productivity"
@@ -136,6 +138,7 @@ def install_into_project(repo_root: Path, project: Path) -> int:
         raise SystemExit(f"Project not found: {project}")
     source_plugin = repo_root / "plugins" / PLUGIN_NAME
     installed = install_skills(source_plugin, [project / ".codex" / "skills"])
+    _install_source.record(installed, "project", project, repo_root)
     aip_dir = project / ".codex" / "skills" / "aip"
     if not (aip_dir / "scripts" / "aip_init.py").exists() or not installed:
         raise SystemExit(f"Install incomplete under {project}")
@@ -201,6 +204,7 @@ def main() -> int:
 
     copy_plugin(source_plugin, destination_plugin)
     installed = install_skills(destination_plugin, skill_roots)
+    _install_source.record(installed, "user", None, repo_root)
     purged = purge_obsolete_commands(home)
 
     marketplace = load_marketplace(marketplace_path)
