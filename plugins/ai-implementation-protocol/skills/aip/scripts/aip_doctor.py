@@ -21,13 +21,14 @@ from pathlib import Path
 import aip_check
 from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
 from aip_knowledge import parse_entries
+from aip_upkeep import KNOWLEDGE_STALE_DAYS, status_word
 from install_hooks import PRE_COMMIT_MARK
 
 # 引擎根 = aip 技能目录（scripts/ 与 templates/ 都在它下面），装到哪都成立。
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "ai-implementation-protocol"
-# knowledge 条目复核超过这个天数只提醒（WARN），不判死刑。
-STALE_DAYS = 90
+# knowledge 条目复核超过这个天数只提醒（WARN），不判死刑；阈值和会话提醒共用一处。
+STALE_DAYS = KNOWLEDGE_STALE_DAYS
 
 Item = tuple[str, str, str | None]  # (级别, 说明, 修复命令)
 
@@ -86,8 +87,8 @@ def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days:
     today = today or date.today()
     out: list[Item] = []
     for e in parse_entries(read_text(kn)):
-        status = e["fields"].get("状态", "")
-        if status.startswith("superseded"):
+        # 已修、已取代的条目记的是当时，draft 另有提醒；只催仍在生效的 active
+        if status_word(e["fields"].get("状态", "")) != "active":
             continue
         raw = e["fields"].get("最后复核", "")
         try:

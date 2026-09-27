@@ -12,6 +12,14 @@ class Init(unittest.TestCase):
             self.assertTrue((d/".aip"/n).exists(), f"{n} 未建")
         # 零配置：config 存在但不含被追问的工程信息（留空骨架）
         self.assertTrue((d/".aip"/"config.yaml").exists())
+    def test_new_config_starts_review_clock_today(self):
+        from datetime import date
+        import aip_upkeep
+        d = Path(tempfile.mkdtemp())
+        aip_init.scaffold(d, ENGINE)
+        cfg = (d/".aip"/"config.yaml").read_text(encoding="utf-8")
+        self.assertIn(f'review_last_full: "{date.today().isoformat()}"', cfg)
+        self.assertEqual(aip_upkeep.last_full_review(d), (True, date.today()))
     def test_idempotent(self):
         d = Path(tempfile.mkdtemp())
         aip_init.scaffold(d, ENGINE)

@@ -63,6 +63,20 @@ def install_pre_commit(repo_root: Path, engine_root: Path, force: bool) -> None:
     print(f"Installed pre-commit hook: {hook}")
 
 
+# 历代 AIP 装过的 SessionStart 脚本；认出来的旧条目在重装时换掉，不留指向已删路径的死钩子。
+AIP_SESSION_SCRIPTS = ("aip_session_start.py", "aip_overview.py")
+
+
+def session_start_cmd(repo_root: Path, engine_root: Path) -> str:
+    try:
+        rel = engine_root.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        py = Path(sys.executable).as_posix()
+        return f'"{py}" "{engine_root.as_posix()}/scripts/aip_session_start.py" --repo-root .'
+    # 项目级安装：引擎在仓库里，写成相对项目根，settings.json 进版本库后换台机器也能用
+    return f'python "$CLAUDE_PROJECT_DIR/{rel}/scripts/aip_session_start.py" --repo-root "$CLAUDE_PROJECT_DIR"'
+
+
 def install_claude_session_start(repo_root: Path, engine_root: Path) -> None:
     settings = repo_root / ".claude" / "settings.json"
     settings.parent.mkdir(parents=True, exist_ok=True)
@@ -72,18 +86,35 @@ def install_claude_session_start(repo_root: Path, engine_root: Path) -> None:
             data = json.loads(settings.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             raise SystemExit(f"Cannot parse {settings}; fix it manually.")
-    py = Path(sys.executable).as_posix()
-    cmd = f'"{py}" "{engine_root.as_posix()}/scripts/aip_session_start.py" --repo-root .'
+    cmd = session_start_cmd(repo_root, engine_root)
     hooks = data.setdefault("hooks", {})
     starts = hooks.setdefault("SessionStart", [])
+    present = False
+    replaced = 0
+    kept_groups = []
     for group in starts:
+        kept = []
         for h in group.get("hooks", []):
-            if h.get("command") == cmd:
-                print(f"Claude SessionStart hook already present in {settings}")
-                return
-    starts.append({"hooks": [{"type": "command", "command": cmd}]})
+            command = h.get("command", "")
+            if command == cmd:
+                if not present:
+                    kept.append(h)
+                present = True
+            elif any(name in command for name in AIP_SESSION_SCRIPTS):
+                replaced += 1
+            else:
+                kept.append(h)
+        if kept:
+            kept_groups.append({**group, "hooks": kept})
+    if present and not replaced:
+        print(f"Claude SessionStart hook already present in {settings}")
+        return
+    if not present:
+        kept_groups.append({"hooks": [{"type": "command", "command": cmd}]})
+    hooks["SessionStart"] = kept_groups
     settings.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
-    print(f"Installed Claude SessionStart hook: {settings}")
+    note = f"（换掉了 {replaced} 条旧的 AIP 钩子）" if replaced else ""
+    print(f"Installed Claude SessionStart hook: {settings}{note}")
 
 
 def install_claude_stop(repo_root: Path, engine_root: Path) -> None:
@@ -116,18 +147,24 @@ def main() -> int:
     parser.add_argument("--claude-stop", action="store_true", help="额外装非阻塞的 Claude Code Stop 钩子。")
     parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（新会话/恢复/压缩后把 OVERVIEW 打进上下文）。")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的非 AIP pre-commit 钩子。")
+    parser.add_argument("--no-pre-commit", action="store_true",
+                        help="不碰 pre-commit（项目已有自己的提交前钩子，比如 pre-commit 框架时用）。")
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
     engine_root = args.engine_root.resolve()
 
-    install_pre_commit(repo_root, engine_root, args.force)
+    if not args.no_pre_commit:
+        install_pre_commit(repo_root, engine_root, args.force)
     if args.claude_stop:
         install_claude_stop(repo_root, engine_root)
     if args.session_start:
         install_claude_session_start(repo_root, engine_root)
 
-    print("Hooks installed. pre-commit now runs `aip check`; bypass once with `git commit --no-verify`.")
+    if args.no_pre_commit:
+        print("Hooks installed (pre-commit left untouched).")
+    else:
+        print("Hooks installed. pre-commit now runs `aip check`; bypass once with `git commit --no-verify`.")
     return 0
 
 

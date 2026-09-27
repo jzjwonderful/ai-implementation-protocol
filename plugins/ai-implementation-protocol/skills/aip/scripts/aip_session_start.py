@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from _aip_common import force_utf8, project_living_path, read_text
+from aip_upkeep import reminders
 
 
 def read_source() -> str:
@@ -35,13 +36,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Print .aip/OVERVIEW.md for a Claude Code SessionStart hook.")
     ap.add_argument("--repo-root", default=".")
     a = ap.parse_args()
-    overview = project_living_path(Path(a.repo_root).resolve(), "OVERVIEW.md")
+    repo = Path(a.repo_root).resolve()
+    overview = project_living_path(repo, "OVERVIEW.md")
     if not overview.exists():
         print("AIP：项目尚未初始化（无 .aip/OVERVIEW.md）。需要时跑 aip init。")
         return 0
-    print(banner(read_source()))
+    source = read_source()
+    print(banner(source))
     print(read_text(overview))
     print("===================")
+    # 压缩后正在干活，不拿复核提醒打断；新会话 / 恢复会话才提。
+    due = [] if source == "compact" else reminders(repo)
+    if due:
+        print("=== AIP 到期提醒：用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声 ===")
+        for line in due:
+            print(f"- {line}")
     return 0
 
 

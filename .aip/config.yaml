@@ -49,3 +49,7 @@ iron_rules:
 
 # 方法层：本项目开发已在用 superpowers（docs/superpowers/ 下的 spec/plan 即其产物）。
 process_skills: "superpowers"
+
+# 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
+# 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
+review_last_full: ""

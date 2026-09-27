@@ -13,6 +13,7 @@
    - **conventions**：发现新规约或现有规约需要修正？→ yes 沉淀；no 一句说为什么没有
    - **inbox**：撞见尚未处理的旁路问题？→ yes 投 inbox；no 一句说为什么没有
    - **config**：有新的构建/测试命令需要记录？→ yes 更新 config.yaml；no 一句说为什么没有
+   - **用过的文档**：本次读过、用过的 knowledge 条目、规约、项目技能、说明文件，有和现状对不上的吗？→ yes 当场改（knowledge 同时更新「最后复核」）；no 一句说核过哪些
 7. **重建派生件**：改过 knowledge 就跑 `python <skill>/scripts/aip_knowledge.py --repo-root .`；总是跑 `python <skill>/scripts/aip_overview.py --repo-root .`。
 8. **把线移出看板**：线完成后不再挂在 OVERVIEW 上。
 

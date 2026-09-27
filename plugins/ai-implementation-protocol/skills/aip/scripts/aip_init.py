@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+from datetime import date
 from pathlib import Path
 from _aip_common import PROJECT_LIVING_FILES, aip_root, ensure_dir, force_utf8, load_template, write_text
 from aip_discovery import upsert_managed_block
@@ -26,7 +27,11 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
             write_text(dst, "# 知识索引（自动生成，勿手改）\n")
         else:
             tpl = TEMPLATE_OF.get(name)
-            write_text(dst, load_template(engine_root, tpl) if tpl else "")
+            text = load_template(engine_root, tpl) if tpl else ""
+            if name == "config.yaml":
+                # 新建即从零开始，把今天记为上次整份 review，免得第一天就被提醒
+                text = text.replace('review_last_full: ""', f'review_last_full: "{date.today().isoformat()}"')
+            write_text(dst, text)
         created.append(dst)
     return created
 

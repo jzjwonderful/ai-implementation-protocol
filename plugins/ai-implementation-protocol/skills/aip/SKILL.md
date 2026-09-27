@@ -42,6 +42,8 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 - **开一条线**：在 OVERVIEW 看板加一块（大线外挂 `tracks/<id>.md`）。长任务在阶段性节点就把进展写回看板，别等收尾——上下文随时可能被压缩。
 - **造新前先查**：有 LSP 用 findReferences；否则 grep + 读候选 + 查 reference；大工程用 nexus-query/CodeGraph（若装）。命中就复用；确需造新且该成权威件的，记进 reference。
 - **改接口前先查引用**：LSP findReferences/incomingCalls，否则 grep；不盲改。
+- **用到即核**：读到的 `.aip/` 条目、项目规约、项目技能、说明文件（`CLAUDE.md` / `AGENTS.md`）和代码或现状对不上，当场改：knowledge 重验后更新「最后复核」，不再成立的改 `fixed` 或标 `superseded(by K-N)`；规约、技能、说明文件改正文；要人拍板的投 inbox。随本次工作同一次提交并知会。知道错了不改，比没写更糟。
+- **到期提醒**：会话开始和 `aip_check` 会列出超过 90 天没复核的 knowledge、还是 draft 的条目、逾期的整份 review（脚本 `aip_upkeep.py`，只提醒不挡提交）。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
 - **撞见无关问题**：先在 knowledge + inbox 检索，没有再整理投 inbox；不无脑 append。
 - **验证出根因**：用 root-cause 技能沉淀进 knowledge，按捕获纪律定 draft/active。
 - **多代理/子代理**：只有**主代理**写 `.aip/`；子代理只汇报发现，不落盘。派活时把相关的 knowledge/reference 条目喂给子代理，别让它重新踩坑。
@@ -49,12 +51,12 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 
 ## 捕获纪律（所有沉淀通用）
 动笔前过一遍 review 自检清单（见 `reference/review-checklist.md`）→ 通过才写 → 当场知会用户（改了哪些文档、每处一句话理由）→ 随本次工作同一次 git 提交留痕。
-- `状态: draft` = 证据不足、自己拿不准；`active` = 已按自检清单核过。AI 可以直接写 active，但要在知会里给依据。
+- `状态: draft` = 证据不足、自己拿不准；`active` = 已按自检清单核过；`fixed` = 缺陷已修、教训仍有用；`superseded(by K-N)` = 被取代。AI 可以直接写 active，但要在知会里给依据。状态只用这四个词开头、「最后复核」只写 `YYYY-MM-DD`，`aip_check` 会查。
 - 只收**已验证**的进 knowledge；推测投 inbox。琐碎且同文件的顺手修、不登记。
 - **推翻决策/规约**：追加新条目并注明「取代 ADR-N + 理由」，旧条目标记已取代；不原地改写或删除。
 - **删除/合并**：只认两个理由——已被证明错误、或与另一条重复。知会里写明删了什么、依据是什么。
 
-**整份 `.aip/` 的 review**（满足任一就做，做法见 `reference/review-checklist.md`）：本次改动含删除或合并；单次改动条目数 ≥ 3；距上次 review 超过一个月；用户敲 `/aip review`。
+**整份 `.aip/` 的 review**（满足任一就做，做法见 `reference/review-checklist.md`）：本次改动含删除或合并；单次改动条目数 ≥ 3；距上次 review 超过一个月（看 `config.yaml` 的 `review_last_full`，逾期会被提醒）；用户敲 `/aip review`。做完把 `review_last_full` 改成当天。
 
 ## 完成检查（一条线做完时）
 按 `reference/closure.md` 走：约束对照 → 验证闭环 → 跑 `aip_check` → 捕获回扫 → 重建派生件 → 把线移出看板。捕获回扫的逐项 yes/no 只对**改了代码或文档结构**的任务做；纯问答、一行注释这类小改动不必走完整回扫，但 `aip_check` 照跑。

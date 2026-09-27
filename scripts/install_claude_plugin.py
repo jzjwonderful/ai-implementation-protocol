@@ -75,9 +75,11 @@ def project_notes(project: Path, aip_dir: Path) -> list[str]:
     notes = [
         "",
         "项目级安装。接下来：",
-        f"  1. 让本仓库的钩子指向这份副本（老仓库的钩子可能还指着已经搬走的路径）："
+        f"  1. 让本仓库的会话开始钩子指向这份副本（指着旧路径的 AIP 钩子会被换掉）："
         f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
-        f" --engine-root {aip_dir} --session-start --force",
+        f" --engine-root {aip_dir} --session-start --no-pre-commit"
+        "\n     要 AIP 的提交前检查就去掉 --no-pre-commit；仓库已有别的提交前钩子（如 pre-commit 框架）时别加 --force，"
+        "\n     把 aip_check.py 接进现有钩子。",
         "  2. 在这个仓库开新会话，用 /aip init（已初始化过的仓库跑一次也是幂等的）。",
     ]
     gitignore = project / ".gitignore"

@@ -55,3 +55,7 @@ iron_rules:
 # 设为 superpowers 则各阶段把方法让位给对应 superpowers 技能（映射见 aip 技能）；
 # 槽/状态/resume 仍归 AIP。缺失或留空则 AIP 裸跑、只少了技法加持。
 process_skills: ""   # 例：superpowers
+
+# 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
+# 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
+review_last_full: ""

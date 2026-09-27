@@ -202,3 +202,5 @@ If `.nexus-map/` does not exist, AIP still works.
 ## Current State
 
 The engine runs on the flat living-doc model (see `.aip/decisions.md`, ADR-2): eight living docs under `.aip/`, an OVERVIEW board for task lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.
+
+Living docs are kept current in two ways (0.3.1, ADR-5). First, "check on use": whenever the AI reads a knowledge entry, convention, project skill or instruction file that no longer matches the code, it fixes it in the same commit. Second, reminders: at session start and in `aip check`, `aip_upkeep.py` lists active knowledge not re-checked for 90 days, draft entries, and an overdue full review (`review_last_full` in `config.yaml`, 30 days). Reminders never block a commit.

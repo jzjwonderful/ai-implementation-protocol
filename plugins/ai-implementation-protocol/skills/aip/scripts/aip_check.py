@@ -7,6 +7,7 @@ from _aip_common import (
     SCAN_PRUNE_DIRS, aip_root, force_utf8, project_living_path, read_text,
 )
 from aip_knowledge import expected_index_text, parse_entries
+from aip_upkeep import STATUS_WORDS, parse_day, reminders, status_word
 
 def check_living_files(repo: Path) -> list[str]:
     return [f"缺失活文档: .aip/{n}" for n in PROJECT_LIVING_FILES
@@ -29,6 +30,21 @@ def check_knowledge_fields(repo: Path) -> list[str]:
         for field in REQUIRED_KNOWLEDGE_FIELDS:
             if not e["fields"].get(field):
                 out.append(f'知识条目 {e["id"]} 缺必填字段: {field}')
+    return out
+
+def check_knowledge_status(repo: Path) -> list[str]:
+    # 到期提醒靠这两个字段算：状态词和日期写乱了，提醒就会漏人。
+    kn = project_living_path(repo, "knowledge.md")
+    if not kn.exists():
+        return []
+    out = []
+    for e in parse_entries(read_text(kn)):
+        status = e["fields"].get("状态", "")
+        if status and status_word(status) not in STATUS_WORDS:
+            out.append(f'知识条目 {e["id"]} 的状态「{status}」要以 {" / ".join(STATUS_WORDS)} 开头')
+        seen = e["fields"].get("最后复核", "")
+        if seen and parse_day(seen) is None:
+            out.append(f'知识条目 {e["id"]} 的最后复核「{seen}」不是 YYYY-MM-DD 日期')
     return out
 
 def check_no_orphan_slots(repo: Path) -> list[str]:
@@ -71,18 +87,25 @@ def check_engine_versions(repo: Path) -> list[str]:
     return out
 
 def run_all(repo: Path) -> list[str]:
-    return check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo) + check_no_orphan_slots(repo) + check_engine_versions(repo)
+    return (check_living_files(repo) + check_index_sync(repo) + check_knowledge_fields(repo)
+            + check_knowledge_status(repo) + check_no_orphan_slots(repo) + check_engine_versions(repo))
 
 def main() -> int:
     force_utf8()
     p = argparse.ArgumentParser(description="AIP hygiene gate.")
     p.add_argument("--repo-root", required=True)
-    viol = run_all(Path(p.parse_args().repo_root).resolve())
+    repo = Path(p.parse_args().repo_root).resolve()
+    viol = run_all(repo)
     if viol:
         print("aip check 未通过：")
         for v in viol: print(f"  - {v}")
-        return 1
-    print("aip check 通过"); return 0
+    else:
+        print("aip check 通过")
+    due = reminders(repo) if project_living_path(repo, "OVERVIEW.md").exists() else []
+    if due:
+        print("到期提醒（不挡提交）：")
+        for d in due: print(f"  - {d}")
+    return 1 if viol else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

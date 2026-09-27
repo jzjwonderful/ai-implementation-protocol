@@ -1,6 +1,7 @@
 # 知识库（验证过的根因 / 坎 / 领域事实）
 
 条目编号 `K-NNN`（K = Knowledge，知识库条目；如 K-001、K-002）。只追加，过时条目不删，标 `状态: superseded(by K-00X)`。
+用到一条就对照现状核一次，核完把「最后复核」改成当天；超过 90 天没复核的 active 条目会在会话开始时被提醒。
 改完跑 `aip knowledge` 重建 `knowledge_index.md`。
 
 ## 类目
@@ -13,7 +14,7 @@ process-lifecycle | concurrency | build | config | ui | data | deployment | doma
 ## K-NNN: 标题
 - 分类: process-lifecycle
 - 状态: active
-  # active=已按自检清单核过 | draft=证据不足待复核 | superseded(by K-00X)
+  # active=已按自检清单核过 | draft=证据不足待复核 | fixed=缺陷已修、教训仍有用 | superseded(by K-00X)=被新条目或新机制取代
 - 症状: <可观察表象>
 - 根因: <已验证的真正原因>
 - 证据: <命令输出 / 代码引用 / 复现步骤>

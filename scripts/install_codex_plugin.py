@@ -144,9 +144,10 @@ def install_into_project(repo_root: Path, project: Path) -> int:
     print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
     print("")
     print("项目级安装。接下来：")
-    print(f"  1. 让本仓库的钩子指向这份副本："
+    print(f"  1. 要 AIP 的提交前检查就让钩子指向这份副本："
           f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
-          f" --engine-root {aip_dir} --force")
+          f" --engine-root {aip_dir}"
+          "\n     仓库已有别的提交前钩子（如 pre-commit 框架）时它会跳过；别加 --force，把 aip_check.py 接进现有钩子。")
     print("  2. 在这个仓库开新会话，用 $aip init（幂等）。")
     print("  3. 技能目录会进版本库（随仓库分发给所有人）。不想进就加进 .gitignore。")
     return 0

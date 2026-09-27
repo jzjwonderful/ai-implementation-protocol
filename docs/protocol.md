@@ -57,7 +57,7 @@ Every completion report for coding work must include the changed result, constra
 
 Run the review checklist (next section) → write → notify the user in-session (which docs changed, a one-line reason each) → the edit lands in the same git commit as the work. There is no pre-approval gate: the human audits after the fact via the notification plus git diff, which is why skipping the notification is forbidden.
 
-- `状态: draft` marks an entry the AI itself is not yet sure of (evidence incomplete); `active` means the review checklist passed. The AI may write `active` directly but must state the evidence in the notification.
+- `状态: draft` marks an entry the AI itself is not yet sure of (evidence incomplete); `active` means the review checklist passed; `fixed` means the defect was fixed but the lesson still helps; `superseded(by K-N)` means replaced. The AI may write `active` directly but must state the evidence in the notification. The status must start with one of these four words and `最后复核` must be a `YYYY-MM-DD` date — `aip check` enforces both.
 - Only **verified** items enter knowledge; guesses and side-issues go to `inbox.md`.
 - **Overturning a decision/convention** — past decisions are not iron law: an AI that finds one no longer fits current needs is expected to say so and correct it. The only mechanism is appending a new entry marked "supersedes ADR-N" with the reason; the old entry is flagged superseded, never rewritten or deleted in place.
 - **Deleting/merging existing content** — the only two valid reasons are "proven wrong" and "duplicate of another entry"; "unused this round" is not one. The notification must name what was removed and why.
@@ -73,7 +73,14 @@ The goal is always **doc quality**, never content volume: clear, accurate, neces
 5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
 6. Afterwards run `aip check` and rebuild the derived files (`aip knowledge` / `aip overview`).
 
-A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (per `.aip/` git history); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
+A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (`review_last_full` in `.aip/config.yaml`); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. A full review also re-verifies the knowledge entries the reminders list, checks that reference paths still exist, and checks project skills and instruction files against the code; it ends by setting `review_last_full` to today. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
+
+### Keeping living docs current
+
+Docs rot unless something makes them get re-checked. Two mechanisms:
+
+- **Check on use.** Whenever the AI reads a `.aip/` entry, a convention, a project skill or an instruction file (`CLAUDE.md` / `AGENTS.md`) and finds it no longer matches the code, it fixes it in the same commit: a still-valid knowledge entry gets today's `最后复核`; one whose defect is fixed becomes `fixed`; one replaced by a newer mechanism becomes `superseded(by K-N)`; conventions, skills and instruction files get their text corrected; anything needing a human decision goes to the inbox. The completion check's capture sweep asks about this explicitly.
+- **Due reminders.** `aip_upkeep.py` lists active knowledge not re-checked in 90 days, entries still in `draft`, and a full review overdue by 30 days. The SessionStart hook prints them on startup and resume (not right after a compaction, mid-task), and `aip check` prints them after its verdict. They never block a commit; the AI handles them when it touches those entries or when the current line wraps up, or tells the user it is deferring them.
 
 ### Completion check (when a work line is done)
 
@@ -94,7 +101,7 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 
 1. **Living docs present** — the living docs above exist under `.aip/`.
 2. **Index consistent** — `knowledge_index.md` matches the current `knowledge.md` (rebuild with `aip knowledge` if not).
-3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty.
+3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty; `状态` starts with active / draft / fixed / superseded and `最后复核` is a date.
 4. **No legacy residue** — none of the forbidden filenames appear in the repo.
 5. **Engine version consistency** (engine repo only) — both plugin manifests' `version` match `skills/aip/VERSION`, the single version source.
 
