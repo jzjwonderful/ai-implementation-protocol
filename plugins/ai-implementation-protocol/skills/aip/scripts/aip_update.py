@@ -160,12 +160,16 @@ def update_notice(repo: Path, engine: Path = ENGINE_ROOT) -> str | None:
 # ---------- 更新 ----------
 
 def install_roots(info: dict, engine: Path) -> list[Path]:
-    """要一起更新的技能目录：本份所在的目录；项目级安装再加上项目里另一端的目录。"""
+    """要一起更新的技能目录：本份所在的目录；项目级安装再加上项目里另一端的目录。
+
+    项目根从本份的位置推（<项目>/.claude/skills/aip），不用记录里的绝对路径——
+    仓库换了机器、换了目录、或装的时候在临时工作区里，那个路径都不再成立。
+    """
     roots = [engine.parent]
-    target = info.get("target")
-    if info.get("scope") == "project" and target:
+    if info.get("scope") == "project":
+        project = engine.parents[2]
         for rel in (".claude/skills", ".codex/skills"):
-            root = Path(target) / rel
+            root = project / rel
             if (root / "aip" / "SKILL.md").exists() and root.resolve() not in [r.resolve() for r in roots]:
                 roots.append(root)
     return roots

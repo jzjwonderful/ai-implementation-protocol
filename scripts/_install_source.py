@@ -17,6 +17,8 @@ import aip_update  # noqa: E402
 def record(installed: list[Path], scope: str, target: Path | None = None, source_repo: Path = REPO_ROOT) -> None:
     """installed 里凡是 aip 技能目录，都写一份来源记录。写不出来不影响安装。"""
     for d in installed:
+        if d.name == "SKILL.md":  # 有的安装器返回 SKILL.md 路径而不是技能目录
+            d = d.parent
         if d.name == "aip":
             try:
                 aip_update.write_install_source(d, source_repo, scope, target)

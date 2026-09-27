@@ -117,6 +117,15 @@ class Apply(unittest.TestCase):
             self.assertEqual(sorted(p.name for p in root.iterdir() if p.name.startswith(".")), [])
         self.assertEqual(upd.check(e.project, e.engine)["state"], "latest")
 
+    def test_project_copies_found_from_install_location_not_recorded_path(self):
+        e = Env(); e.push("0.2.0")
+        moved = e.root / "moved-proj"
+        shutil.move(str(e.project), str(moved))  # 仓库换了目录，记录里的 target 已不存在
+        rc, out = quiet(upd.apply, moved, moved / ".claude" / "skills" / "aip")
+        self.assertEqual(rc, 0, out)
+        for rel in (".claude/skills", ".codex/skills"):
+            self.assertEqual((moved / rel / "aip" / "VERSION").read_text(encoding="utf-8").strip(), "0.2.0")
+
     def test_incomplete_remote_leaves_install_untouched(self):
         e = Env()
         write_package(e.work, "0.2.0")
