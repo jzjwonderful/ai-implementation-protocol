@@ -68,7 +68,7 @@ def _verify(aip_dir: Path, installed: list[Path]) -> None:
     missing = [p for p in [aip_dir / "SKILL.md",
                            aip_dir / "VERSION",
                            aip_dir / "scripts" / "aip_init.py",
-                           aip_dir / "templates" / "overview-template.md"] if not p.exists()]
+                           aip_dir / "templates" / "item-knowledge.md"] if not p.exists()]
     if missing or not installed:
         raise SystemExit("Install incomplete: missing " + (", ".join(str(p) for p in missing) or "skills"))
 

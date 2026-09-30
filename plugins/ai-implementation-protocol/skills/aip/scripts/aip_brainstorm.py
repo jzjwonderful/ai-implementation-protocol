@@ -319,7 +319,7 @@ def cmd_conclude(repo: Path, args: argparse.Namespace) -> int:
     if re.search(r"^## 结论 *$", text, re.M):
         raise DocError("已有「结论」章节，不能重复写（要改请直接编辑该章节）")
     check_free_text(args.text, "结论")
-    print("结论已写入，议题关闭。可按 AIP 捕获纪律把结论沉淀进 decisions.md / knowledge.md。")
+    print("结论已写入，议题关闭。可按 AIP 捕获纪律用 aip_item.py 把结论沉淀成决策或知识条目。")
     print_status(path, _append_section(path, text, "结论", args.text))
     return 0
 

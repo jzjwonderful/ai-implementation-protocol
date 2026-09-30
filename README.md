@@ -60,7 +60,7 @@ Skills land at:
 ~/.grok/skills/{aip,root-cause,aip-brainstorm}/     # Grok
 ```
 
-Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks and deposits verified causes into `.aip/knowledge.md`; `aip-brainstorm` lets AIs in multiple terminals hold a turn-based discussion through a shared topic document in `.aip/brainstorm/`.
+Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks and deposits verified causes into `.aip/knowledge/`; `aip-brainstorm` lets AIs in multiple terminals hold a turn-based discussion through a shared topic document in `.aip/brainstorm/`.
 
 > **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules.
 
@@ -119,24 +119,33 @@ Skills → `~/.grok/skills/`. Optional `--user-plugin` also copies to `~/.grok/p
 > once in each AIP-enabled repository. It scaffolds any missing living docs and refreshes the hooks — including
 > repointing hooks that older versions aimed at `~/plugins/.../scripts/`, which 0.3.0 moved into the `aip` skill.
 > `aip init` is idempotent and preserves your existing files.
+>
+> **Coming from before 0.5.0?** Knowledge, decisions and side issues moved from single files to one file per item.
+> `aip init` refuses to run on the old layout; follow `/aip migrate` (`aip_migrate.py`, preview first, then `--apply`).
 
 ## Core Ideas
 
-AIP keeps project state in a small set of **living docs** (cross-task, long-lived) plus local validation scripts. There are no per-feature work packages and no runtime pointer — task state lives on the OVERVIEW board.
+AIP keeps project state in **living docs** (cross-task, long-lived) plus local validation scripts. There are no per-feature work packages and no runtime pointer — task state lives in track files, and the board is generated from them.
 
 All AIP outputs inside a target project live under a single hidden `.aip/` directory (like `.git`):
 
 ```text
 .aip/
-├── OVERVIEW.md               # multi-line board + auto digest (read first)
-├── decisions.md              # ADR-lite decision log (append-only)
-├── knowledge.md              # verified root causes / gotchas (append-only, recall-first)
-├── knowledge_index.md        # generated catalog of knowledge.md (rebuilt via `aip knowledge`)
+├── knowledge/                # verified root causes / gotchas, one file each
+├── decisions/                # architecture decisions, one file each
+├── inbox/                    # side issues (capture, don't chase), one file each
+├── tracks/                   # work lines, one file each
 ├── reference.md              # domain concepts, core invariants, reusable implementations
-├── inbox.md                  # side-finding inbox (capture, don't chase)
 ├── conventions.md            # standing how-we-work rules
-└── config.yaml               # project adaptation (truth sources / gates / lenses)
+├── config.yaml               # project adaptation (truth sources / gates / lenses)
+├── .gitignore                # keeps the generated board out of git
+└── OVERVIEW.md               # the board — generated from the items, not committed (read first)
 ```
+
+Item files are named `<timestamp>_<type>_<status>_<short title>.md`, e.g.
+`knowledge/20260928-153012_knowledge_active_gbrain健康分是扣分制.md`. An item's id is `<timestamp>_<short title>`;
+references use the full id. Nothing is numbered, so parallel branches never collide and merge without conflicts.
+`aip_item.py` creates items, changes status (renaming the file and its header together), lists and shows them.
 
 The AIP docs are project-level and committed. The AI's own cross-session memory (e.g. Claude Code's) is personal and stays on one machine; project facts go to `.aip/` only, user preferences stay in the tool's memory. Only the main agent writes `.aip/`; subagents report back. See `docs/protocol.md`.
 
@@ -167,8 +176,10 @@ The remaining scripts are triggered by the AI at the right moment, per the insta
 
 ```bash
 python ~/.claude/skills/aip/scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
-python ~/.claude/skills/aip/scripts/aip_knowledge.py --repo-root <target-project>  # rebuild knowledge_index.md
-python ~/.claude/skills/aip/scripts/aip_overview.py --repo-root <target-project>   # rebuild the OVERVIEW auto digest
+python ~/.claude/skills/aip/scripts/aip_item.py --repo-root <target-project> list  # items: new / status / reviewed / list / show
+python ~/.claude/skills/aip/scripts/aip_overview.py --repo-root <target-project>   # regenerate the board (.aip/OVERVIEW.md)
+python ~/.claude/skills/aip/scripts/aip_upkeep.py --repo-root <target-project> --all  # everything due for review
+python ~/.claude/skills/aip/scripts/aip_migrate.py --repo-root <target-project>    # pre-0.5.0 layout: preview, then --apply
 python ~/.claude/skills/aip/scripts/aip_doctor.py --repo-root <target-project>     # install/environment health check
 ```
 
@@ -201,8 +212,10 @@ If `.nexus-map/` does not exist, AIP still works.
 
 ## Current State
 
-The engine runs on the flat living-doc model (see `.aip/decisions.md`, ADR-2): eight living docs under `.aip/`, an OVERVIEW board for task lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.
+The engine runs on the flat living-doc model (ADR-2 in `.aip/decisions/`): living docs under `.aip/`, a board for task lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.
 
 Living docs are kept current in two ways (0.3.1, ADR-5). First, "check on use": whenever the AI reads a knowledge entry, convention, project skill or instruction file that no longer matches the code, it fixes it in the same commit. Second, reminders: at session start and in `aip check`, `aip_upkeep.py` lists knowledge whose cited code changed after its last review, cited files or code names that existed then and are gone now, entries without code references older than 90 days, draft entries, and an overdue full review (`review_last_full` in `config.yaml`, 30 days). Reminders never block a commit.
 
 Installed skills update themselves (0.4.0, ADR-6): the session-start hook quietly checks the recorded remote and says so when a newer commit exists; `/aip update` (`aip_update.py --apply`) shallow-clones the remote and swaps the installed skill directories in place, rolling back on failure.
+
+Since 0.5.0 knowledge, decisions, side issues and work lines are one file per item (see decision `20261001-004400_条目改成一条一个文件` in `.aip/decisions/`). Numbered entries in one big file kept colliding when branches or clones added entries in parallel; files named by timestamp and short title don't. The board is generated and no longer committed, reminders are sorted and capped at five with a summary line, the session-start hook also reports a checkout behind its upstream or uncommitted `.aip/` changes, and `aip_migrate.py` converts the old layout.

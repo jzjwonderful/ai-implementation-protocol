@@ -1,9 +1,8 @@
 import sys, tempfile, unittest
-from datetime import date
 from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
-import aip_doctor as doc, aip_init
+import aip_doctor as doc, aip_init, aip_item as it
 from _aip_common import SKILL_NAMES
 
 
@@ -17,46 +16,38 @@ class ProjectHealth(unittest.TestCase):
         items = doc.check_project(d, ENGINE)
         self.assertEqual(levels(items), ["INFO"])
 
-    def test_missing_living_doc_is_error_with_fix(self):
+    def test_missing_doc_is_error_with_fix(self):
         d = Path(tempfile.mkdtemp())
         aip_init.scaffold(d, ENGINE)
-        import aip_knowledge, aip_overview
-        aip_knowledge.rebuild_index(d); aip_overview.rebuild_overview(d)
-        (d/".aip"/"decisions.md").unlink()
+        (d/".aip"/"reference.md").unlink()
         items = doc.check_project(d, ENGINE)
         self.assertIn("ERROR", levels(items))
-        self.assertTrue(any("decisions.md" in msg for _, msg, _ in items))
+        self.assertTrue(any("reference.md" in msg for _, msg, _ in items))
 
-
-class Freshness(unittest.TestCase):
-    def _repo_with_entry(self, reviewed: str) -> Path:
+    def test_old_layout_is_error_pointing_to_migration(self):
         d = Path(tempfile.mkdtemp()); (d/".aip").mkdir()
-        (d/".aip"/"knowledge.md").write_text(
-            "# 知识库\n\n## 类目\nother\n\n"
-            "## K-001: 条目\n- 分类: other\n- 状态: active\n- 症状: s\n- 根因: r\n"
-            f"- 适用范围: a\n- 最后复核: {reviewed}\n", encoding="utf-8")
-        return d
+        (d/".aip"/"knowledge.md").write_text("# 旧\n", encoding="utf-8")
+        items = doc.check_project(d, ENGINE)
+        self.assertEqual(set(levels(items)), {"ERROR"})
+        self.assertTrue(all("aip_migrate.py" in fix for _, _, fix in items))
 
-    def test_stale_entry_warns(self):
-        d = self._repo_with_entry("2026-01-01")
-        items = doc.check_knowledge_freshness(d, today=date(2026, 7, 1))
+
+class DueSummary(unittest.TestCase):
+    def test_many_due_items_are_one_warn_line(self):
+        d = Path(tempfile.mkdtemp())
+        aip_init.scaffold(d, ENGINE)
+        for n in range(12):
+            it.new_item(d, "knowledge", f"老坑{n}", "active", stamp=f"20260101-1000{n:02d}",
+                        meta={"category": "other", "scope": "w", "last_reviewed": "2026-01-01"},
+                        body="- 症状: x\n- 根因: y\n")
+        items = doc.check_project(d, ENGINE)
         self.assertEqual(levels(items), ["WARN"])
+        self.assertIn("12 项", items[0][1]); self.assertIn("--all", items[0][2])
 
-    def test_fresh_entry_silent(self):
-        d = self._repo_with_entry("2026-06-20")
-        self.assertEqual(doc.check_knowledge_freshness(d, today=date(2026, 7, 1)), [])
-
-    def test_bad_date_warns(self):
-        d = self._repo_with_entry("最近")
-        items = doc.check_knowledge_freshness(d, today=date(2026, 7, 1))
-        self.assertEqual(levels(items), ["WARN"])
-
-    def test_stale_days_override(self):
-        # 60 天前的条目：默认 90 天阈值不报，收紧到 30 天就报。
-        d = self._repo_with_entry("2026-05-02")
-        self.assertEqual(doc.check_knowledge_freshness(d, today=date(2026, 7, 1)), [])
-        items = doc.check_knowledge_freshness(d, today=date(2026, 7, 1), stale_days=30)
-        self.assertEqual(levels(items), ["WARN"])
+    def test_nothing_due_is_silent(self):
+        d = Path(tempfile.mkdtemp())
+        aip_init.scaffold(d, ENGINE)
+        self.assertEqual(doc.check_project(d, ENGINE), [])
 
 
 class InstallHealth(unittest.TestCase):

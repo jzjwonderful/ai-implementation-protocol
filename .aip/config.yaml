@@ -19,7 +19,7 @@ gates:
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
-    # cmd: ""              # 无 lint；版本一致性（两份 plugin.json 对 skills/aip/VERSION）由 aip check 覆盖
+    # cmd: ""              # 无 lint；版本一致性（三份 plugin.json 对 skills/aip/VERSION）由 aip check 覆盖
   e2e:
     # cmd: ""              # 无 e2e 场景
 
@@ -38,8 +38,8 @@ iron_rules:
   - "新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变"
   - "引擎只有一份：plugins/ai-implementation-protocol/skills/aip/ 下的 scripts/ 与 templates/；改动落这里，不改 ~/.claude/skills 或 ~/plugins 里的安装副本"
   - "协议是真源：行为/规则变更同次更新 docs/protocol.md 与技能正文（SKILL.md / reference/）"
-  - "版本只有一处：skills/aip/VERSION；改版本同次改两份 plugin.json 的 version"
-  - "行为/架构变更同次更新 .aip/OVERVIEW.md 看板"
+  - "版本只有一处：skills/aip/VERSION；改版本同次改三份 plugin.json（.claude-plugin / .codex-plugin / .grok-plugin）的 version"
+  - "行为/架构变更同次更新 .aip/tracks/ 下对应的在建线（OVERVIEW.md 是生成的，不手改）"
   - "所有编码任务宣布完成前，必须对照适用的 plan/需求、测试和其他约束完成验证闭环；无法闭环时至少执行相关 lint/build，并明确列出未验证项和风险"
   - "重新执行 aip init 必须升级 AGENTS.md/CLAUDE.md 中带 AIP managed 标记的规则块；不得覆盖已有活文档或项目自有内容"
   - "每条 plan/需求必须映射到实现位置和行为证据；不得删除、跳过或削弱测试来绕过约束"
@@ -52,4 +52,4 @@ process_skills: "superpowers"
 
 # 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
 # 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
-review_last_full: ""
+review_last_full: "2026-10-01"

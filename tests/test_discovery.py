@@ -8,6 +8,8 @@ class Discovery(unittest.TestCase):
     def test_bootstrap_is_new_model(self):
         b = disc.managed_block()
         self.assertIn("OVERVIEW.md", b)
+        self.assertIn("aip_item.py", b)
+        self.assertNotIn("knowledge.md", b)
         self.assertNotIn("current_task.json", b)
         self.assertNotIn("STATUS.md", b)
     def test_upsert_block_custom_markers_idempotent(self):

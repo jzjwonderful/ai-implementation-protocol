@@ -27,7 +27,8 @@ def _check_cmd(engine_root: Path) -> str:
 
 
 def pre_commit_body(engine_root: Path) -> str:
-    cmd = _check_cmd(engine_root)
+    # 提交前只查格式，不算到期提醒：提醒不挡提交，算它要跑 git 历史，白白拖慢每次提交
+    cmd = _check_cmd(engine_root) + " --no-reminders"
     return (
         "#!/bin/sh\n"
         f"{PRE_COMMIT_MARK}\n"

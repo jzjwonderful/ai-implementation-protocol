@@ -1,42 +1,119 @@
-import sys, tempfile, unittest
+import subprocess, sys, tempfile, unittest
 from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
-import aip_check as chk, aip_knowledge as k
+import aip_check as chk, aip_init, aip_item as it
+
+GOOD_BODY = "- 症状: 卡住\n- 根因: 锁没放\n"
+
 
 def make_repo() -> Path:
-    d = Path(tempfile.mkdtemp()); aip = d/".aip"; aip.mkdir()
-    for n in ["OVERVIEW.md","decisions.md","reference.md","inbox.md","conventions.md","config.yaml"]:
-        (aip/n).write_text("# stub\n", encoding="utf-8")
-    (aip/"knowledge.md").write_text("# 知识库\n\n## 类目\nother\n", encoding="utf-8")
-    (aip/"knowledge_index.md").write_text(k.expected_index_text(d), encoding="utf-8")
+    d = Path(tempfile.mkdtemp())
+    aip_init.scaffold(d, ENGINE)
     return d
 
-class LivingAndIndex(unittest.TestCase):
-    def test_clean_passes(self):
-        d = make_repo()
-        self.assertEqual(chk.check_living_files(d), [])
-        self.assertEqual(chk.check_index_sync(d), [])
-    def test_missing_living(self):
-        d = make_repo(); (d/".aip"/"decisions.md").unlink()
-        self.assertTrue(any("decisions.md" in v for v in chk.check_living_files(d)))
-    def test_stale_index(self):
-        d = make_repo(); (d/".aip"/"knowledge_index.md").write_text("# 旧\n", encoding="utf-8")
-        self.assertTrue(chk.check_index_sync(d))
 
-class KnowledgeFields(unittest.TestCase):
-    def test_missing_field(self):
+def knowledge(d: Path, title: str = "某坑", status: str = "active", body: str = GOOD_BODY, **meta) -> it.Item:
+    meta = {"category": "other", "scope": "某模块", "last_reviewed": "2026-09-01", **meta}
+    return it.new_item(d, "knowledge", title, status, meta=meta, body=body, stamp="20260901-100000")
+
+
+class Layout(unittest.TestCase):
+    def test_fresh_scaffold_passes(self):
+        self.assertEqual(chk.run_all(make_repo()), [])
+
+    def test_missing_doc_and_dir(self):
         d = make_repo()
-        (d/".aip"/"knowledge.md").write_text(
-            "# k\n\n## 类目\nother\n\n## K-001: 缺\n- 分类: other\n- 状态: active\n", encoding="utf-8")
-        viol = chk.check_knowledge_fields(d)
-        self.assertTrue(any("症状" in v for v in viol))
-    def test_complete_ok(self):
+        (d/".aip"/"reference.md").unlink()
+        for p in (d/".aip"/"inbox").iterdir():
+            p.unlink()
+        (d/".aip"/"inbox").rmdir()
+        viol = chk.run_all(d)
+        self.assertTrue(any("reference.md" in v for v in viol))
+        self.assertTrue(any("inbox/" in v for v in viol))
+
+    def test_old_layout_points_to_migration_and_skips_the_rest(self):
         d = make_repo()
-        (d/".aip"/"knowledge.md").write_text(
-            "# k\n\n## 类目\nother\n\n## K-001: 全\n- 分类: other\n- 状态: active\n- 症状: x\n"
-            "- 根因: y\n- 证据: z\n- 适用范围: w\n- 最后复核: 2026-06-25\n", encoding="utf-8")
-        self.assertEqual(chk.check_knowledge_fields(d), [])
+        (d/".aip"/"knowledge.md").write_text("# 旧\n", encoding="utf-8")
+        (d/".aip"/"reference.md").unlink()
+        viol = chk.run_all(d)
+        self.assertEqual(len(viol), 1)
+        self.assertIn("aip_migrate.py", viol[0])
+
+
+class Names(unittest.TestCase):
+    def test_bad_name_wrong_dir_and_bad_status(self):
+        d = make_repo()
+        k = d/".aip"/"knowledge"
+        (k/"随手记.md").write_text("x\n", encoding="utf-8")
+        (k/"20260901-100000_inbox_open_放错目录.md").write_text("x\n", encoding="utf-8")
+        (k/"20260901-100000_knowledge_done_状态不对.md").write_text("x\n", encoding="utf-8")
+        viol = chk.check_item_names(d)
+        self.assertEqual(len(viol), 3, viol)
+        self.assertTrue(any("随手记" in v and "不合格式" in v for v in viol))
+        self.assertTrue(any("放错目录" in v and "不符" in v for v in viol))
+        self.assertTrue(any("状态不对" in v and "只能是" in v for v in viol))
+
+    def test_gitkeep_is_not_an_item(self):
+        self.assertEqual(chk.check_item_names(make_repo()), [])
+
+
+class Items(unittest.TestCase):
+    def test_complete_knowledge_passes(self):
+        d = make_repo(); knowledge(d)
+        self.assertEqual(chk.check_items(d), [])
+
+    def test_head_status_must_match_file_name(self):
+        d = make_repo(); k = knowledge(d)
+        k.path.write_text(k.path.read_text(encoding="utf-8").replace("status: active", "status: draft"),
+                          encoding="utf-8")
+        self.assertTrue(any("文件名里的状态是 active" in v for v in chk.check_items(d)))
+
+    def test_missing_head_fields_and_body_sections(self):
+        d = make_repo()
+        it.new_item(d, "knowledge", "缺东西", "active", meta={"last_reviewed": "2026-09-01"},
+                    body="- 症状: <可观察的表象>\n", stamp="20260901-100000")
+        viol = chk.check_items(d)
+        for word in ("category", "scope", "「症状」", "「根因」"):
+            self.assertTrue(any(word in v for v in viol), (word, viol))
+
+    def test_bad_review_date(self):
+        d = make_repo(); knowledge(d, last_reviewed="六月")
+        self.assertTrue(any("last_reviewed" in v and "不是" in v for v in chk.check_items(d)))
+
+    def test_duplicate_id_after_a_bad_merge(self):
+        d = make_repo(); k = knowledge(d)
+        twin = k.path.with_name(k.path.name.replace("_active_", "_draft_"))
+        twin.write_text(k.path.read_text(encoding="utf-8").replace("status: active", "status: draft"),
+                        encoding="utf-8")
+        self.assertTrue(any("标识重复" in v for v in chk.check_items(d)))
+
+    def test_superseded_needs_a_target_text_is_fine_bad_id_is_not(self):
+        d = make_repo(); knowledge(d, title="旧坑", status="superseded")
+        self.assertTrue(any("superseded_by" in v for v in chk.check_items(d)))
+        d = make_repo(); knowledge(d, title="旧坑", status="superseded", superseded_by="改用新机制后不再成立")
+        self.assertEqual(chk.check_items(d), [])
+        d = make_repo(); knowledge(d, title="旧坑", status="superseded", superseded_by="20990101-000000_没有")
+        self.assertTrue(any("不存在的条目" in v for v in chk.check_items(d)))
+
+    def test_related_must_point_to_a_real_item(self):
+        d = make_repo()
+        a = knowledge(d, title="甲")
+        knowledge(d, title="乙", related=f"{a.id}, 20260101-000000_没有")
+        viol = chk.check_items(d)
+        self.assertEqual(len(viol), 1, viol)
+        self.assertIn("20260101-000000_没有", viol[0])
+
+
+class Generated(unittest.TestCase):
+    def test_tracked_overview_is_flagged(self):
+        d = make_repo()
+        subprocess.run(["git", "init", "-q"], cwd=d, check=True)
+        (d/".aip"/"OVERVIEW.md").write_text("# 看板\n", encoding="utf-8")
+        self.assertEqual(chk.check_generated_untracked(d), [])   # 被 .aip/.gitignore 挡着
+        subprocess.run(["git", "add", "-f", ".aip/OVERVIEW.md"], cwd=d, check=True)
+        self.assertTrue(any("git rm --cached" in v for v in chk.check_generated_untracked(d)))
+
 
 class OrphanSlots(unittest.TestCase):
     def test_flags_old_file(self):
@@ -44,6 +121,17 @@ class OrphanSlots(unittest.TestCase):
         self.assertTrue(any("handoff.md" in v for v in chk.check_no_orphan_slots(d)))
     def test_clean_ok(self):
         self.assertEqual(chk.check_no_orphan_slots(make_repo()), [])
+
+
+class NoReminders(unittest.TestCase):
+    def test_flag_skips_reminders(self):
+        d = make_repo()
+        (d/".aip"/"config.yaml").write_text("gates:\n", encoding="utf-8")   # 没记整份 review，会被提醒
+        run = lambda *extra: subprocess.run([sys.executable, str(SCRIPTS/"aip_check.py"), "--repo-root", str(d), *extra],
+                                            capture_output=True, text=True, encoding="utf-8").stdout
+        self.assertIn("到期提醒", run())
+        self.assertNotIn("到期提醒", run("--no-reminders"))
+
 
 class EngineVersions(unittest.TestCase):
     def _mk(self, claude="0.3.0", codex="0.3.0", grok="0.3.0", version="0.3.0"):

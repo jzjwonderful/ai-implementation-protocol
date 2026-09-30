@@ -3,7 +3,7 @@ from __future__ import annotations
 """aip doctor —— 安装与环境健康检查（诊断用，不挡提交；硬闸门是 aip check）。
 
 四类检查：
-1. 项目 .aip/ 健康（活文档齐全、索引一致、无旧机制残留、knowledge 复核超期）
+1. 项目 .aip/ 健康（文档和条目目录齐全、条目格式、无旧机制残留、到期提醒汇总）
 2. 安装健康（~/.claude/skills 与 Codex 技能目录里的 aip 技能是否完整、装的版本 vs 引擎版本）
 3. hook 健康（pre-commit 是否在、是否 AIP 管理、指向的引擎还在不在）
 4. 引擎仓库健康（两份 plugin.json 的 version 与技能目录 VERSION 一致）
@@ -15,20 +15,17 @@ from __future__ import annotations
 import argparse
 import os
 import re
-from datetime import date, datetime
+from collections import Counter
 from pathlib import Path
 
 import aip_check
 from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
-from aip_knowledge import parse_entries
-from aip_upkeep import KNOWLEDGE_STALE_DAYS, status_word
+from aip_upkeep import collect
 from install_hooks import PRE_COMMIT_MARK
 
 # 引擎根 = aip 技能目录（scripts/ 与 templates/ 都在它下面），装到哪都成立。
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "ai-implementation-protocol"
-# knowledge 条目复核超过这个天数只提醒（WARN），不判死刑；阈值和会话提醒共用一处。
-STALE_DAYS = KNOWLEDGE_STALE_DAYS
 
 Item = tuple[str, str, str | None]  # (级别, 说明, 修复命令)
 
@@ -61,47 +58,34 @@ def codex_skill_paths(home: Path, skill: str, codex_home: Path | None = None) ->
     return out
 
 
-def check_project(repo: Path, engine: Path, stale_days: int = STALE_DAYS) -> list[Item]:
+def check_project(repo: Path, engine: Path) -> list[Item]:
     out: list[Item] = []
     if not aip_root(repo).is_dir():
         out.append(("INFO", f"项目未初始化 AIP（无 {aip_root(repo)}）",
                     f"python {engine}/scripts/aip_init.py --repo-root {repo}"))
         return out
+    old = aip_check.check_old_layout(repo)
+    if old:
+        return [("ERROR", v, f"python {engine}/scripts/aip_migrate.py --repo-root {repo}") for v in old]
     init_fix = f"python {engine}/scripts/aip_init.py --repo-root {repo}"
-    for v in aip_check.check_living_files(repo):
+    for v in aip_check.check_project_files(repo):
         out.append(("ERROR", v, init_fix))
-    for v in aip_check.check_index_sync(repo):
-        out.append(("ERROR", v, f"python {engine}/scripts/aip_knowledge.py --repo-root {repo}"))
-    for v in aip_check.check_knowledge_fields(repo):
-        out.append(("ERROR", v, "补齐该条目的必填字段"))
+    for v in aip_check.check_item_names(repo) + aip_check.check_items(repo):
+        out.append(("ERROR", v, "按提示改条目文件；改状态用 aip_item.py status"))
     for v in aip_check.check_no_orphan_slots(repo):
         out.append(("ERROR", v, "内容迁入现行活文档后删除该文件"))
-    out.extend(check_knowledge_freshness(repo, stale_days=stale_days))
+    out.extend(check_due(repo, engine))
     return out
 
 
-def check_knowledge_freshness(repo: Path, today: date | None = None, stale_days: int = STALE_DAYS) -> list[Item]:
-    kn = aip_root(repo) / "knowledge.md"
-    if not kn.exists():
+def check_due(repo: Path, engine: Path) -> list[Item]:
+    """到期提醒只汇总成一行：逐条列出来一个项目能刷上百行，反而没人看。"""
+    dues = collect(repo)
+    if not dues:
         return []
-    today = today or date.today()
-    out: list[Item] = []
-    for e in parse_entries(read_text(kn)):
-        # 已修、已取代的条目记的是当时，draft 另有提醒；只催仍在生效的 active
-        if status_word(e["fields"].get("状态", "")) != "active":
-            continue
-        raw = e["fields"].get("最后复核", "")
-        try:
-            reviewed = datetime.strptime(raw, "%Y-%m-%d").date()
-        except ValueError:
-            out.append(("WARN", f'知识条目 {e["id"]} 的「最后复核」不是 YYYY-MM-DD：{raw!r}',
-                        "改成日期格式，复核后更新"))
-            continue
-        age = (today - reviewed).days
-        if age > stale_days:
-            out.append(("WARN", f'知识条目 {e["id"]} 已 {age} 天未复核（最后复核 {raw}，阈值 {stale_days} 天）',
-                        "复核内容是否仍成立，更新「最后复核」日期"))
-    return out
+    summary = "、".join(f"{k} {n}" for k, n in Counter(d.kind for d in dues).items())
+    return [("WARN", f"有 {len(dues)} 项到期要处理（{summary}）",
+             f"python {engine}/scripts/aip_upkeep.py --repo-root {repo} --all 看完整清单")]
 
 
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
@@ -166,9 +150,8 @@ def check_engine_repo(repo: Path) -> list[Item]:
             for v in aip_check.check_engine_versions(repo)]
 
 
-def run_all(repo: Path, home: Path, engine: Path, stale_days: int = STALE_DAYS,
-            codex_home: Path | None = None) -> list[Item]:
-    return (check_project(repo, engine, stale_days) + check_install(home, engine, codex_home)
+def run_all(repo: Path, home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
+    return (check_project(repo, engine) + check_install(home, engine, codex_home)
             + check_hooks(repo, engine) + check_engine_repo(repo))
 
 
@@ -180,13 +163,11 @@ def main() -> int:
     ap.add_argument("--codex-home", default=None,
                     help="Codex home；默认取 CODEX_HOME，未设置则为 <home>/.codex。")
     ap.add_argument("--engine-root", default=str(ENGINE_ROOT))
-    ap.add_argument("--stale-days", type=int, default=STALE_DAYS,
-                    help=f"knowledge 条目超过多少天未复核就提醒（默认 {STALE_DAYS}）。")
     a = ap.parse_args()
     home = Path(a.home).resolve()
     codex_home = Path(a.codex_home).expanduser().resolve() if a.codex_home else None
     items = run_all(Path(a.repo_root).resolve(), home,
-                    Path(a.engine_root).resolve(), a.stale_days, codex_home)
+                    Path(a.engine_root).resolve(), codex_home)
     for level, msg, fix in items:
         print(f"[{level}] {msg}" + (f"\n        修复：{fix}" if fix else ""))
     errors = sum(1 for lv, _, _ in items if lv == "ERROR")

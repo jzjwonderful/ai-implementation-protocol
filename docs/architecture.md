@@ -8,7 +8,7 @@ AIP has four layers.
 
 Human and machine rules that define:
 
-- the required living docs
+- the living docs: item directories (one file per knowledge entry, decision, side issue, work line) and whole documents
 - capture and completion discipline
 - resume behavior
 - validation expectations (`aip check`)
@@ -36,10 +36,12 @@ Key scripts:
 - `aip_init.py` — scaffold `.aip/` (zero-config)
 - `aip_check.py` — the blocking validation check
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
-- `aip_knowledge.py` — rebuild the knowledge index
-- `aip_overview.py` — rebuild the OVERVIEW digest
+- `aip_item.py` — create items, change status (file name and header together), list, show
+- `aip_overview.py` — generate the board (`.aip/OVERVIEW.md`, not committed) from the items
+- `aip_upkeep.py` — due reminders, sorted by urgency and capped
+- `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
 - `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
-- `aip_session_start.py` — SessionStart hook entry: prints the OVERVIEW, with an extra reminder after context compaction
+- `aip_session_start.py` — SessionStart hook entry: generates and prints the board, reports checkout state (behind upstream, uncommitted `.aip/` changes), with an extra reminder after context compaction
 - `aip_brainstorm.py` — the shared-topic-document state machine behind the `aip-brainstorm` skill
 
 Installers stay at the repository root and only copy the package: `scripts/install_all.py` (all runtimes at

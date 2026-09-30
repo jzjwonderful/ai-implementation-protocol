@@ -43,7 +43,7 @@ class CodexInstaller(unittest.TestCase):
         for base in [home / ".agents" / "skills", home / ".codex" / "skills",
                      home / "plugins" / "ai-implementation-protocol" / "skills"]:
             self.assertTrue((base / "aip" / "scripts" / "aip_init.py").exists(), base)
-            self.assertTrue((base / "aip" / "templates" / "overview-template.md").exists(), base)
+            self.assertTrue((base / "aip" / "templates" / "item-knowledge.md").exists(), base)
             self.assertTrue((base / "aip" / "VERSION").exists(), base)
 
     def test_codex_home_scope_installs_skills_under_codex_home(self):

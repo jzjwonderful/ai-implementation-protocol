@@ -8,13 +8,12 @@
 4. **交付声明**要包含：改动结果、约束对照结论、实际执行的验证命令及结果、未执行项及原因、剩余风险。没走完闭环就明确标"部分验证/未完成闭环"。
 5. **范围内纠偏**：只整理本次碰过的条目及其直接关联；每处改动过 review 自检清单并在知会中列出，不静默改与本线无关的旧内容。
 6. **捕获回扫**（改了代码或文档结构的任务逐项给 yes/no；OVERVIEW 不替代这些文档）：
-   - **knowledge**：验证出可复现的坑或根因？→ yes 按捕获纪律沉淀；no 一句说为什么没有
+   - **knowledge**：验证出可复现的坑或根因？→ yes 按捕获纪律 `aip_item.py new --type knowledge`；no 一句说为什么没有
    - **reference**：产出可复用实现或需要定锚的概念？→ yes 沉淀；no 一句说为什么没有
    - **conventions**：发现新规约或现有规约需要修正？→ yes 沉淀；no 一句说为什么没有
-   - **inbox**：撞见尚未处理的旁路问题？→ yes 投 inbox；no 一句说为什么没有
+   - **inbox**：撞见尚未处理的旁路问题？→ yes `aip_item.py new --type inbox`；no 一句说为什么没有
    - **config**：有新的构建/测试命令需要记录？→ yes 更新 config.yaml；no 一句说为什么没有
-   - **用过的文档**：本次读过、用过的 knowledge 条目、规约、项目技能、说明文件，有和现状对不上的吗？→ yes 当场改（knowledge 同时更新「最后复核」）；no 一句说核过哪些
-7. **重建派生件**：改过 knowledge 就跑 `python <skill>/scripts/aip_knowledge.py --repo-root .`；总是跑 `python <skill>/scripts/aip_overview.py --repo-root .`。
-8. **把线移出看板**：线完成后不再挂在 OVERVIEW 上。
+   - **用过的文档**：本次读过、用过的 knowledge 条目、规约、项目技能、说明文件，有和现状对不上的吗？→ yes 当场改（knowledge 同时 `aip_item.py reviewed`）；no 一句说核过哪些
+7. **收线**：`aip_item.py status <这条线的标识> done`，再跑 `python <skill>/scripts/aip_overview.py --repo-root .` 刷新看板（看板不进仓库，不用提交）。
 
-做出架构/取舍决策的，同次在 `decisions.md` 追加一条（背景、决策、理由、影响），免得以后被反复重新争论。
+做出架构/取舍决策的，同次 `aip_item.py new --type decision` 记一条（背景、决策、理由、影响），免得以后被反复重新争论。

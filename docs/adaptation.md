@@ -8,10 +8,11 @@ Adapt AIP to any software project without rewriting the protocol.
 
 The target project receives a single hidden `.aip/` directory containing:
 
-- project-level living docs (`OVERVIEW.md`, `decisions.md`, `knowledge.md` + `knowledge_index.md`, `reference.md`, `inbox.md`, `conventions.md`, `config.yaml`)
+- item directories, one file per item: `knowledge/`, `decisions/`, `inbox/`, `tracks/`
+- whole documents: `reference.md`, `conventions.md`, `config.yaml`, and the generated, uncommitted board `OVERVIEW.md`
 - optional `.nexus-map/` linkage
 
-Task state lives on the `OVERVIEW.md` board — there is no per-feature directory and no runtime pointer.
+Task state lives in `tracks/` files, and the board is generated from them — there is no per-feature directory and no runtime pointer.
 
 ## Engine vs Config
 
@@ -23,7 +24,7 @@ protocol or script changes.
 ## Recommended Steps
 
 1. Run `aip init` (scaffolds `.aip/` and installs the git pre-commit hook; zero-config)
-2. Add a work line to `OVERVIEW.md` when you start something; track its next step + `must_read` there
+2. Add a track (`aip_item.py new --type track`) when you start something; keep its goal, blocker, next step and read-first list there
 3. Fill `.aip/config.yaml` as you go — truth sources, machine-check commands, lenses, iron rules (captured when first needed, not asked upfront)
 4. Keep `aip check` running via the hook (or add it to CI); run `aip doctor` any time to check install/environment health
 
@@ -48,7 +49,7 @@ runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `
 
 ```bash
 python <skill>/scripts/install_hooks.py --repo-root <target>                  # git pre-commit gate
-python <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (OVERVIEW into context, also after compaction)
+python <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (board into context, also after compaction)
 python <skill>/scripts/install_hooks.py --repo-root <target> --claude-stop    # + non-blocking Claude Stop hook
 ```
 

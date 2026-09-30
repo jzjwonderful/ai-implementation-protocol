@@ -4,7 +4,7 @@
 
 Use AIP for:
 
-- tracking multi-session refactors on the OVERVIEW board
+- tracking multi-session refactors in track files
 - recording verified root causes (crashes, races) in the knowledge base
 - a decision log for architecture trade-offs
 - machine-check evidence (build/tests) bound to "done"
@@ -37,6 +37,6 @@ Use AIP for:
 Across all examples, the same structure stays stable:
 
 - one hidden `.aip/` directory
-- one OVERVIEW board holding work-line state (next step + `must_read`)
-- one append-only knowledge base and decision log
+- one track file per work line (next step + read-first list), with a generated board
+- knowledge and decisions as one file per item, never renumbered
 - one blocking `aip check`

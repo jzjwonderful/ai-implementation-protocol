@@ -4,7 +4,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 
 def force_utf8() -> None:
@@ -19,11 +19,15 @@ def force_utf8() -> None:
 # 业务仓库里 AIP 的全部产出都落在这个隐藏目录下（像 .git/.nexus-map），不污染项目根。
 AIP_DIR = ".aip"
 
-# 项目级活文档（跨 feature，长期存在）。init 生成、check 校验存在。
-PROJECT_LIVING_FILES = [
-    "OVERVIEW.md", "decisions.md", "knowledge.md", "knowledge_index.md",
-    "reference.md", "inbox.md", "conventions.md", "config.yaml",
-]
+# 项目级整篇文档（长期存在、整篇维护）。init 生成、check 校验存在。
+# 知识、决策、旁路问题、在建线是一条一个文件，放在各自目录下，见 aip_item.TYPES。
+PROJECT_FILES = ["reference.md", "conventions.md", "config.yaml"]
+
+# 现场生成、不进仓库的文件（init 写进 .aip/.gitignore）。进了仓库，并行分支每次合并都会冲突。
+GENERATED_FILES = ["OVERVIEW.md"]
+
+# 0.5.0 之前「一类一个大文件」的布局。还在就说明没迁移，check 报红并指向迁移脚本。
+OLD_LAYOUT_FILES = ["knowledge.md", "decisions.md", "inbox.md", "knowledge_index.md"]
 
 # 不该出现在仓库任何地方的文件名：旧 per-feature 接管残留 + 已被取代的旧文档名（迁移守卫）。
 FORBIDDEN_SLOT_FILENAMES = [
@@ -31,9 +35,6 @@ FORBIDDEN_SLOT_FILENAMES = [
     "session_log.md", "report.md", "file_scope.yaml",
     "STATUS.md", "findings.md", "canonical-assets.md",
 ]
-
-# knowledge.md 每条目必填字段（check 校验）。
-REQUIRED_KNOWLEDGE_FIELDS = ["分类", "状态", "症状", "根因", "适用范围", "最后复核"]
 
 # 插件包携带的全部技能（plugins/.../skills/ 下应有同名目录）。
 # 安装器按目录遍历不读这个清单；doctor/uninstall 靠它逐个点名，新增技能只改这里。
@@ -86,12 +87,3 @@ def aip_root(target_repo: Path) -> Path:
 
 def project_living_path(target_repo: Path, name: str) -> Path:
     return aip_root(target_repo) / name
-
-
-# 向后兼容旧调用名（现在指向 .aip 根）。
-def project_docs_root(target_repo: Path) -> Path:
-    return aip_root(target_repo)
-
-
-def list_missing(paths: Iterable[Path]) -> list[str]:
-    return [str(p) for p in paths if not p.exists()]

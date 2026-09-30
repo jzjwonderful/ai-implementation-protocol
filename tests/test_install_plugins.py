@@ -41,7 +41,7 @@ class InstallGrok(unittest.TestCase):
         # 引擎随技能走：技能正文里写的 <skill>/scripts/... 必须在安装后成立
         grok_aip = home / ".grok" / "skills" / "aip"
         self.assertTrue((grok_aip / "scripts" / "aip_init.py").exists())
-        self.assertTrue((grok_aip / "templates" / "overview-template.md").exists())
+        self.assertTrue((grok_aip / "templates" / "item-knowledge.md").exists())
         self.assertTrue((grok_aip / "VERSION").exists())
         # 默认不装 ~/.grok/plugins/
         self.assertFalse((home / ".grok" / "plugins" / mod.PLUGIN_NAME).exists())
@@ -115,7 +115,7 @@ class InstallIntoProject(unittest.TestCase):
         # 引擎随技能走，装到项目里也一样
         aip = project / ".claude" / "skills" / "aip"
         self.assertTrue((aip / "scripts" / "aip_init.py").exists())
-        self.assertTrue((aip / "templates" / "overview-template.md").exists())
+        self.assertTrue((aip / "templates" / "item-knowledge.md").exists())
 
     def test_codex_installs_under_project_without_marketplace(self):
         project = self._project()

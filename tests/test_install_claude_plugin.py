@@ -27,7 +27,7 @@ class ClaudeInstaller(unittest.TestCase):
         self.assertTrue((aip / "SKILL.md").exists())
         self.assertTrue((aip / "scripts" / "aip_init.py").exists())
         self.assertTrue((aip / "scripts" / "aip_session_start.py").exists())
-        self.assertTrue((aip / "templates" / "overview-template.md").exists())
+        self.assertTrue((aip / "templates" / "item-knowledge.md").exists())
         self.assertTrue((aip / "reference").is_dir())
         self.assertEqual((aip / "VERSION").read_text(encoding="utf-8"),
                          (ENGINE / "VERSION").read_text(encoding="utf-8"))
@@ -46,6 +46,7 @@ class ClaudeInstaller(unittest.TestCase):
                                 text=True, encoding="utf-8", capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertTrue((target / ".aip" / "OVERVIEW.md").exists())
+        self.assertTrue((target / ".aip" / "knowledge").is_dir())
 
 
 if __name__ == "__main__":

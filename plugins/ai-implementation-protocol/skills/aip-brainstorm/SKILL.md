@@ -67,7 +67,7 @@ python <aip>/scripts/aip_brainstorm.py note --doc <议题> --text "用户原话�
 
 **5. 收尾**
 
-- 状态转 `converged` 后，收尾的 AI 先读全文，再 `conclude --text "共识点 + 行动项"` 写入结论；随后按 AIP 捕获纪律把结论沉淀进 `decisions.md` / `knowledge.md`（够格才写）。
+- 状态转 `converged` 后，收尾的 AI 先读全文，再 `conclude --text "共识点 + 行动项"` 写入结论；随后按 AIP 捕获纪律用 `aip_item.py new` 把结论沉淀成决策或知识条目（够格才写）。
 - 状态转 `need-user` 后，用 `escalate --text "待裁决问题清单（列清选项和分歧点）"`，然后明确告诉用户"议题需要你裁决，问题已写进文档"。
 - 轮次超过上限仍未共识，脚本自动转 need-user（保险丝，防止无限讨论），同样走 escalate。
 - 用户要终止 → `abort --reason "原因"`。

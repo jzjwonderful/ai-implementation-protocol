@@ -10,29 +10,45 @@ All AIP outputs in a target repository live under a single hidden directory `.ai
 
 ## Project-Level Living Docs
 
-AIP keeps project state in a small set of living docs (cross-task, long-lived) under `.aip/`. There are **no per-feature work-package directories and no runtime pointer** — task state lives on the OVERVIEW board.
+AIP keeps project state under `.aip/` in two shapes. There are **no per-feature work-package directories and no runtime pointer** — task state lives in track files.
 
-- `OVERVIEW.md` — multi-line board (hand-written top) + auto-generated digest. Read this first when starting or resuming any work.
-- `decisions.md` — architecture/direction-level decision log (append-only).
-- `knowledge.md` (+ the derived `knowledge_index.md`) — verified root causes and pitfalls.
+**Items — one file each.** Knowledge, decisions, side issues and work lines each have a directory; every entry is one Markdown file named `<timestamp>_<type>_<status>_<short title>.md`, e.g. `20260928-153012_knowledge_active_gbrain健康分是扣分制.md`:
+
+- `knowledge/` — verified root causes and pitfalls (`active` / `draft` / `fixed` / `superseded`).
+- `decisions/` — architecture/direction-level decisions (`accepted` / `superseded`).
+- `inbox/` — side issues hit while doing something unrelated (`open` / `closed`).
+- `tracks/` — work lines; the board is generated from them (`active` / `blocked` / `paused` / `done`).
+
+The timestamp is the creation time to the second. The short title is written by whoever creates the item (the AI): an 8–24 character name that says what the item is, not the first half of the title sentence. `aip_item.py new` requires `--slug` when the title is longer than 24 characters and suggests a fallback cut at a clause boundary; the automatic cut (whole leading clauses, hard cut only when no clause fits) is used only by migration when no name was given. The short title never changes afterwards, because it is part of the id. An item's **id is `<timestamp>_<short title>`**: references between items and code-comment anchors always use the full id (`.aip/knowledge/20260928-153012_gbrain健康分是扣分制`) — never the timestamp alone (unreadable) and never the status (it changes). The status sits both in the file name (for filtering and sorting) and in the file's front matter (`status:`), and `aip check` requires the two to match; status changes go through `aip_item.py status`, which renames the file and rewrites the header together. Why files instead of numbered entries in one big file: numbering by "highest + 1" collided whenever two branches or clones added entries in parallel (observed in a real project: two different K-186s, two I-14s, two I-25s), and every parallel append conflicted at the end of the same file. Separate files never collide on creation and merge without conflicts. A database was considered and rejected: a binary file can't be merged by git or GitLab's web merge, can't be reviewed in a diff, and can't be read or grepped directly.
+
+Front matter is plain `key: value` lines between `---` markers: `title` and `status` always; knowledge also needs `category`, `scope` and `last_reviewed` (a `YYYY-MM-DD` date) and a body with non-empty `症状` and `根因`; `superseded` knowledge/decisions need `superseded_by` (the replacing item's id, or a sentence when a mechanism rather than an entry replaced it). Optional: `related` (comma-separated ids), `aliases` (old ids from before migration, e.g. `K-185`), `rule_id`.
+
+`aip_item.py` is the one tool for items: `new`, `status`, `reviewed`, `list`, `show` (by full id, file name, or old alias).
+
+**Whole documents:**
+
+- `OVERVIEW.md` — the board, **generated on the spot and not committed** (`.aip/.gitignore`): live tracks in full, open side issues, knowledge counts and recent entries, recent decisions, reference section counts. Every section is capped, so the board doesn't grow with the project. Read it first when starting or resuming work.
 - `reference.md` — domain concepts/terms, core invariants, and reusable implementations (the canonical pick).
-- `inbox.md` — side-finding inbox (problems hit while doing something unrelated).
 - `conventions.md` — project conventions (standing how-we-work rules).
 - `config.yaml` — project adaptation (truth sources / machine-check commands / lenses / iron rules).
 
-`aip init` creates these, and `aip check` validates their presence (the derived `knowledge_index.md` counts as required too).
+`aip init` creates the three documents, the four item directories (with a `.gitkeep`) and the `.gitignore`; `aip check` validates them.
 
 ### Retired slots (must not reappear)
 
-Earlier AIP versions used per-feature packages, a runtime pointer, and a separate bug track. Those are gone. `aip check` treats these filenames as **forbidden anywhere in the repo** (a migration guard): `current_task.json`, `task_board.yaml`, `handoff.md`, `verification.md`, `session_log.md`, `report.md`, `file_scope.yaml`, `STATUS.md`, `findings.md`, `canonical-assets.md`. Their roles moved: current state → `OVERVIEW.md`; side-findings → `inbox.md`; reusable-asset registry → `reference.md`.
+Earlier AIP versions used per-feature packages, a runtime pointer, and a separate bug track. Those are gone. `aip check` treats these filenames as **forbidden anywhere in the repo** (a migration guard): `current_task.json`, `task_board.yaml`, `handoff.md`, `verification.md`, `session_log.md`, `report.md`, `file_scope.yaml`, `STATUS.md`, `findings.md`, `canonical-assets.md`. Their roles moved: current state → `tracks/` (board generated into `OVERVIEW.md`); side-findings → `inbox/`; reusable-asset registry → `reference.md`.
+
+The pre-0.5.0 layout — `knowledge.md`, `decisions.md`, `inbox.md`, `knowledge_index.md` as single files and a hand-written board — is migrated by `aip_migrate.py` (preview by default, `--apply` to write, `--rewrite-anchors` to also rewrite `.aip/knowledge.md::<rule_id or old id>` code-comment anchors; `--names-out <file>` exports the items whose titles are too long so the AI can name them, and `--names <file>` reads the names back). A migrated item's timestamp is the author time of the commit where its heading first appeared (following file renames), not `git blame`, which reports the last edit of the heading line (e.g. the day a side issue was struck through); when that can't be found it falls back to `git blame`, then to now. Entries committed together share one second and are told apart by their short titles. Old ids become `aliases` on each item. Everywhere under `.aip/` — item bodies, header fields other than `title`, `reference.md`, `conventions.md`, `config.yaml`, `specs/` and other remaining files — old ids and `.aip/knowledge.md::…` anchors are replaced by full ids without needing the flag (the flag only covers code outside `.aip/`); titles keep their old ids, and an old id shared by two entries is left as is and reported. While those files exist, `aip check` reports only "still the old layout", `aip init` refuses to run, and the SessionStart hook asks for the migration. The steps live in the skill's `reference/migrate.md`.
 
 ## Resume / Onboarding
 
 Any AI starting or resuming work:
 
-1. Read `OVERVIEW.md`, find the `▶[active]` line, read its **next step** and `must_read`.
-2. Read every file listed in `must_read` (includes `decisions.md` and `knowledge_index.md`).
+1. Read `OVERVIEW.md`, find the ▶ active track, read its **next step** and its "read first" list.
+2. Read those files; look up related knowledge and decisions by file name or `aip_item.py list` and open only the relevant ones — never read a whole item directory.
 3. Only then start — don't replay history.
+
+The SessionStart hook also reports the checkout state before any `.aip/` write: a checkout behind its upstream (from local refs only, no fetch) and uncommitted changes under `.aip/`. In a real project, entries written in a checkout 50 commits behind and never committed were lost and their numbers reused.
 
 ## Capture + Completion Check
 
@@ -40,7 +56,7 @@ Any AI starting or resuming work:
 
 For any coding work, including business feature development and bug fixes, verification is part of the work rather than an optional follow-up.
 
-Before editing code, the AI must understand the repository's verification mechanism and inspect the applicable plan or requirements, existing tests, build/lint commands, CI configuration, and other constraints. It must identify the verification path before implementation starts and create an acceptance matrix mapping each requirement to an implementation location and behavioral evidence. The matrix may live in the active OVERVIEW line or its `tracks/<id>.md` companion.
+Before editing code, the AI must understand the repository's verification mechanism and inspect the applicable plan or requirements, existing tests, build/lint commands, CI configuration, and other constraints. It must identify the verification path before implementation starts and create an acceptance matrix mapping each requirement to an implementation location and behavioral evidence. The matrix may live in the active track file.
 
 Before declaring the work complete, the AI must compare the implementation against those constraints and run the applicable verification chain. The normal chain is: constraint comparison → implementation check → tests/build/lint/static or end-to-end checks → result comparison. If the full chain cannot run, the AI must at least run the relevant lint or build checks and state every skipped check, the reason, and the remaining risk. It must not describe unverified behavior as completed.
 
@@ -50,28 +66,28 @@ Every completion report for coding work must include the changed result, constra
 
 ### Two capture paths
 
-- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → write to `knowledge.md` (`状态: draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
-- **Side path** — a problem unrelated to the current task → search `knowledge.md` + `inbox.md` first → if new, file it in `inbox.md` (don't blindly append).
+- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → `aip_item.py new --type knowledge` (`draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
+- **Side path** — a problem unrelated to the current task → search `knowledge/` and `inbox/` first → if new, `aip_item.py new --type inbox` (don't blindly add).
 
 ### Write discipline (all sedimentation)
 
 Run the review checklist (next section) → write → notify the user in-session (which docs changed, a one-line reason each) → the edit lands in the same git commit as the work. There is no pre-approval gate: the human audits after the fact via the notification plus git diff, which is why skipping the notification is forbidden.
 
-- `状态: draft` marks an entry the AI itself is not yet sure of (evidence incomplete); `active` means the review checklist passed; `fixed` means the defect was fixed but the lesson still helps; `superseded(by K-N)` means replaced. The AI may write `active` directly but must state the evidence in the notification. The status must start with one of these four words and `最后复核` must be a `YYYY-MM-DD` date — `aip check` enforces both.
-- Only **verified** items enter knowledge; guesses and side-issues go to `inbox.md`.
-- **Overturning a decision/convention** — past decisions are not iron law: an AI that finds one no longer fits current needs is expected to say so and correct it. The only mechanism is appending a new entry marked "supersedes ADR-N" with the reason; the old entry is flagged superseded, never rewritten or deleted in place.
+- Knowledge `draft` marks an entry the AI itself is not yet sure of (evidence incomplete); `active` means the review checklist passed; `fixed` means the defect was fixed but the lesson still helps; `superseded` means replaced (`superseded_by` says by what). The AI may write `active` directly but must state the evidence in the notification.
+- Only **verified** items enter knowledge; guesses and side-issues go to `inbox/`.
+- **Overturning a decision/convention** — past decisions are not iron law: an AI that finds one no longer fits current needs is expected to say so and correct it. The only mechanism is a new decision whose body says "supersedes <old id>" with the reason, and `aip_item.py status <old> superseded --by <new>`; the old entry is never rewritten or deleted in place.
 - **Deleting/merging existing content** — the only two valid reasons are "proven wrong" and "duplicate of another entry"; "unused this round" is not one. The notification must name what was removed and why.
 
 ### Review checklist (`aip review`, soft quality)
 
 The goal is always **doc quality**, never content volume: clear, accurate, necessary, minimal — when in doubt, write less. **The default action is delete or merge, not add**: every addition must first clear the necessity bar below, or it doesn't get written. Run it entry-by-entry before writing any living doc, and over the whole `.aip/` on `/aip review` (`$aip review` in Codex):
 
-1. Read the target doc in full (not just the tail); merge or cross-link near-duplicates instead of adding.
-2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox.md`. Promote an entry to `active` only after every checklist item passes, and only with the evidence stated in the notification.
+1. Look for near-duplicates first: items by file name and `aip_item.py list`, opening the close ones in full; whole documents in full. Merge or cross-link (`related`) instead of adding.
+2. Only write facts verified first-hand (ran the command, read the code, reproduced it); mark uncertain items `draft` or file them in `inbox/`. Promote an entry to `active` only after every checklist item passes, and only with the evidence stated in the notification.
 3. Necessity: without this entry, would a new AI six months from now clearly pay a higher comprehension cost? If no, delete it; if yes but it reads unclearly, rewrite; if still unclear, drop it.
 4. Minimal: one entry states one thing; don't restate what git history or the code itself derives.
 5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
-6. Afterwards run `aip check` and rebuild the derived files (`aip knowledge` / `aip overview`).
+6. Afterwards run `aip check`.
 
 A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (`review_last_full` in `.aip/config.yaml`); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. A full review also re-verifies the knowledge entries the reminders list, checks that reference paths still exist, and checks project skills and instruction files against the code; it ends by setting `review_last_full` to today. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
 
@@ -79,8 +95,10 @@ A full-`.aip/` review triggers when any of: the change deletes or merges content
 
 Docs rot unless something makes them get re-checked. Two mechanisms:
 
-- **Check on use.** Whenever the AI reads a `.aip/` entry, a convention, a project skill or an instruction file (`CLAUDE.md` / `AGENTS.md`) and finds it no longer matches the code, it fixes it in the same commit: a still-valid knowledge entry gets today's `最后复核`; one whose defect is fixed becomes `fixed`; one replaced by a newer mechanism becomes `superseded(by K-N)`; conventions, skills and instruction files get their text corrected; anything needing a human decision goes to the inbox. The completion check's capture sweep asks about this explicitly.
-- **Due reminders.** `aip_upkeep.py` decides what is due from what actually changed, not only from the calendar. For each active knowledge entry it reads the file paths and code names the entry cites in backticks: if any cited code file (docs and `.aip/` don't count) has a commit after the entry's `最后复核`, the entry is due; if a cited file or name existed in the repo on the review date and is gone now, it is due (names that were never in the repo — external APIs, env vars, server paths — are ignored, so they never cause noise). Entries that cite no code fall back to 90 days; entries whose code never moved get a one-year ceiling. The same "was there, now gone" check runs over `reference.md` against the last full review date. It also lists entries still in `draft` and a full review overdue by 30 days. Without git it falls back to the 90-day rule. The SessionStart hook prints them on startup and resume (not right after a compaction, mid-task), and `aip check` prints them after its verdict. They never block a commit; the AI handles them when it touches those entries or when the current line wraps up, or tells the user it is deferring them.
+- **Check on use.** Whenever the AI reads a `.aip/` entry, a convention, a project skill or an instruction file (`CLAUDE.md` / `AGENTS.md`) and finds it no longer matches the code, it fixes it in the same commit: a still-valid knowledge entry gets `aip_item.py reviewed`; one whose defect is fixed becomes `fixed`; one replaced by a newer mechanism becomes `superseded`; conventions, skills and instruction files get their text corrected; anything needing a human decision goes to the inbox. The completion check's capture sweep asks about this explicitly.
+- **Due reminders.** `aip_upkeep.py` decides what is due from what actually changed, not only from the calendar. For each active knowledge entry it reads the file paths and code names the entry cites in backticks: if a cited file or name existed in the repo on the review date and is gone now, the entry is due; otherwise if any cited code file (docs and `.aip/` don't count) has a commit after `last_reviewed`, it is due (names that were never in the repo — external APIs, env vars, server paths — are ignored, so they never cause noise). Entries that cite no code fall back to 90 days; entries whose code never moved get a one-year ceiling. The same "was there, now gone" check runs over `reference.md` against the last full review date. It also lists `draft` entries, a full review overdue by 30 days, live tracks longer than 12 lines, and AIP script paths written in `CLAUDE.md` / `AGENTS.md` (outside the managed block) that no longer exist on disk. Without git it falls back to the 90-day rule.
+
+  Each item lands in exactly one bucket, and the list is sorted by urgency: dead guide paths → cited code gone → cited code changed / reference gone → full review → drafts / long tracks → 90-day → one-year. A real project produced 171 reminders at once, which nobody reads; so the SessionStart hook and `aip check` show a one-line summary plus the top 5, and `aip_upkeep.py --all` prints everything. The hook prints them on startup and resume (not right after a compaction, mid-task). They never block a commit, and the pre-commit hook skips computing them (`aip check --no-reminders`). The AI handles them when it touches those entries or when the current line wraps up, or tells the user it is deferring them.
 
 ### Completion check (when a work line is done)
 
@@ -90,10 +108,9 @@ Docs rot unless something makes them get re-checked. Two mechanisms:
 2. Run `aip check` (red blocks the commit; fix item by item).
 3. Scoped correction: tidy only the entries you touched this round and their direct links (checklist-reviewed and notified; no silent edits outside the line's scope).
 4. Capture sweep: list what you concretely learned/hit this round — into knowledge / inbox / reference / conventions / config?
-5. Rebuild derived files: `aip knowledge` (index) and `aip overview` (digest).
-6. Move the line off the OVERVIEW board.
+5. Close the line: `aip_item.py status <track> done`, then regenerate the board (`aip overview`; it isn't committed).
 
-**Tier 2 (on an architecture/trade-off decision):** append one record to `decisions.md` (context, decision, rationale, impact) so it isn't re-litigated later.
+**Tier 2 (on an architecture/trade-off decision):** `aip_item.py new --type decision` (context, decision, rationale, impact) so it isn't re-litigated later.
 
 ### Updating an installed engine (`/aip update`)
 
@@ -105,11 +122,13 @@ Installers write `SOURCE.json` into the installed `aip` skill: remote URL, branc
 
 `aip check` (`python <skill>/scripts/aip_check.py --repo-root .`, where `<skill>` is the installed `aip` skill directory) validates:
 
-1. **Living docs present** — the living docs above exist under `.aip/`.
-2. **Index consistent** — `knowledge_index.md` matches the current `knowledge.md` (rebuild with `aip knowledge` if not).
-3. **Knowledge fields complete** — each entry's required fields (分类 / 状态 / 症状 / 根因 / 适用范围 / 最后复核) are non-empty; `状态` starts with active / draft / fixed / superseded and `最后复核` is a date.
-4. **No legacy residue** — none of the forbidden filenames appear in the repo.
-5. **Engine version consistency** (engine repo only) — both plugin manifests' `version` match `skills/aip/VERSION`, the single version source.
+1. **Not the old layout** — if `knowledge.md` / `decisions.md` / `inbox.md` / `knowledge_index.md` still exist, that is the only finding reported (run the migration).
+2. **Documents and item directories present** — `reference.md`, `conventions.md`, `config.yaml`, and the four item directories.
+3. **Item file names** — `<timestamp>_<type>_<status>_<short title>.md`, type matching its directory, status valid for the type.
+4. **Items well-formed** — the header status matches the file name; required header fields and body sections present; `last_reviewed` is a date; `superseded` items say by what; `related` and id-shaped `superseded_by` point to existing items; **no duplicate ids** (e.g. both sides of a merge changed the same item's status).
+5. **Generated files not committed** — `OVERVIEW.md` is not tracked by git.
+6. **No legacy residue** — none of the forbidden filenames appear under `.aip/`.
+7. **Engine version consistency** (engine repo only) — the plugin manifests' `version` match `skills/aip/VERSION`, the single version source.
 
 Exit 0 = pass; non-zero = violations listed on stdout.
 
@@ -124,11 +143,11 @@ AIs running in separate terminals can hold a structured discussion about one top
 
 ## `aip doctor` (diagnosis, non-blocking)
 
-`aip doctor` (`python <skill>/scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (including knowledge entries whose `最后复核` is >90 days old — WARN only), install health (skill directories complete, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo version consistency. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
+`aip doctor` (`python <skill>/scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (the checks above, plus the due reminders summarised as one WARN line), install health (skill directories complete, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo version consistency. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
 
 ## Commands (AI-autonomous; the human only runs init)
 
-Day-to-day actions (capture, check, review, rebuild index/digest, read OVERVIEW to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
+Day-to-day actions (capture, check, review, regenerate the board, read it to resume) are triggered by the AI at the right moment — the human doesn't type them. The human runs one command once per new repo:
 
 ```
 python <skill>/scripts/aip_init.py --repo-root .
@@ -136,9 +155,9 @@ python <skill>/scripts/aip_init.py --repo-root .
 
 In Claude Code the human types `/aip init`; in Codex `$aip init`. The skill runs the script.
 
-`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, upgrade the marked AIP guide blocks, install hooks (git pre-commit plus a Claude Code SessionStart hook that re-injects the OVERVIEW on startup, resume and after context compaction), rebuild derived files — idempotent, existing living docs and user content are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it records "no tests — start with characterization tests" as a known gap on the OVERVIEW board instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
+`aip init` has two phases. **Phase A** is the deterministic script above: scaffold the living docs, upgrade the marked AIP guide blocks, install hooks (git pre-commit plus a Claude Code SessionStart hook that regenerates and re-injects the board on startup, resume and after context compaction), generate the board — idempotent, existing living docs and user content are never overwritten. **Phase B** is AI-driven and runs immediately after: the AI analyzes the project itself (README, build/dependency manifests, test dirs, CI config, directory layout — it never interrogates the user; zero-config means "don't ask", not "don't know"), then fills **only files still in template or empty state** — build/test commands into `config.yaml` gates, core concepts and directory roles into `reference.md`, established practices into `conventions.md`. For legacy/test-less projects it files "no tests — start with characterization tests" as a side issue instead of inventing tests. Phase B must end with an init summary: what was detected / what was written per file / what's uncertain / what the user should confirm.
 
-**Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the OVERVIEW active line on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
+**Three reliability layers:** hooks (`install_hooks.py` adds a git pre-commit that runs `aip check`), the completion check, and onboarding (read the board's active track on every resume). The concrete command lines and the phase→skill mapping are single-sourced in the installed `aip` skill, not duplicated here (drift prevention).
 
 ## External-Tool Degradation Chain
 
@@ -161,8 +180,8 @@ AIP doesn't record which external tools are installed (the platform lists what's
   4. **第一性原理思考**；遇到问题先拆到最基本的事实和约束，从那里推导，而不是照搬惯例。
      能质疑的前提就质疑，能去掉的步骤就去掉。
 - **Comment hygiene** — code comments must not reference drift-prone external ids
-  (requirement #, plan line #, doc section #). Reference only immutable anchors (`ADR-N`,
-  i.e. Architecture Decision Record entries; likewise `K-NNN` knowledge and `I-N` inbox ids).
+  (requirement #, plan line #, doc section #). Reference only immutable anchors: an item's full
+  id (`.aip/knowledge/<timestamp>_<short title>`); pre-migration ids like `ADR-3` / `K-185` still resolve via `aliases`.
 - **Refresh manual indexes before query** — codegraph/nexus/etc. are manually updated;
   refresh before querying or a stale index misleads you into creating duplicates.
 - **Conditional domain lenses** — when a change touches a domain declared in `config.yaml`
@@ -174,14 +193,14 @@ Tools like Claude Code keep a personal, per-machine memory that only that AI see
 
 ### Multi-agent and parallel branches
 
-Only the **main agent** writes `.aip/`; subagents report findings and never write living docs. Feed relevant knowledge/reference entries to subagents when delegating. The OVERVIEW board is maintained on the main branch only; parallel lines each use a `tracks/<id>.md` file with a one-line pointer on the board, so merges rarely conflict. Knowledge/decision entries made on a branch merge with it; run `aip check` after merging.
+Only the **main agent** writes `.aip/`; subagents report findings and never write living docs. Feed relevant knowledge/reference entries to subagents when delegating. Each parallel line has its own track file and every new entry is a new file, so branches merge without conflicts; if both sides changed the same item's status, git reports a rename conflict — keep one, and `aip check` flags duplicate ids. Run `aip check` after merging.
 
 ### Process-skill integration (optional method layer)
 
 AIP owns the **slots** (living docs, state, checks); an external process-skill framework, when present, owns the **methods** (how to fill each slot well). They compose:
 
 - Slots belong to AIP; a method's output lands in the AIP slot, never a parallel location.
-- **Resume is AIP-only**: the `OVERVIEW.md` active line (next step + `must_read`) is the single resumable-state source. Any external "execute the plan in a separate session" checkpointing maps onto the OVERVIEW board, not a second progress/plan file.
+- **Resume is AIP-only**: the active track file (next step + read-first list) is the single resumable-state source. Any external "execute the plan in a separate session" checkpointing maps onto the track file, not a second progress/plan file.
 - AIP runs standalone if no method layer is present.
 - The concrete phase→skill mapping is single-sourced in the installed `aip` skill.
 
@@ -190,8 +209,8 @@ AIP owns the **slots** (living docs, state, checks); an external process-skill f
 What is load-bearing is enforced by **deterministic checks that block**, not prose:
 
 - **Scaffold** (`aip init`) creates the living docs in the one correct place — no location drift.
-- **`aip check`** is a blocking check: living docs present, knowledge index consistent and fields complete, no forbidden legacy files, engine versions consistent. A hook runs it automatically.
-- **Hooks** (`install_hooks.py`): git pre-commit (+ optional Claude Stop) run `aip check` so it can't be forgotten.
+- **`aip check`** is a blocking check: documents and item directories present, item names and headers well-formed, no duplicate ids, generated board not committed, no forbidden legacy files, engine versions consistent. A hook runs it automatically.
+- **Hooks** (`install_hooks.py`): git pre-commit (`aip check --no-reminders`, + optional Claude Stop) run `aip check` so it can't be forgotten.
 
 Method *quality* (was the investigation deep, the review real) can't be machine-forced — the checks verify the *residue* a method must leave (verified causes, sources cited, in-session notification of every doc edit, the git trail). Beyond residue it is best-effort by design: a poorly executed method leaves an incomplete slot the check rejects.
 
