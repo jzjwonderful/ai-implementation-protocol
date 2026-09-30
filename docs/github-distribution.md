@@ -50,11 +50,11 @@ Skill destinations:
 
 | Runtime | Skills | Extra |
 |---------|--------|--------|
-| Claude Code | `~/.claude/skills/{aip,root-cause,aip-brainstorm}/` | nothing goes to `~/plugins/` |
-| Codex | `~/.agents/skills/{aip,root-cause,aip-brainstorm}/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
-| Grok | `~/.grok/skills/{aip,root-cause,aip-brainstorm}/` | optional `--user-plugin` → `~/.grok/plugins/` |
+| Claude Code | `~/.claude/skills/aip/` | nothing goes to `~/plugins/` |
+| Codex | `~/.agents/skills/aip/` and `$CODEX_HOME/skills` (or `~/.codex/skills`) | updates `~/.agents/plugins/marketplace.json` |
+| Grok | `~/.grok/skills/aip/` | optional `--user-plugin` → `~/.grok/plugins/` |
 
-Every installer copies the **whole** skill directory, so the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION` always sit next to its `SKILL.md`. The `~/plugins/` copy that Codex and Grok keep is the packaged source they install from; the single-runtime Claude installer does not use it.
+Every installer copies the **whole** skill directory, so the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION` always sit next to its `SKILL.md`. Installing over an older version also removes the `root-cause` and `aip-brainstorm` skills that AIP shipped before 0.6.0. The `~/plugins/` copy that Codex and Grok keep is the packaged source they install from; the single-runtime Claude installer does not use it.
 
 ## Installing Into One Project
 
@@ -96,7 +96,6 @@ After installation, confirm these files exist for your runtime:
 ~/plugins/ai-implementation-protocol/.codex-plugin/plugin.json
 ~/.agents/skills/aip/SKILL.md
 ~/.agents/skills/aip/scripts/aip_init.py
-~/.agents/skills/root-cause/SKILL.md
 ~/.agents/plugins/marketplace.json
 
 # Grok
@@ -105,12 +104,10 @@ After installation, confirm these files exist for your runtime:
 ~/.grok/skills/aip/scripts/aip_init.py
 ```
 
-Codex users should also confirm the Codex home skill files exist:
+Codex users should also confirm the Codex home skill file exists:
 
 ```text
 $CODEX_HOME/skills/aip/SKILL.md
-$CODEX_HOME/skills/root-cause/SKILL.md
-$CODEX_HOME/skills/aip-brainstorm/SKILL.md
 ```
 
 Then restart the tool (or open a new session) and use the `aip` skill.

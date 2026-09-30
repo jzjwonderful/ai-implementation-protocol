@@ -58,7 +58,7 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 - **到期提醒**：会话开始和 `aip_check` 列出该处理的事（脚本 `aip_upkeep.py`，只提醒不挡提交），按轻重排好、只列前 5 项，其余给总数，完整清单用 `aip_upkeep.py --all`：说明文件里写的 AIP 脚本路径已失效；active 知识引用的文件或代码名字复核那天还在、现在没了；引用的代码在「最后复核」之后改过（reference 同样按上次整份 review 查）；逾期的整份 review；draft 条目；写太长的在建线；没写代码位置的条目满 90 天、写了但代码一直没动的满一年。每条只归一类。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
 - **有更新先说**：会话开始会查一次 AIP 引擎有没有新版本（查不了就不出声）。打出「AIP 有更新」时，先告诉用户，用户同意再跑 `/aip update`，然后继续当前任务。
 - **撞见无关问题**：先在 knowledge/ 和 inbox/ 里按文件名检索，没有再 `aip_item.py new --type inbox`；不无脑新建。
-- **验证出根因**：用 root-cause 技能沉淀进 knowledge，按捕获纪律定 draft/active。
+- **验证出根因**：记成知识条目。先在 knowledge/ 按文件名检索去重，像的就补进那一条或在 `related` 加关联，不像才新建：`aip_item.py new --type knowledge --title "一句话" --slug <简述> --category <分类> --scope <适用范围> --status <active|draft>`，再编辑生成的文件填症状、根因、证据。按捕获纪律定 draft/active。
 - **多代理/子代理**：只有**主代理**写 `.aip/`；子代理只汇报发现，不落盘。派活时把相关的 knowledge/reference 条目喂给子代理，别让它重新踩坑。
 - **worktree / 分支并行**：每条线一个 `tracks/` 文件，各分支新增的条目都是新文件，合并不冲突。两边改了同一条的状态时 git 会报改名冲突，留一个、`aip_check` 查重复标识。合并后跑一次 `aip_check`。
 
@@ -79,7 +79,7 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 阶段 A 跑脚本 `python <skill>/scripts/aip_init.py --repo-root .`（建骨架、装钩子、刷新引导块，幂等不覆盖）；阶段 B 由 AI 自己看项目填空白文件，不向用户提问。细节见 `reference/init.md`。
 
 ## `/aip update`（更新已装的 AIP 技能）
-查：`python <skill>/scripts/aip_update.py --repo-root .`。更新：加 `--apply`，从远端浅克隆最新版、核对齐全后原地替换本机装的 aip / root-cause / aip-brainstorm（项目级安装时 `.claude/skills` 和 `.codex/skills` 两份一起换），失败会换回原样；不需要本机有 AIP 仓库，也不走安装器。远端地址默认取安装时记下的（技能目录里的 `SOURCE.json`），项目 `config.yaml` 写了 `aip_remote` / `aip_remote_branch` 就用它们。项目级安装更新完要把技能目录的变化提交进仓库。
+查：`python <skill>/scripts/aip_update.py --repo-root .`。更新：加 `--apply`，从远端浅克隆最新版、核对齐全后原地替换本机装的 aip 技能，顺手删掉以前随包分发、0.6.0 起不再提供的 root-cause、aip-brainstorm（项目级安装时 `.claude/skills` 和 `.codex/skills` 两份一起换），失败会换回原样；不需要本机有 AIP 仓库，也不走安装器。远端地址默认取安装时记下的（技能目录里的 `SOURCE.json`），项目 `config.yaml` 写了 `aip_remote` / `aip_remote_branch` 就用它们。项目级安装更新完要把技能目录的变化提交进仓库。
 
 ## `/aip migrate`（0.5.0 之前的旧布局迁成一条一个文件）
 旧布局是 `knowledge.md` / `decisions.md` / `inbox.md` 各一个大文件、看板手写。会话开始报「还是旧格式」、`aip_check` 报红时，先跟用户说，同意后按 `reference/migrate.md` 走：预览 → 执行 → 收尾（撞号、代码注释锚点、说明文件、旧看板遗留内容）→ 一次提交。

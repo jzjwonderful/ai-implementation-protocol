@@ -29,15 +29,18 @@ class CodexInstaller(unittest.TestCase):
         old_skill = home / ".agents" / "skills" / "aip"
         old_skill.mkdir(parents=True)
         (old_skill / "SKILL.md").write_text("old", encoding="utf-8")
+        for retired in (home / ".agents" / "skills" / "root-cause", home / ".codex" / "skills" / "aip-brainstorm"):
+            retired.mkdir(parents=True)
+            (retired / "SKILL.md").write_text("old", encoding="utf-8")
 
         result = self.run_installer("--home", str(home), env=env)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertTrue((home / "plugins" / "ai-implementation-protocol" / ".codex-plugin" / "plugin.json").exists())
         self.assertFalse((old_plugin / "old.txt").exists())
         self.assertTrue((home / ".agents" / "skills" / "aip" / "SKILL.md").exists())
-        self.assertTrue((home / ".agents" / "skills" / "root-cause" / "SKILL.md").exists())
         self.assertTrue((home / ".codex" / "skills" / "aip" / "SKILL.md").exists())
-        self.assertTrue((home / ".codex" / "skills" / "root-cause" / "SKILL.md").exists())
+        self.assertFalse((home / ".agents" / "skills" / "root-cause").exists())   # 0.6.0 删掉的技能顺手清
+        self.assertFalse((home / ".codex" / "skills" / "aip-brainstorm").exists())
         self.assertTrue((home / ".agents" / "plugins" / "marketplace.json").exists())
         # 脚本和模板随技能目录一起装，SKILL.md 里写的相对路径才成立。
         for base in [home / ".agents" / "skills", home / ".codex" / "skills",
@@ -58,7 +61,6 @@ class CodexInstaller(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertTrue((codex_home / "skills" / "aip" / "SKILL.md").exists())
-        self.assertTrue((codex_home / "skills" / "root-cause" / "SKILL.md").exists())
         self.assertFalse((home / ".agents" / "skills" / "aip" / "SKILL.md").exists())
         self.assertTrue((home / ".agents" / "plugins" / "marketplace.json").exists())
 

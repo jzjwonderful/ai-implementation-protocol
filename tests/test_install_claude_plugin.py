@@ -20,6 +20,9 @@ class ClaudeInstaller(unittest.TestCase):
         old.mkdir(parents=True)
         (old / "stale.txt").write_text("old", encoding="utf-8")
         (home / ".claude" / "commands" / "aip").mkdir(parents=True)
+        for name in ("root-cause", "aip-brainstorm", "my-own-skill"):   # 前两个是 0.6.0 删掉的
+            (home / ".claude" / "skills" / name).mkdir(parents=True)
+            (home / ".claude" / "skills" / name / "SKILL.md").write_text("old", encoding="utf-8")
 
         result = self.run_installer("--home", str(home))
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -32,7 +35,10 @@ class ClaudeInstaller(unittest.TestCase):
         self.assertEqual((aip / "VERSION").read_text(encoding="utf-8"),
                          (ENGINE / "VERSION").read_text(encoding="utf-8"))
         self.assertFalse((aip / "stale.txt").exists())
-        self.assertTrue((home / ".claude" / "skills" / "root-cause" / "SKILL.md").exists())
+        self.assertFalse((home / ".claude" / "skills" / "root-cause").exists())
+        self.assertFalse((home / ".claude" / "skills" / "aip-brainstorm").exists())
+        self.assertTrue((home / ".claude" / "skills" / "my-own-skill" / "SKILL.md").exists())
+        self.assertIn("Removed retired skill", result.stdout)
         self.assertFalse((home / ".claude" / "commands" / "aip").exists())
         self.assertFalse((home / "plugins").exists())
 

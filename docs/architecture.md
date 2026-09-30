@@ -42,7 +42,6 @@ Key scripts:
 - `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
 - `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
 - `aip_session_start.py` — SessionStart hook entry: generates and prints the board, reports checkout state (behind upstream, uncommitted `.aip/` changes), with an extra reminder after context compaction
-- `aip_brainstorm.py` — the shared-topic-document state machine behind the `aip-brainstorm` skill
 
 Installers stay at the repository root and only copy the package: `scripts/install_all.py` (all runtimes at
 once), `scripts/install_claude_plugin.py`, `scripts/install_codex_plugin.py`, `scripts/install_grok_plugin.py`

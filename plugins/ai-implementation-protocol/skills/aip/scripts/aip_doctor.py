@@ -19,7 +19,7 @@ from collections import Counter
 from pathlib import Path
 
 import aip_check
-from _aip_common import SKILL_NAMES, aip_root, force_utf8, read_text
+from _aip_common import RETIRED_SKILL_NAMES, SKILL_NAMES, aip_root, force_utf8, read_text
 from aip_upkeep import collect
 from install_hooks import PRE_COMMIT_MARK
 
@@ -108,6 +108,12 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
         if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
             out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
                         "在 AIP 仓库根跑 python scripts/install_grok_plugin.py"))
+    for skill in RETIRED_SKILL_NAMES:
+        leftovers = [claude_skills / skill, home / ".grok" / "skills" / skill,
+                     *(p.parent for p in codex_skill_paths(home, skill, codex_home))]
+        for skill_dir in leftovers:
+            if (skill_dir / "SKILL.md").exists():
+                out.append(("WARN", f"已从 AIP 删掉的技能 {skill} 还装着：{skill_dir}", reinstall + "，会顺手清掉"))
     engine_ver = _read_version(engine / "VERSION")
     installs = ([("Claude", claude_aip)]
                 + [("Codex", p.parent) for p in codex_skill_paths(home, "aip", codex_home)]

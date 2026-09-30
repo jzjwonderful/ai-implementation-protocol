@@ -12,7 +12,7 @@ Its purpose is simple:
 This repository contains:
 
 - the protocol itself
-- a plugin package that ships three skills (`aip`, `root-cause`, `aip-brainstorm`) for Claude Code, Codex and Grok — scripts and templates travel inside the `aip` skill
+- a plugin package that ships the `aip` skill for Claude Code, Codex and Grok — scripts and templates travel inside it
 - local validation scripts
 - optional adapters such as Nexus integration
 
@@ -55,12 +55,12 @@ Engine package always lands at:
 Skills land at:
 
 ```text
-~/.claude/skills/{aip,root-cause,aip-brainstorm}/   # Claude Code
-~/.agents/skills/{aip,root-cause,aip-brainstorm}/   # Codex
-~/.grok/skills/{aip,root-cause,aip-brainstorm}/     # Grok
+~/.claude/skills/aip/   # Claude Code
+~/.agents/skills/aip/   # Codex
+~/.grok/skills/aip/     # Grok
 ```
 
-Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands; `root-cause` auto-triggers on bug/unexpected-behavior tasks and deposits verified causes into `.aip/knowledge/`; `aip-brainstorm` lets AIs in multiple terminals hold a turn-based discussion through a shared topic document in `.aip/brainstorm/`.
+Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands. Installing over an older version removes the `root-cause` and `aip-brainstorm` skills that AIP shipped before 0.6.0.
 
 > **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules.
 
@@ -94,7 +94,7 @@ python scripts/install_claude_plugin.py
 # update: re-run the same command (existing files are replaced)
 ```
 
-Skills → `~/.claude/skills/{aip,root-cause,aip-brainstorm}/`, whole directories, nothing under `~/plugins/`.
+Skill → `~/.claude/skills/aip/`, the whole directory, nothing under `~/plugins/`.
 
 ## Install For Codex Only
 
@@ -154,8 +154,6 @@ The AIP docs are project-level and committed. The AI's own cross-session memory 
 - `docs/`: protocol and product docs
 - `plugins/ai-implementation-protocol/`: the installable package (Claude Code + Codex + Grok)
   - `skills/aip/`: the engine skill — `SKILL.md`, `reference/` (details loaded on demand), `scripts/` (CLI), `templates/`, `VERSION`
-  - `skills/root-cause/`: the root-cause investigation skill
-  - `skills/aip-brainstorm/`: the multi-terminal multi-AI discussion skill
 - `scripts/`: installers and uninstaller only
 - `tests/`: unit tests for the scripts
 - `.agents/plugins/marketplace.json`: repo-local Codex marketplace entry
@@ -219,3 +217,5 @@ Living docs are kept current in two ways (0.3.1, ADR-5). First, "check on use": 
 Installed skills update themselves (0.4.0, ADR-6): the session-start hook quietly checks the recorded remote and says so when a newer commit exists; `/aip update` (`aip_update.py --apply`) shallow-clones the remote and swaps the installed skill directories in place, rolling back on failure.
 
 Since 0.5.0 knowledge, decisions, side issues and work lines are one file per item (see decision `20261001-004400_条目改成一条一个文件` in `.aip/decisions/`). Numbered entries in one big file kept colliding when branches or clones added entries in parallel; files named by timestamp and short title don't. The board is generated and no longer committed, reminders are sorted and capped at five with a summary line, the session-start hook also reports a checkout behind its upstream or uncommitted `.aip/` changes, and `aip_migrate.py` converts the old layout.
+
+Since 0.6.0 the package ships only the `aip` skill (decision `20261001-070424_删除随包的头脑风暴和根因技能`): the `root-cause` and `aip-brainstorm` skills and `aip_brainstorm.py` were removed as rarely used. The step for recording a verified root cause as a knowledge item moved into the `aip` skill; installers, `/aip update` and the uninstaller delete old copies of the two removed skills.

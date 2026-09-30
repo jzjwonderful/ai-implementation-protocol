@@ -32,6 +32,7 @@ def install_skills(source_skills: Path, home: Path) -> list[Path]:
             shutil.rmtree(dst)
         shutil.copytree(src, dst, ignore=IGNORE)
         installed.append(dst)
+    _install_source.remove_retired([home / ".claude" / "skills"])
     return installed
 
 

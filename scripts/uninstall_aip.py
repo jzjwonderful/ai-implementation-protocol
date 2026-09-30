@@ -4,13 +4,13 @@ from __future__ import annotations
 
 清理范围（缺啥跳啥，幂等）：
 - 引擎包         ~/plugins/ai-implementation-protocol/（Codex / Grok 用；旧版 Claude 安装也落在这里）
-- Claude 技能    ~/.claude/skills/{aip,root-cause,aip-brainstorm}/
+- Claude 技能    ~/.claude/skills/aip/（连同以前随包分发的 root-cause、aip-brainstorm）
 - Claude 旧命令  ~/.claude/commands/aip/        （旧 per-command 模型残留）
-- Codex 技能     ~/.agents/skills/{aip,root-cause,aip-brainstorm}/
-- Codex home 技能 $CODEX_HOME/skills/{aip,root-cause,aip-brainstorm}/（默认 ~/.codex/skills）
+- Codex 技能     ~/.agents/skills/aip/（同上）
+- Codex home 技能 $CODEX_HOME/skills/aip/（同上；默认 ~/.codex/skills）
 - Codex 旧命令   ~/.agents/commands/aip/
 - Codex 市场条目 ~/.agents/plugins/marketplace.json 里的 ai-implementation-protocol
-- Grok 技能      ~/.grok/skills/{aip,root-cause,aip-brainstorm}/
+- Grok 技能      ~/.grok/skills/aip/（同上）
 - Grok 用户插件  ~/.grok/plugins/ai-implementation-protocol/
 
 装进各业务仓库 .git/hooks/pre-commit 的 AIP 检查是逐仓库的、无法在这里枚举，
@@ -29,7 +29,7 @@ PLUGIN_NAME = "ai-implementation-protocol"
 # 技能清单的唯一真源在引擎里（aip 技能的 scripts/_aip_common.py）；新增技能只改那一处。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]
                        / "plugins" / PLUGIN_NAME / "skills" / "aip" / "scripts"))
-from _aip_common import SKILL_NAMES  # noqa: E402
+from _aip_common import RETIRED_SKILL_NAMES, SKILL_NAMES  # noqa: E402
 
 
 def _utf8() -> None:
@@ -81,18 +81,19 @@ def main() -> int:
     home = args.home.resolve()
     codex_home = args.codex_home.expanduser().resolve() if args.codex_home else default_codex_home(home)
     removed: list[str] = []
+    skills = SKILL_NAMES + RETIRED_SKILL_NAMES  # 以前装过、后来删掉的技能也一起清
 
     rm(home / "plugins" / PLUGIN_NAME, removed)
-    for s in SKILL_NAMES:
+    for s in skills:
         rm(home / ".claude" / "skills" / s, removed)
     rm(home / ".claude" / "commands" / "aip", removed)
-    for s in SKILL_NAMES:
+    for s in skills:
         rm(home / ".agents" / "skills" / s, removed)
-    for s in SKILL_NAMES:
+    for s in skills:
         rm(codex_home / "skills" / s, removed)
     rm(home / ".agents" / "commands" / "aip", removed)
     prune_marketplace(home / ".agents" / "plugins" / "marketplace.json", removed)
-    for s in SKILL_NAMES:
+    for s in skills:
         rm(home / ".grok" / "skills" / s, removed)
     rm(home / ".grok" / "plugins" / PLUGIN_NAME, removed)
 

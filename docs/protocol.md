@@ -66,7 +66,7 @@ Every completion report for coding work must include the changed result, constra
 
 ### Two capture paths
 
-- **Main path** — a pitfall/root cause hit during the task → confirm with the `root-cause` skill → `aip_item.py new --type knowledge` (`draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
+- **Main path** — a pitfall/root cause verified during the task → search `knowledge/` for a match first (extend it or link it via `related` if similar) → `aip_item.py new --type knowledge` (`draft` while evidence is incomplete; `active` once the review checklist passes — the AI promotes autonomously but must notify).
 - **Side path** — a problem unrelated to the current task → search `knowledge/` and `inbox/` first → if new, `aip_item.py new --type inbox` (don't blindly add).
 
 ### Write discipline (all sedimentation)
@@ -89,7 +89,7 @@ The goal is always **doc quality**, never content volume: clear, accurate, neces
 5. Right slot: pitfalls/root causes → knowledge; concepts/reusables → reference; standing rules → conventions; side-issues → inbox; direction → decisions. A misplaced entry is worse than none.
 6. Afterwards run `aip check`.
 
-A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (`review_last_full` in `.aip/config.yaml`); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. A full review also re-verifies the knowledge entries the reminders list, checks that reference paths still exist, and checks project skills and instruction files against the code; it ends by setting `review_last_full` to today. `aip review` owns doc quality only — problem analysis stays with the `root-cause` skill; they don't overlap.
+A full-`.aip/` review triggers when any of: the change deletes or merges content; ≥3 entries changed at once; more than a month since the last review (`review_last_full` in `.aip/config.yaml`); the user runs `/aip review` (unconditional). Findings are reported as *problem + suggested edit + reason + impact* before applying. A full review also re-verifies the knowledge entries the reminders list, checks that reference paths still exist, and checks project skills and instruction files against the code; it ends by setting `review_last_full` to today. `aip review` owns doc quality only; it does not analyse problems.
 
 ### Keeping living docs current
 
@@ -116,7 +116,7 @@ Docs rot unless something makes them get re-checked. Two mechanisms:
 
 Installers write `SOURCE.json` into the installed `aip` skill: remote URL, branch, installed commit, scope (user / project) and target. At session start (not after a compaction) the hook runs a quiet check — `git ls-remote` against the remote branch, 5-second timeout, no credential prompts — and prints a notice only when the remote has a newer commit; a missing record, no network, or an unknown remote stay silent. If the machine happens to hold the source repo and the remote commit is an ancestor of the installed one, the install is ahead (unpushed work) and nothing is shown. A project can pin the remote with `aip_remote` / `aip_remote_branch` in `config.yaml`.
 
-`aip_update.py --apply` updates in place without the source repo or the installers: shallow-clone the remote branch into a temp dir, verify the package is complete, then swap each installed skill directory (for a project install, both `.claude/skills` and `.codex/skills`) by staging the new copy beside it and renaming; any failure renames the old copies back. `SOURCE.json` is rewritten with the new commit. Project installs then commit the changed skill directories.
+`aip_update.py --apply` updates in place without the source repo or the installers: shallow-clone the remote branch into a temp dir, verify the package is complete, then swap each installed skill directory (for a project install, both `.claude/skills` and `.codex/skills`) by staging the new copy beside it and renaming; any failure renames the old copies back. The skills removed in 0.6.0 (`root-cause`, `aip-brainstorm`) are deleted from the same skill directories afterwards; the installers and the uninstaller do the same. `SOURCE.json` is rewritten with the new commit. Project installs then commit the changed skill directories.
 
 ## `aip check` (the one machine check)
 
@@ -132,18 +132,9 @@ Installers write `SOURCE.json` into the installed `aip` skill: remote URL, branc
 
 Exit 0 = pass; non-zero = violations listed on stdout.
 
-## Multi-AI brainstorm (`aip-brainstorm`)
-
-AIs running in separate terminals can hold a structured discussion about one topic through a single **topic document** under `.aip/brainstorm/<slug>.md`. AIs never talk to each other directly — every position, user interjection, and conclusion passes through the document.
-
-- **Roles by argument** — the first AI starts the topic (`aip_brainstorm.py start`, writing its opening position); each later AI just checks the document (`status`) and speaks (`say`) when the header field `当前轮到` names it. There is no real polling: the user relays "your turn" between terminals, or an AI self-schedules a wake-up if its CLI supports one.
-- **Deterministic state machine** — all document mutations go through `<skill>/scripts/aip_brainstorm.py` (`start/say/note/conclude/escalate/abort/status`); the AI never edits the document by hand. The script enforces turn order, counts rounds, evaluates convergence, and validates document structure (`status` doubles as the document health check).
-- **User participation** — anything the user types into any participating session is immediately recorded as a `【用户】` entry (`note`), which costs no turn; that is how user input syncs to the other AIs.
-- **Convergence (no endless discussion)** — every speech ends with a stance: `继续` / `同意收敛` / `需要用户裁决`. All-agree flips the topic to `converged` (a conclusion is written); any `需要用户裁决` or exceeding the round cap flips it to `need-user` (a question list is written and discussion pauses until the user answers); the initiator may `abort` anytime.
-
 ## `aip doctor` (diagnosis, non-blocking)
 
-`aip doctor` (`python <skill>/scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (the checks above, plus the due reminders summarised as one WARN line), install health (skill directories complete, installed VERSION vs engine VERSION), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo version consistency. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
+`aip doctor` (`python <skill>/scripts/aip_doctor.py --repo-root .`) checks install/environment health — advisory, while `aip check` stays the one blocking gate. Four areas: project `.aip/` health (the checks above, plus the due reminders summarised as one WARN line), install health (skill directories complete, installed VERSION vs engine VERSION, leftovers of the skills removed in 0.6.0), hook health (pre-commit present, AIP-managed, engine path still valid), and engine-repo version consistency. Output is graded ERROR (AIP unusable) / WARN (drift risk or degraded experience) / INFO (optional), each with a fix command; exit 1 only on ERROR. The installers print the doctor command after a successful install.
 
 ## Commands (AI-autonomous; the human only runs init)
 

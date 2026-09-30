@@ -14,7 +14,7 @@ from _engine import ROOT, SCRIPTS
 
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(SCRIPTS))
-from _aip_common import SKILL_NAMES  # noqa: E402
+from _aip_common import RETIRED_SKILL_NAMES, SKILL_NAMES  # noqa: E402
 
 
 def _load(name: str):
@@ -28,8 +28,12 @@ class InstallGrok(unittest.TestCase):
         # 直接调 main 的核心步骤：copy + skills
         src = ROOT / "plugins" / mod.PLUGIN_NAME
         dst = home / "plugins" / mod.PLUGIN_NAME
+        retired = home / ".grok" / "skills" / "root-cause"
+        retired.mkdir(parents=True)
+        (retired / "SKILL.md").write_text("old", encoding="utf-8")
         mod.copy_plugin(src, dst)
         installed = mod.install_skills(dst, home)
+        self.assertFalse(retired.exists())   # 0.6.0 删掉的技能顺手清
         self.assertTrue((dst / ".grok-plugin" / "plugin.json").exists())
         self.assertTrue((dst / "skills" / "aip" / "scripts" / "aip_init.py").exists())
         self.assertEqual(
@@ -77,7 +81,7 @@ class UninstallGrok(unittest.TestCase):
         plugin = home / "plugins" / "ai-implementation-protocol"
         plugin.mkdir(parents=True)
         for base in [".claude", ".agents", ".grok"]:
-            for skill in SKILL_NAMES:
+            for skill in SKILL_NAMES + RETIRED_SKILL_NAMES:
                 p = home / base / "skills" / skill
                 p.mkdir(parents=True)
                 (p / "SKILL.md").write_text("x", encoding="utf-8")
@@ -93,7 +97,7 @@ class UninstallGrok(unittest.TestCase):
             sys.argv = old
         self.assertEqual(rc, 0)
         self.assertFalse(plugin.exists())
-        for skill in SKILL_NAMES:
+        for skill in SKILL_NAMES + RETIRED_SKILL_NAMES:   # 以前装过、后来删掉的技能也清
             self.assertFalse((home / ".grok" / "skills" / skill).exists())
         self.assertFalse((home / ".grok" / "plugins" / "ai-implementation-protocol").exists())
 

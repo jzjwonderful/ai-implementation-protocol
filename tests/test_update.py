@@ -15,8 +15,10 @@ def git(repo: Path, *args: str) -> str:
     return r.stdout.strip()
 
 
-def write_package(work: Path, version: str) -> None:
-    for skill in ("aip", "root-cause"):
+def write_package(work: Path, version: str, skills: tuple[str, ...] = ("aip",)) -> None:
+    if (work / PKG).exists():
+        shutil.rmtree(work / PKG)
+    for skill in skills:
         (work / PKG / skill).mkdir(parents=True, exist_ok=True)
         (work / PKG / skill / "SKILL.md").write_text(f"# {skill} {version}\n", encoding="utf-8")
     scripts = work / PKG / "aip" / "scripts"; scripts.mkdir(exist_ok=True)
@@ -34,7 +36,7 @@ class Env:
         self.work = self.root / "work"
         git(self.root, "clone", "-q", str(self.remote), str(self.work))
         git(self.work, "checkout", "-q", "-b", "master")
-        self.push("0.1.0")
+        self.push("0.1.0", ("aip", "root-cause"))   # 旧版还带着 0.6.0 删掉的根因技能
         self.project = self.root / "proj"
         for rel in (".claude/skills", ".codex/skills"):
             root = self.project / rel; root.mkdir(parents=True)
@@ -47,8 +49,8 @@ class Env:
         (self.project / ".aip" / "config.yaml").write_text("gates:\n", encoding="utf-8")
         self.engine = self.project / ".claude" / "skills" / "aip"
 
-    def push(self, version: str) -> None:
-        write_package(self.work, version)
+    def push(self, version: str, skills: tuple[str, ...] = ("aip",)) -> None:
+        write_package(self.work, version, skills)
         git(self.work, "add", "-A"); git(self.work, "commit", "-q", "-m", version)
         git(self.work, "push", "-q", "origin", "master")
         self.head = git(self.work, "rev-parse", "HEAD")
@@ -104,14 +106,14 @@ class Check(unittest.TestCase):
 
 
 class Apply(unittest.TestCase):
-    def test_apply_swaps_every_project_copy_and_keeps_own_skills(self):
+    def test_apply_swaps_every_project_copy_drops_retired_and_keeps_own_skills(self):
         e = Env(); e.push("0.2.0")
         rc, out = quiet(upd.apply, e.project, e.engine)
         self.assertEqual(rc, 0, out)
         for rel in (".claude/skills", ".codex/skills"):
             root = e.project / rel
             self.assertEqual((root / "aip" / "VERSION").read_text(encoding="utf-8").strip(), "0.2.0")
-            self.assertIn("0.2.0", (root / "root-cause" / "SKILL.md").read_text(encoding="utf-8"))
+            self.assertFalse((root / "root-cause").exists())
             self.assertTrue((root / "gandalf-own" / "SKILL.md").exists())
             self.assertEqual(json.loads((root / "aip" / upd.SOURCE_FILE).read_text(encoding="utf-8"))["commit"], e.head)
             self.assertEqual(sorted(p.name for p in root.iterdir() if p.name.startswith(".")), [])
@@ -144,7 +146,7 @@ class Apply(unittest.TestCase):
 
         def flaky(self, target):
             calls["n"] += 1
-            if calls["n"] == 3:  # 换第二个技能时出错
+            if calls["n"] == 2:  # 旧版已挪开、新版换上去时出错
                 raise OSError("disk full")
             return real_rename(self, target)
         Path.rename = flaky
@@ -154,7 +156,6 @@ class Apply(unittest.TestCase):
         finally:
             Path.rename = real_rename
         self.assertEqual((root / "aip" / "VERSION").read_text(encoding="utf-8").strip(), "0.1.0")
-        self.assertIn("0.1.0", (root / "root-cause" / "SKILL.md").read_text(encoding="utf-8"))
         self.assertEqual(sorted(p.name for p in root.iterdir() if p.name.startswith(".")), [])
 
 

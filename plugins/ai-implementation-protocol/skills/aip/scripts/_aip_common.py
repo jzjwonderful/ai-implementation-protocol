@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,7 +39,11 @@ FORBIDDEN_SLOT_FILENAMES = [
 
 # 插件包携带的全部技能（plugins/.../skills/ 下应有同名目录）。
 # 安装器按目录遍历不读这个清单；doctor/uninstall 靠它逐个点名，新增技能只改这里。
-SKILL_NAMES = ["aip", "root-cause", "aip-brainstorm"]
+SKILL_NAMES = ["aip"]
+
+# 以前随包分发、0.6.0 删掉的技能。安装、更新时从技能目录里清掉，卸载时一并删：
+# 留着的话，头脑风暴技能会去调已经不存在的脚本。
+RETIRED_SKILL_NAMES = ["root-cause", "aip-brainstorm"]
 
 # 扫描"无并行产物"时跳过的重目录。
 SCAN_PRUNE_DIRS = {
@@ -87,3 +92,14 @@ def aip_root(target_repo: Path) -> Path:
 
 def project_living_path(target_repo: Path, name: str) -> Path:
     return aip_root(target_repo) / name
+
+
+def remove_retired_skills(skills_root: Path) -> list[Path]:
+    """清掉 skills_root 下已删除的 AIP 技能目录，返回删了哪些。"""
+    removed: list[Path] = []
+    for name in RETIRED_SKILL_NAMES:
+        skill_dir = skills_root / name
+        if skill_dir.is_dir():
+            shutil.rmtree(skill_dir)
+            removed.append(skill_dir)
+    return removed

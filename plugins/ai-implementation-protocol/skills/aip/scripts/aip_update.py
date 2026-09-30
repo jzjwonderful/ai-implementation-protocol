@@ -25,7 +25,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from _aip_common import SKILL_NAMES, force_utf8, project_living_path, read_text, write_text
+from _aip_common import SKILL_NAMES, force_utf8, project_living_path, read_text, remove_retired_skills, write_text
 
 SOURCE_FILE = "SOURCE.json"
 # 远端仓库里技能包所在的目录
@@ -237,6 +237,8 @@ def apply(repo: Path, engine: Path = ENGINE_ROOT) -> int:
                 names = swap_skills(new_skills, root)
                 _write_source(root / "aip", record)
                 print(f"已更新 {root}：{'、'.join(names)}")
+                for path in remove_retired_skills(root):
+                    print(f"已删掉不再随 AIP 分发的技能：{path}")
         except (OSError, RuntimeError) as e:
             print(f"更新失败，已保留原来的版本：{e}")
             return 1

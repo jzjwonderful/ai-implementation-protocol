@@ -8,11 +8,9 @@ It contains:
 - `skills/aip/` — the `aip` engine skill. **Everything the skill needs travels with it**:
   - `SKILL.md` — the always-loaded core (short)
   - `reference/` — the review checklist, completion check and init details, read on demand
-  - `scripts/` — the CLI tools (`aip_init.py`, `aip_check.py`, `aip_item.py`, `aip_overview.py`, `aip_upkeep.py`, `aip_migrate.py`, `aip_doctor.py`, `aip_update.py`, `aip_brainstorm.py`, `install_hooks.py`, `aip_session_start.py`)
+  - `scripts/` — the CLI tools (`aip_init.py`, `aip_check.py`, `aip_item.py`, `aip_overview.py`, `aip_upkeep.py`, `aip_migrate.py`, `aip_doctor.py`, `aip_update.py`, `install_hooks.py`, `aip_session_start.py`)
   - `templates/` — the living-doc templates `aip_init.py` scaffolds from
   - `VERSION` — the engine version (single source)
-- `skills/root-cause/SKILL.md` — root-cause investigation + knowledge sedimentation
-- `skills/aip-brainstorm/SKILL.md` — multi-terminal multi-AI discussion through a shared topic document (turn-taking, convergence, user input relay)
 
 There is no separate copy of scripts or templates anywhere else in the repository, so nothing needs syncing.
 
@@ -27,19 +25,18 @@ python scripts/install_codex_plugin.py    # → ~/.agents/skills/ + $CODEX_HOME/
 python scripts/install_grok_plugin.py     # → ~/.grok/skills/ + ~/plugins/
 ```
 
-Every installer copies whole skill directories, for example:
+Every installer copies the whole skill directory, for example:
 
 ```text
 ~/.claude/skills/aip/        (SKILL.md + reference/ + scripts/ + templates/ + VERSION)
-~/.claude/skills/root-cause/
-~/.claude/skills/aip-brainstorm/
 ```
 
 Codex and Grok also keep the packaged source under `~/plugins/ai-implementation-protocol/` and install from
 there; Codex additionally writes a local marketplace entry to `~/.agents/plugins/marketplace.json`. The
-single-runtime Claude installer writes nothing to `~/plugins/`. Existing AIP install files are replaced.
+single-runtime Claude installer writes nothing to `~/plugins/`. Existing AIP install files are replaced, and the
+`root-cause` / `aip-brainstorm` skills that AIP shipped before 0.6.0 are removed.
 
-Project-level install (the skills travel with one repository instead of the machine):
+Project-level install (the skill travels with one repository instead of the machine):
 
 ```bash
 python scripts/install_all.py --project /path/to/repo   # → <repo>/.claude/skills/ + <repo>/.codex/skills/
@@ -53,5 +50,3 @@ python scripts/install_grok_plugin.py --user-plugin
 ```
 
 After installation, run `/aip init` (Claude Code) or `$aip init` (Codex / Grok) once per repository. Everything else — capturing knowledge, running `aip check`, regenerating the board, resuming from the active track — is triggered by the AI at the right moment, not typed by the human.
-
-The `root-cause` skill auto-triggers on bug / unexpected-behavior tasks: it recalls known causes from `.aip/knowledge/`, digs past the symptom, hands the cause to you, then deposits verified causes there as new items. The `aip-brainstorm` skill drives `aip_brainstorm.py`: AIs in separate terminals discuss one topic through a shared document in `.aip/brainstorm/`, with enforced turn-taking, user-input relay, and convergence exits (consensus / user arbitration / round cap).

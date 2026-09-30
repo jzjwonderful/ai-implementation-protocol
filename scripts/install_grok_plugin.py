@@ -4,6 +4,8 @@ import argparse
 import shutil
 from pathlib import Path
 
+import _install_source
+
 
 PLUGIN_NAME = "ai-implementation-protocol"
 
@@ -39,6 +41,7 @@ def install_skills(source_plugin: Path, home: Path) -> list[Path]:
         shutil.copytree(src, destination_skill_dir,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
         installed.append(destination_skill_dir / "SKILL.md")
+    _install_source.remove_retired([home / ".grok" / "skills"])
     return installed
 
 

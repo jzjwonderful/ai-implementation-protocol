@@ -96,6 +96,16 @@ class InstallHealth(unittest.TestCase):
             self._skill(home/".grok", skill, version=self._engine_version())
         self.assertEqual(doc.check_install(home, ENGINE, codex_home=home/".codex"), [])
 
+    def test_retired_skill_still_installed_is_warn(self):
+        home = Path(tempfile.mkdtemp())
+        for skill in SKILL_NAMES:
+            self._skill(home/".claude", skill, version=self._engine_version())
+        self._skill(home/".claude", "root-cause")
+        self._skill(home/".agents", "aip-brainstorm")
+        warns = [msg for lv, msg, _ in doc.check_install(home, ENGINE) if lv == "WARN"]
+        self.assertTrue(any("root-cause" in m and "还装着" in m for m in warns), warns)
+        self.assertTrue(any("aip-brainstorm" in m and "还装着" in m for m in warns), warns)
+
     def test_codex_home_skill_counts_as_installed(self):
         home = Path(tempfile.mkdtemp())
         for skill in SKILL_NAMES:

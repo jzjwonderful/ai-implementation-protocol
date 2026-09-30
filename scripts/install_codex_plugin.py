@@ -89,6 +89,7 @@ def install_skills(source_plugin: Path, skill_roots: list[Path]) -> list[Path]:
             shutil.rmtree(destination_skill_dir)
         shutil.copytree(src, destination_skill_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
         installed.append(destination_skill_dir / "SKILL.md")
+    _install_source.remove_retired(skill_roots)
     return installed
 
 

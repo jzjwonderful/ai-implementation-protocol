@@ -18,4 +18,4 @@
 3. 顺带核项目技能和说明文件（`CLAUDE.md` / `AGENTS.md`、项目技能目录）里的路径、命令、叫法是否还和现状一致。
 4. 做完把 `config.yaml` 的 `review_last_full` 改成当天，随本次提交。
 
-review 只管文档质量，不做问题分析——问题分析是 root-cause 技能的职责，二者不重叠。
+review 只管文档质量，不做问题分析。
