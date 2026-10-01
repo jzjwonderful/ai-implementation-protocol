@@ -113,7 +113,7 @@ def main() -> int:
         print(f"Installed Grok user plugin: {grok_plugin}")
         print("If the plugin is listed but inactive, run: grok plugin enable ai-implementation-protocol")
     print(
-        f"Health check any time: python {home / '.grok' / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
+        f"Health check any time: {_install_source.py_cmd()} {home / '.grok' / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
     )
     print("Restart Grok or open a new session for the skills to be picked up.")
     return 0

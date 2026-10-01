@@ -223,9 +223,11 @@ def main(argv: list[str] | None = None) -> int:
         print(line)
     print(f"Installed for: {', '.join(targets)}")
     print(
-        f"Health check: python {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
+        f"Health check: {_install_source.py_cmd()} {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>"
     )
     print("Restart Claude Code / Codex / Grok (or open a new session) to pick up skills.")
+    print("Tip: installing into each project is recommended (--project <repo>): the skills travel with the "
+          "repository and each repository upgrades on its own schedule.")
     return 0
 
 

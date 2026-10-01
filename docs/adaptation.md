@@ -29,17 +29,18 @@ rules and conventions. Porting AIP to a new project = fill those; no protocol or
 
 ## Install Targets
 
-- **All at once (recommended)**: `python3 scripts/install_all.py` — one engine copy under `~/plugins/` plus
+- **Into one project (recommended)**: `python3 scripts/install_all.py --project <repo>` (also works with
+  `install_claude_plugin.py` / `install_codex_plugin.py`). The skills land in `<repo>/.claude/skills/` and
+  `<repo>/.codex/skills/` and travel with that repository: everyone gets the same version, and each
+  repository upgrades on its own schedule. Grok has no project-level skill directory.
+- **Whole machine, all at once**: `python3 scripts/install_all.py` — one engine copy under `~/plugins/` plus
   skills for Claude Code, Codex, and Grok. Subset with `--targets claude,grok` (or `codex`, or `all`).
+  Upgrading it upgrades every repository at once.
 - **Codex only**: `python3 scripts/install_codex_plugin.py` (skills to `~/.agents/skills` and
   `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced).
 - **Claude Code only**: `python3 scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
 - **Grok only**: `python3 scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
   optional `--user-plugin` → `~/.grok/plugins/`).
-- **Into one project**: add `--project <repo>` to `install_all.py`, `install_claude_plugin.py` or
-  `install_codex_plugin.py`. The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/`
-  and travel with that repository instead of the machine. Grok has no project-level skill directory,
-  so `--project` covers Claude Code and Codex only.
 
 The same plugin package serves all three runtimes. Each installer copies whole skill directories, so every
 runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `scripts/`.

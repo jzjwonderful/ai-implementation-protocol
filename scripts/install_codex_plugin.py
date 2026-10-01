@@ -145,11 +145,11 @@ def install_into_project(repo_root: Path, project: Path) -> int:
         raise SystemExit(f"Install incomplete under {project}")
     for path in installed:
         print(f"Installed skill: {path}")
-    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
+    print(f"Health check any time: {_install_source.py_cmd()} {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
     print("")
     print("项目级安装。接下来：")
     print(f"  1. 要 AIP 的提交前检查就让钩子指向这份副本："
-          f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
+          f"\n     {_install_source.py_cmd()} {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
           f" --engine-root {aip_dir}"
           "\n     仓库已有别的提交前钩子（如 pre-commit 框架）时它会跳过；别加 --force，把 aip_check.py 接进现有钩子。")
     print("  2. 在这个仓库开新会话，用 $aip init（幂等）。")
@@ -225,7 +225,7 @@ def main() -> int:
     for path in purged:
         print(f"Removed obsolete commands: {path}")
     print(f"Updated marketplace: {marketplace_path}")
-    print(f"Health check any time: python {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+    print(f"Health check any time: {_install_source.py_cmd()} {destination_plugin / 'skills' / 'aip' / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
     print("Restart Codex or refresh plugins if the plugin list is already open.")
     return 0
 

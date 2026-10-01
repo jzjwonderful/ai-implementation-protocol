@@ -57,7 +57,7 @@ def install_into_project(repo_root: Path, project: Path) -> int:
     _verify(aip_dir, installed)
     for path in installed:
         print(f"Installed skill: {path}")
-    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
+    print(f"Health check any time: {_install_source.py_cmd()} {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root {project}")
     for line in project_notes(project, aip_dir):
         print(line)
     print("Open a new Claude Code session in that project for the skills to be picked up.")
@@ -80,7 +80,7 @@ def project_notes(project: Path, aip_dir: Path) -> list[str]:
         "",
         "项目级安装。接下来：",
         f"  1. 让本仓库的会话开始钩子指向这份副本（指着旧路径的 AIP 钩子会被换掉）："
-        f"\n     python {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
+        f"\n     {_install_source.py_cmd()} {aip_dir / 'scripts' / 'install_hooks.py'} --repo-root {project}"
         f" --engine-root {aip_dir} --session-start --no-pre-commit"
         "\n     要 AIP 的提交前检查就去掉 --no-pre-commit；仓库已有别的提交前钩子（如 pre-commit 框架）时别加 --force，"
         "\n     把 aip_check.py 接进现有钩子。",
@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Installed skill: {path}")
     for path in purged:
         print(f"Removed obsolete commands: {path}")
-    print(f"Health check any time: python {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
+    print(f"Health check any time: {_install_source.py_cmd()} {aip_dir / 'scripts' / 'aip_doctor.py'} --repo-root <your-project>")
 
     legacy = home / "plugins" / PLUGIN_NAME
     if legacy.is_dir():

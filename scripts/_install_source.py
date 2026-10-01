@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "plugins" / PLUGIN_NAME / "skills" / "aip" / "scripts"))
 
 import aip_update  # noqa: E402
-from _aip_common import remove_retired_skills  # noqa: E402
+from _aip_common import py_cmd, remove_retired_skills  # noqa: E402,F401  py_cmd 给各安装器印命令用
 
 
 def record(installed: list[Path], scope: str, target: Path | None = None, source_repo: Path = REPO_ROOT) -> None:

@@ -114,6 +114,26 @@ class InstallHealth(unittest.TestCase):
         items = doc.check_install(home, ENGINE, codex_home=home/".codex")
         self.assertFalse(any("Codex 技能未安装" in msg for _, msg, _ in items))
 
+    def test_project_install_counts_and_no_global_needed(self):
+        home, repo = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        for skill in SKILL_NAMES:
+            self._skill(repo/".claude", skill, version=self._engine_version())
+            self._skill(repo/".codex", skill, version=self._engine_version())
+        items = doc.check_install(home, ENGINE, codex_home=home/".codex", repo=repo)
+        self.assertEqual([lv for lv, msg, _ in items if "Grok" not in msg], [])
+
+    def test_missing_everywhere_recommends_project_install(self):
+        home, repo = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        items = doc.check_install(home, ENGINE, repo=repo)
+        fix = next(fix for _, msg, fix in items if "Claude 技能未安装" in msg)
+        self.assertIn(f"--project {repo}", fix)
+
+    def test_project_install_version_mismatch_is_warn(self):
+        home, repo = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        self._skill(repo/".claude", "aip", version="0.0.1")
+        items = doc.check_install(home, ENGINE, repo=repo)
+        self.assertTrue(any("项目级" in msg and "版本不一致" in msg for _, msg, _ in items), items)
+
 
 class EngineRepoHealth(unittest.TestCase):
     def test_own_repo_is_clean(self):

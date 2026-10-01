@@ -14,3 +14,8 @@ __pycache__/
 
 # codex CLI 的本机状态（绝对路径/PID/会话ID，勿提交）
 .omc/
+
+# 本仓库自装的 aip 技能副本里的安装记录（本机绝对路径，每次重装都变）。
+# 引擎仓库靠 git pull + 重装更新，用不到 /aip update 的来源记录。
+.claude/skills/aip/SOURCE.json
+.codex/skills/aip/SOURCE.json

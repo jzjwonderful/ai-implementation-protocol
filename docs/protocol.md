@@ -130,7 +130,9 @@ Installers write `SOURCE.json` into the installed `aip` skill: remote URL, branc
 3. **Item file names** — `<timestamp>_<type>_<status>_<short title>.md`, type matching its directory, status valid for the type.
 4. **Items well-formed** — the header status matches the file name; required header fields and body sections present; `last_reviewed` is a date; `superseded` items say by what; `related` and id-shaped `superseded_by` point to existing items; **no duplicate ids** (e.g. both sides of a merge changed the same item's status).
 5. **No legacy residue** — none of the forbidden filenames appear under `.aip/`.
-6. **Engine version consistency** (engine repo only) — the plugin manifests' `version` match `skills/aip/VERSION`, the single version source.
+6. **Engine version consistency** (engine repo only) — the plugin manifests' `version` match `skills/aip/VERSION`, the single version source; and the repo's own project-level copies (`.claude/skills/aip`, `.codex/skills/aip`) match the engine source file by file (install record and caches aside) — after changing the engine, reinstall with `scripts/install_all.py --project .`.
+
+Commands printed for a human or the AI to run (installers, doctor, reminders, check messages) use the interpreter that is actually running, not a fixed `python3`; the SessionStart hook probes `python3` then `python` (3.9+ only) and prints the one it found at the end of the board, and the AI uses it for the whole session.
 
 Exit 0 = pass; non-zero = violations listed on stdout.
 

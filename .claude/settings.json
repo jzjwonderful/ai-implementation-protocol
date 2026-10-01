@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for py in python3 python; do \"$py\" -c \"import sys; sys.exit(sys.version_info < (3, 9))\" 2>/dev/null && exec \"$py\" \"$CLAUDE_PROJECT_DIR/plugins/ai-implementation-protocol/skills/aip/scripts/aip_session_start.py\" --repo-root \"$CLAUDE_PROJECT_DIR\"; done; echo \"AIP：没找到 Python 3.9 以上的解释器，看板没打印\""
+          }
+        ]
+      }
+    ]
+  }
+}

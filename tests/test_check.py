@@ -113,6 +113,46 @@ class DoneTracks(unittest.TestCase):
         self.assertTrue(any("做完的在建线不留文件" in v for v in chk.check_item_names(d)))
 
 
+class EngineCopies(unittest.TestCase):
+    def engine_repo(self) -> Path:
+        d = Path(tempfile.mkdtemp())
+        src = d/chk.ENGINE_PKG/"skills"/"aip"
+        (src/"scripts").mkdir(parents=True)
+        (src/"SKILL.md").write_text("技能\n", encoding="utf-8")
+        (src/"scripts"/"a.py").write_text("print(1)\n", encoding="utf-8")
+        return d
+
+    def install(self, d: Path, rel: str) -> Path:
+        import shutil
+        copy = d/rel
+        shutil.copytree(d/chk.ENGINE_PKG/"skills"/"aip", copy)
+        (copy/"SOURCE.json").write_text("{}\n", encoding="utf-8")          # 安装记录不算
+        (copy/"scripts"/"__pycache__").mkdir()
+        (copy/"scripts"/"__pycache__"/"a.pyc").write_bytes(b"x")            # 缓存不算
+        return copy
+
+    def test_matching_copies_pass_and_no_copy_is_fine(self):
+        d = self.engine_repo()
+        self.assertEqual(chk.check_engine_copies(d), [])
+        self.install(d, ".claude/skills/aip"); self.install(d, ".codex/skills/aip")
+        self.assertEqual(chk.check_engine_copies(d), [])
+
+    def test_changed_or_missing_file_is_flagged(self):
+        d = self.engine_repo()
+        copy = self.install(d, ".claude/skills/aip")
+        (d/chk.ENGINE_PKG/"skills"/"aip"/"scripts"/"a.py").write_text("print(2)\n", encoding="utf-8")
+        (d/chk.ENGINE_PKG/"skills"/"aip"/"new.md").write_text("新\n", encoding="utf-8")
+        [msg] = chk.check_engine_copies(d)
+        self.assertIn(".claude/skills/aip", msg); self.assertIn("2 个文件", msg)
+        self.assertIn("install_all.py --project", msg)
+
+    def test_not_engine_repo_skipped(self):
+        self.assertEqual(chk.check_engine_copies(Path(tempfile.mkdtemp())), [])
+
+    def test_this_repo_copies_match_source(self):
+        self.assertEqual(chk.check_engine_copies(ROOT), [])
+
+
 class OrphanSlots(unittest.TestCase):
     def test_flags_old_file(self):
         d = make_repo(); (d/".aip"/"handoff.md").write_text("x\n", encoding="utf-8")

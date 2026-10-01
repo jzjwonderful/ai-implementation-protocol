@@ -16,9 +16,30 @@ This repository contains:
 - local validation scripts
 - optional adapters such as Nexus integration
 
-## Install (all supported AIs)
+## Install (recommended: into each project)
 
-One command installs the shared engine plus skills for **Claude Code, Codex, and Grok**:
+Install the skills into the repository itself, so they travel with it. Commands below say `python3`; check first with `python3 --version`, and if that's missing (typical on Windows) use `python` after `python --version`. It must be Python 3.9+ — don't run AIP with Python 2.
+
+```bash
+git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
+cd ai-implementation-protocol
+python3 scripts/install_all.py --project /path/to/repo     # Claude Code + Codex
+python3 scripts/install_claude_plugin.py --project /path/to/repo   # → <repo>/.claude/skills/
+python3 scripts/install_codex_plugin.py --project /path/to/repo    # → <repo>/.codex/skills/
+```
+
+Then run `/aip init` (or `$aip init`) once in that repository and commit the skill directories, `.claude/settings.json` and `.aip/`.
+
+Why project-level first:
+
+- Everyone who clones the repository gets the same engine version, with no personal install, and the hooks use paths relative to the project.
+- Each repository upgrades on its own schedule (`/aip update`, then commit). A machine-wide upgrade changes every repository at once, while some are mid-migration or on old layouts; their hooks point at the shared copy and break when it moves or is removed.
+
+The installer prints the follow-up steps: repoint that repository's hooks at the in-repo copy, then run `/aip init`. Grok has no established project-level skill directory, so `--project` covers Claude Code and Codex only. The AIP repository installs itself the same way (a real copy, so it also works on Windows, where git symlinks need extra setup). `aip check` compares those copies with `plugins/ai-implementation-protocol/skills/aip` and fails if they differ: after changing the engine, re-run `scripts/install_all.py --project .`.
+
+## Install For The Whole Machine (user home)
+
+If you'd rather have one copy for every repository on this machine, one command installs the shared engine plus skills for **Claude Code, Codex, and Grok**. Upgrading it upgrades every repository at once, and each one then has to be tidied (see the note below).
 
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
@@ -71,21 +92,6 @@ $aip init
 ```
 
 Per-runtime installers below are still available if you only want one tool.
-
-## Install Into One Project
-
-Instead of the user home, the skills can live inside a single repository and travel with it:
-
-```bash
-python3 scripts/install_all.py --project /path/to/repo     # Claude Code + Codex
-python3 scripts/install_claude_plugin.py --project /path/to/repo   # → <repo>/.claude/skills/
-python3 scripts/install_codex_plugin.py --project /path/to/repo    # → <repo>/.codex/skills/
-```
-
-Everyone who clones that repository then gets the same engine version, with no personal install. The
-installer prints the follow-up steps: repoint that repository's hooks at the in-repo copy, then run
-`/aip init` (or `$aip init`) once. Grok has no established project-level skill directory, so
-`--project` covers Claude Code and Codex only.
 
 ## Install For Claude Code Only
 
@@ -162,23 +168,23 @@ There is exactly one copy of the engine (scripts + templates) in this repository
 
 ## First Commands
 
-Initialize a target repository (the only command a human runs; in Claude Code just type `/aip init`):
+Initialize a target repository (the only command a human runs; in Claude Code just type `/aip init`). Paths below are for a project-level install, run from the repository root:
 
 ```bash
-python3 ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target-project>
+python3 .claude/skills/aip/scripts/aip_init.py --repo-root .
 ```
 
 The remaining scripts are triggered by the AI at the right moment, per the installed `aip` skill:
 
 ```bash
-python3 ~/.claude/skills/aip/scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
-python3 ~/.claude/skills/aip/scripts/aip_item.py --repo-root <target-project> list  # items: new / status / reviewed / list / show
-python3 ~/.claude/skills/aip/scripts/aip_upkeep.py --repo-root <target-project> --all  # everything due for review
-python3 ~/.claude/skills/aip/scripts/aip_migrate.py --repo-root <target-project>    # pre-0.5.0 layout: preview, then --apply
-python3 ~/.claude/skills/aip/scripts/aip_doctor.py --repo-root <target-project>     # install/environment health check
+python3 .claude/skills/aip/scripts/aip_check.py --repo-root .      # hygiene gate (also runs in the pre-commit hook)
+python3 .claude/skills/aip/scripts/aip_item.py --repo-root . list  # items: new / status / reviewed / list / show
+python3 .claude/skills/aip/scripts/aip_upkeep.py --repo-root . --all  # everything due for review
+python3 .claude/skills/aip/scripts/aip_migrate.py --repo-root .    # pre-0.5.0 layout: preview, then --apply
+python3 .claude/skills/aip/scripts/aip_doctor.py --repo-root .     # install/environment health check (project-level counts; no global install needed)
 ```
 
-For Codex, replace `~/.claude/skills/aip` with `~/.agents/skills/aip` (or `$CODEX_HOME/skills/aip`).
+For Codex use `.codex/skills/aip`. With a whole-machine install use `~/.claude/skills/aip` (Codex: `~/.agents/skills/aip` or `$CODEX_HOME/skills/aip`) and `--repo-root <target-project>`.
 
 ## Codex Plugin Internals
 

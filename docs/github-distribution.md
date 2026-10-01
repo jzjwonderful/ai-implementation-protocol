@@ -26,11 +26,17 @@ git push origin v0.1.0
 
 ## User Install Flow
 
-Users install by cloning the repository and running the **all-in-one** installer (recommended):
+Users install by cloning the repository and installing **into each project** (recommended — the skills travel with the repository, everyone gets the same version, and each repository upgrades on its own schedule; see "Installing Into One Project" below):
 
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 cd ai-implementation-protocol
+python3 scripts/install_all.py --project /path/to/repo
+```
+
+A whole-machine install drops `--project`:
+
+```bash
 python3 scripts/install_all.py
 ```
 
@@ -56,7 +62,7 @@ Skill destinations:
 
 Every installer copies the **whole** skill directory, so the `aip` skill's `scripts/`, `templates/`, `reference/` and `VERSION` always sit next to its `SKILL.md`. Installing over an older version also removes the `root-cause` and `aip-brainstorm` skills that AIP shipped before 0.6.0. The `~/plugins/` copy that Codex and Grok keep is the packaged source they install from; the single-runtime Claude installer does not use it.
 
-## Installing Into One Project
+## Installing Into One Project (recommended)
 
 ```bash
 python3 scripts/install_all.py --project /path/to/repo
@@ -65,11 +71,13 @@ python3 scripts/install_all.py --project /path/to/repo
 The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/` and are committed with that
 repository, so everyone who clones it gets the same engine version without a personal install. Nothing
 is written to `~/plugins/` or the marketplace. Grok has no project-level skill directory, so this
-covers Claude Code and Codex only.
+covers Claude Code and Codex only. A machine-wide install upgrades every repository at once — including ones
+mid-migration or on an old layout, whose hooks point at the shared copy — so prefer this per-project form.
 
 ## Updating An Existing Install
 
-After pulling a newer version:
+A project-level install updates itself: `/aip update` in that repository, then commit the skill directories.
+For a whole-machine install, after pulling a newer version:
 
 ```bash
 git pull

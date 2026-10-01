@@ -135,6 +135,7 @@ class SessionStart(unittest.TestCase):
         it.new_item(d, "track", "在做的线", stamp="20260901-100000")
         out = self.run_hook(d, "startup")
         self.assertIn("在做的线", out); self.assertIn("到期提醒", out)
+        self.assertIn(Path(sys.executable).as_posix(), out)   # 打出探测到的解释器
         self.assertFalse((d/".aip"/"OVERVIEW.md").exists())   # 看板只打印，不存文件
         compact = self.run_hook(d, "compact")
         self.assertIn("在做的线", compact); self.assertNotIn("到期提醒", compact)

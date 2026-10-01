@@ -16,10 +16,16 @@ There is no separate copy of scripts or templates anywhere else in the repositor
 
 ## Where it lands
 
-Installers, all run from the repository root:
+Installers, all run from the repository root. Recommended: install into each project, so the skill travels with the repository and each repository upgrades on its own schedule:
 
 ```bash
-python3 scripts/install_all.py             # recommended: Claude + Codex + Grok in one shot
+python3 scripts/install_all.py --project /path/to/repo   # → <repo>/.claude/skills/ + <repo>/.codex/skills/
+```
+
+Whole-machine installs:
+
+```bash
+python3 scripts/install_all.py             # Claude + Codex + Grok in one shot
 python3 scripts/install_claude_plugin.py   # → ~/.claude/skills/
 python3 scripts/install_codex_plugin.py    # → ~/.agents/skills/ + $CODEX_HOME/skills + marketplace + ~/plugins/
 python3 scripts/install_grok_plugin.py     # → ~/.grok/skills/ + ~/plugins/
@@ -35,12 +41,6 @@ Codex and Grok also keep the packaged source under `~/plugins/ai-implementation-
 there; Codex additionally writes a local marketplace entry to `~/.agents/plugins/marketplace.json`. The
 single-runtime Claude installer writes nothing to `~/plugins/`. Existing AIP install files are replaced, and the
 `root-cause` / `aip-brainstorm` skills that AIP shipped before 0.6.0 are removed.
-
-Project-level install (the skill travels with one repository instead of the machine):
-
-```bash
-python3 scripts/install_all.py --project /path/to/repo   # → <repo>/.claude/skills/ + <repo>/.codex/skills/
-```
 
 Grok optional user-plugin registration:
 

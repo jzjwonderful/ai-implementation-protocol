@@ -1,0 +1,24 @@
+# AIP 项目配置。只放引擎和 AI 真会用到的几项；项目铁律、做事规矩写进 conventions.md。
+
+# 验证命令：AI 声明「做完了」之前要真跑通的命令（在仓库根执行）。aip check 不跑它们。
+gates:
+  tests:
+    # cmd: ""              # 例：python3 -m pytest -q
+  build:
+    # cmd: ""              # 例：dotnet build -c Debug / npm run build
+  lint_or_drift:
+    # cmd: ""              # 例：ruff check . / npx knip
+  e2e:
+    # cmd: ""              # 真机/真浏览器场景
+
+# 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
+# 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
+review_last_full: ""
+
+# 这个仓库的 .aip/ 按哪一版 AIP 的模板整理过。升级 AIP 后，会话开始会对照 aip 技能
+# reference/upgrade.md 提醒还没做的调整；做完改成提醒里给的版本号。
+aip_version: ""
+
+# /aip update 对比哪个远端（可选）。留空就用安装时记下的来源（aip 技能目录里的 SOURCE.json）。
+aip_remote: ""          # 例：https://github.com/<you>/ai-implementation-protocol.git
+aip_remote_branch: ""   # 例：master

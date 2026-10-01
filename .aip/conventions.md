@@ -5,7 +5,7 @@
 ## 铁律（违反就出事的硬约束）
 - 未授权不提交：git add/commit/push 需用户明确指示。
 - 新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变。
-- 引擎只有一份：`plugins/ai-implementation-protocol/skills/aip/` 下的 `scripts/` 与 `templates/`；改动落这里，不改 `~/.claude/skills` 或 `~/plugins` 里的安装副本（关联: 20260914-224845_改引擎要改仓库里的技能目录不是已安装的副本）。
+- 引擎只有一份：`plugins/ai-implementation-protocol/skills/aip/` 下的 `scripts/` 与 `templates/`；改动落这里，不改别处的安装副本（关联: 20260914-224845_改引擎要改仓库里的技能目录不是已安装的副本）。本仓库自己的 `.claude/skills/aip`、`.codex/skills/aip` 是项目级安装的拷贝（不用链接，Windows 上 git 链接要额外设置）：改完源要重跑 `scripts/install_all.py --project .`，`aip_check` 发现两边不一致会报红。
 - 协议是真源：行为/规则变更同次更新 `docs/protocol.md`、`docs/architecture.md`、`README.md` 与技能正文（`SKILL.md` / `reference/`）。
 - 版本只有一处：`skills/aip/VERSION`；改版本同次改三份 `plugin.json`（`.claude-plugin` / `.codex-plugin` / `.grok-plugin`）的 version。
 - 改了既有仓库要跟着调整的模板或规矩（删字段、搬内容、删旧文件），同次在技能的 `reference/upgrade.md` 加一节新版本，写清怎么调整。

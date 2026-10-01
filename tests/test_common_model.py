@@ -19,5 +19,10 @@ class CommonModel(unittest.TestCase):
                   "PROJECT_LIVING_FILES","REQUIRED_KNOWLEDGE_FIELDS","project_docs_root"]:
             self.assertFalse(hasattr(c, a), f"{a} 应已删除")
 
+class PyCmd(unittest.TestCase):
+    def test_printed_interpreter_is_the_running_one(self):
+        self.assertIn(Path(sys.executable).as_posix(), c.py_cmd())
+
+
 if __name__ == "__main__":
     unittest.main()

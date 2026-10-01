@@ -219,6 +219,8 @@ class Names(unittest.TestCase):
         d = old_repo()
         inbox = d/".aip"/"inbox.md"
         inbox.write_text(read(inbox) + f"\n## I-9：{self.LONG}\n- 发现 / 状态：2026-09-06 / 待处理\n", encoding="utf-8")
+        # 提交进 git：没提交的条目时间戳取「现在」，导出和读回跨过一秒标识就对不上
+        git(d, "commit", "-qam", "I-9")
         table = d/"names.tsv"
         r = subprocess.run([sys.executable, str(SCRIPTS/"aip_migrate.py"), "--repo-root", str(d), "--names-out", str(table)],
                            capture_output=True, text=True, encoding="utf-8")
