@@ -105,14 +105,12 @@ class Items(unittest.TestCase):
         self.assertIn("20260101-000000_没有", viol[0])
 
 
-class Generated(unittest.TestCase):
-    def test_tracked_overview_is_flagged(self):
+class DoneTracks(unittest.TestCase):
+    def test_leftover_done_track_file_is_flagged(self):
         d = make_repo()
-        subprocess.run(["git", "init", "-q"], cwd=d, check=True)
-        (d/".aip"/"OVERVIEW.md").write_text("# 看板\n", encoding="utf-8")
-        self.assertEqual(chk.check_generated_untracked(d), [])   # 被 .aip/.gitignore 挡着
-        subprocess.run(["git", "add", "-f", ".aip/OVERVIEW.md"], cwd=d, check=True)
-        self.assertTrue(any("git rm --cached" in v for v in chk.check_generated_untracked(d)))
+        (d/".aip"/"tracks"/"20260901-100000_track_done_旧线.md").write_text(
+            "---\ntitle: 旧线\nstatus: done\n---\n", encoding="utf-8")
+        self.assertTrue(any("做完的在建线不留文件" in v for v in chk.check_item_names(d)))
 
 
 class OrphanSlots(unittest.TestCase):

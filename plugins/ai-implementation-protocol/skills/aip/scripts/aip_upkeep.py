@@ -18,9 +18,9 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from _aip_common import force_utf8, project_living_path, read_text
+from _aip_common import force_utf8, project_living_path, py_cmd, read_text
 from aip_discovery import BEGIN as GUIDE_BEGIN, END as GUIDE_END
-from aip_item import Item, list_items
+from aip_item import ENGINE_ROOT, Item, list_items
 
 KNOWLEDGE_STALE_DAYS = 90
 FULL_REVIEW_DAYS = 30
@@ -33,6 +33,10 @@ TRACK_LINE_LIMIT = 12
 
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})")
 REVIEW_KEY_RE = re.compile(r"^review_last_full:\s*[\"']?([^\"'#\s]*)", re.M)
+AIP_VERSION_RE = re.compile(r"^aip_version:\s*[\"']?([^\"'#\s]*)", re.M)
+# 升级说明里每个要调整既有仓库的版本是一个二级标题，如「## 0.7.0」
+UPGRADE_DOC = ENGINE_ROOT / "reference" / "upgrade.md"
+UPGRADE_HEAD_RE = re.compile(r"^## (\d+(?:\.\d+)*)\b", re.M)
 
 
 def parse_day(value: str) -> date | None:
@@ -346,11 +350,37 @@ def guide_dues(repo: Path) -> list[Due]:
     return out
 
 
+def _version(text: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", text))
+
+
+def pending_upgrades(repo: Path) -> list[str]:
+    """升级说明里比这个仓库 .aip/ 整理时的版本（config.yaml 的 aip_version）新的那些版本。
+
+    没写 aip_version 的是 0.7.0 之前建的仓库，所有调整都要做。
+    """
+    cfg = project_living_path(repo, "config.yaml")
+    if not cfg.exists() or not UPGRADE_DOC.exists():
+        return []
+    m = AIP_VERSION_RE.search(read_text(cfg))
+    done = _version(m.group(1)) if m else ()
+    return [v for v in UPGRADE_HEAD_RE.findall(read_text(UPGRADE_DOC)) if _version(v) > done]
+
+
+def upgrade_dues(repo: Path) -> list[Due]:
+    pending = pending_upgrades(repo)
+    if not pending:
+        return []
+    return [Due(0, "升级整理", f"AIP 升级后这个仓库的 .aip/ 还没按新模板整理（{'、'.join(pending)} 的调整没做）："
+                "先跟用户说一声，再按 aip 技能 reference/upgrade.md 做，做完把 config.yaml 的 aip_version "
+                f"改成 {max(pending, key=_version)}")]
+
+
 def track_dues(repo: Path) -> list[Due]:
     out = []
     for t in list_items(repo, "track"):
         lines = [l for l in t.body.splitlines() if l.strip()]
-        if t.status != "done" and len(lines) > TRACK_LINE_LIMIT:
+        if len(lines) > TRACK_LINE_LIMIT:
             out.append(Due(4, "在建线太长", f"{t.id}：在建线写了 {len(lines)} 行（上限 {TRACK_LINE_LIMIT}）。"
                            "只留目标、卡在哪、下一步、先读；过程和结论进 git 提交或知识条目"))
     return out
@@ -358,7 +388,7 @@ def track_dues(repo: Path) -> list[Due]:
 
 def collect(repo: Path, today: date | None = None) -> list[Due]:
     today = today or date.today()
-    dues = (guide_dues(repo) + knowledge_dues(repo, today) + reference_dues(repo)
+    dues = (upgrade_dues(repo) + guide_dues(repo) + knowledge_dues(repo, today) + reference_dues(repo)
             + full_review_dues(repo, today) + track_dues(repo))
     return sorted(dues, key=lambda d: d.priority)
 
@@ -370,7 +400,7 @@ def reminders(repo: Path, today: date | None = None, limit: int | None = REMINDE
         return [d.text for d in dues]
     counts = Counter(d.kind for d in dues)
     head = (f"共 {len(dues)} 项要处理（" + "、".join(f"{k} {n}" for k, n in counts.items())
-            + f"），下面是最该先处理的 {limit} 项；完整清单：python <aip 技能目录>/scripts/aip_upkeep.py --repo-root . --all")
+            + f"），下面是最该先处理的 {limit} 项；完整清单：{py_cmd()} <aip 技能目录>/scripts/aip_upkeep.py --repo-root . --all")
     return [head] + [d.text for d in dues[:limit]]
 
 

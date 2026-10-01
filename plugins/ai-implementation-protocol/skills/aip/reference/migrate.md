@@ -9,27 +9,28 @@
 ## 步骤
 1. **引擎先到位**：项目用的 aip 技能要是 0.5.0 以上。项目级安装（技能在仓库的 `.claude/skills/aip/` 里）按 `/aip update` 更新并提交；0.3.x 装的没有自动更新，要在 AIP 仓库里重跑一次安装器。
 2. **起点干净**：`.aip/` 没有未提交的改动（脚本会检查）。有的话先问用户：是上次会话留下没提交的，就先提交；不要的就丢掉。
-3. **预览**：`python <skill>/scripts/aip_migrate.py --repo-root .`。不写任何文件，打印：
+3. **预览**：`python3 <skill>/scripts/aip_migrate.py --repo-root .`。不写任何文件，打印：
    - 每类会生成多少条、前几个文件名；
    - 要人看的地方：旧编号撞号、认不出的状态、标了 superseded 却没写被谁取代；
    - 代码注释里 `.aip/knowledge.md::<rule_id 或旧编号>` 锚点能自动改写多少处、哪些认不出；
    - `.aip/` 以外还在提旧文件名的文件；
    - 有多少条标题太长、简述是自动截的。
    把这些要点转述给用户，确认后再执行。
-4. **起简述**：`python <skill>/scripts/aip_migrate.py --repo-root . --names-out <临时目录>/names.tsv` 导出标题太长的条目（标识、标题、自动截的简述三列）。逐行把第三列改成 8–24 字、说清这条是什么的短名字，不要截半句；条目多就分批改，别的列不动。这张表放临时目录，不进仓库。
-5. **执行**：`python <skill>/scripts/aip_migrate.py --repo-root . --names <临时目录>/names.tsv --apply --rewrite-anchors`（用户不想动代码文件就去掉 `--rewrite-anchors`，锚点留给人改）。脚本会：
+4. **起简述**：`python3 <skill>/scripts/aip_migrate.py --repo-root . --names-out <临时目录>/names.tsv` 导出标题太长的条目（标识、标题、自动截的简述三列）。逐行把第三列改成 8–24 字、说清这条是什么的短名字，不要截半句；条目多就分批改，别的列不动。这张表放临时目录，不进仓库。
+5. **执行**：`python3 <skill>/scripts/aip_migrate.py --repo-root . --names <临时目录>/names.tsv --apply --rewrite-anchors`（用户不想动代码文件就去掉 `--rewrite-anchors`，锚点留给人改）。脚本会：
    - 生成 `knowledge/`、`decisions/`、`inbox/`、`tracks/` 下的条目文件；旧编号写进每条的 `aliases`，`aip_item.py show K-185` 照样查得到；
    - `.aip/` 下所有地方（条目正文、除标题外的文件头字段、reference.md、conventions.md、config.yaml、specs/ 等）提到的旧编号和 `.aip/knowledge.md::…` 锚点换成完整的「时间戳_简述」，不需要 `--rewrite-anchors`（那个开关只管 `.aip/` 以外的代码）；标题里的旧编号不换（换了标题太长，靠 `aliases` 查）；撞号的旧编号没法定是哪条，原样留着，列在「要人看的地方」；
    - 删掉 `knowledge.md`、`decisions.md`、`inbox.md`、`knowledge_index.md`；
-   - 把 `OVERVIEW.md` 移出版本库（`.aip/.gitignore`），改为现场生成；
-   - 旧看板里带状态标记的在建线变成 `tracks/` 下的文件，其余手写内容收进一条「迁移前看板里的其他内容待整理」旁路问题。
+   - 删掉 `OVERVIEW.md`（看板改由会话开始钩子按目录打印，不存文件）；
+   - 旧看板里带状态标记的在建线变成 `tracks/` 下的文件（标了做完的不迁），其余手写内容收进一条「迁移前看板里的其他内容待整理」旁路问题。
 6. **收尾**（AI 做，逐项知会用户）：
-   - `python <skill>/scripts/aip_check.py --repo-root .`，把报红的改掉。
+   - `python3 <skill>/scripts/aip_check.py --repo-root .`，把报红的改掉。
    - **撞号**：同一个旧编号对应两条的，两条都留着；在知会里点出来，正文里还留着的这个旧编号指的是哪一条让用户判断，判断完改成完整标识。
-   - **在建线**：打开 `tracks/` 下的文件，压成目标、卡在哪、下一步、先读四项；过程记录删掉（git 里有）。已经做完的改 `done`。
+   - **在建线**：打开 `tracks/` 下的文件，压成目标、卡在哪、下一步、先读四项；过程记录删掉（git 里有）。已经做完的删掉（`aip_item.py status <线> done`）。
    - **旧看板遗留内容**：那条「待整理」旁路问题里，还要做的拆成单独的旁路问题或在建线，过时的删掉，处理完把它标 `closed`。
    - **说明文件**：`CLAUDE.md` / `AGENTS.md` 里 AIP 托管块以外、按旧布局写的手写规矩（「读 knowledge.md」「先写 draft 等人确认」、失效的脚本路径等）改掉或删掉；再跑一次 `aip_init.py --repo-root .` 刷新托管块和钩子。
    - **还在提旧文件名的文件**（预览里列的）：说明、脚本、项目技能里的 `.aip/knowledge.md` 等改成新目录或条目标识；认不出的代码锚点问用户。
+   - **升级整理**：迁完会话开始会提醒「还没按新模板整理」，接着按 `reference/upgrade.md` 做（同一个提交里做也行）。
 7. **一次提交**：迁移 + 收尾放在同一个提交里，提交说明写明「.aip 迁到一条一个文件」。出问题整条 revert 就回到迁移前。
 
 ## 迁移规则（给核对用）

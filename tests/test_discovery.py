@@ -7,7 +7,9 @@ import aip_discovery as disc
 class Discovery(unittest.TestCase):
     def test_bootstrap_is_new_model(self):
         b = disc.managed_block()
-        self.assertIn("OVERVIEW.md", b)
+        self.assertIn(".aip/tracks/", b)
+        self.assertNotIn("OVERVIEW.md", b)          # 看板不存文件
+        self.assertIn("conventions.md", b)          # 铁律在 conventions 里，要读到
         self.assertIn("aip_item.py", b)
         self.assertNotIn("knowledge.md", b)
         self.assertNotIn("current_task.json", b)

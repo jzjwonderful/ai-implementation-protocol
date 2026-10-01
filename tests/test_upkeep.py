@@ -3,14 +3,19 @@ from datetime import date
 from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
-import aip_upkeep as up, aip_overview as ov, aip_item as it, aip_session_start as ss
+import aip_upkeep as up, aip_item as it, aip_session_start as ss
+from _aip_common import OLD_BOARD_HEADER
 
 TODAY = date(2026, 9, 27)
 
 
-def make_repo(config: str = 'review_last_full: "2026-09-20"\n') -> Path:
+CURRENT = f'aip_version: "{(ENGINE/"VERSION").read_text(encoding="utf-8").strip()}"\n'
+
+
+def make_repo(config: str = 'review_last_full: "2026-09-20"\n', tidied: bool = True) -> Path:
+    """tidied：config 里写上当前版本的 aip_version，不触发升级整理提醒。"""
     d = Path(tempfile.mkdtemp()); a = d/".aip"; a.mkdir()
-    (a/"config.yaml").write_text(config, encoding="utf-8")
+    (a/"config.yaml").write_text(config + (CURRENT if tidied else ""), encoding="utf-8")
     return d
 
 
@@ -74,14 +79,31 @@ class Reminders(unittest.TestCase):
 
 
 class Tracks(unittest.TestCase):
-    def test_long_live_track_is_flagged_done_is_not(self):
+    def test_long_track_is_flagged(self):
         d = make_repo()
         body = "\n".join(f"- 第 {n} 段流水账" for n in range(up.TRACK_LINE_LIMIT + 1))
         live = it.new_item(d, "track", "长线", body=body, stamp="20260901-100000")
-        it.new_item(d, "track", "完了的长线", "done", body=body, stamp="20260901-100000")
         due = up.reminders(d, TODAY)
         self.assertEqual(len(due), 1)
         self.assertIn(live.id, due[0])
+
+
+class Upgrade(unittest.TestCase):
+    def test_repo_without_aip_version_is_asked_to_tidy_up(self):
+        due = up.reminders(make_repo(tidied=False), TODAY)
+        self.assertEqual(len(due), 1, due)
+        self.assertIn("reference/upgrade.md", due[0]); self.assertIn("0.7.0", due[0])
+
+    def test_only_versions_newer_than_aip_version_are_pending(self):
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), [])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.10.0"\n', tidied=False)), [])
+
+    def test_doc_headings_are_versions(self):
+        heads = up.UPGRADE_HEAD_RE.findall(up.UPGRADE_DOC.read_text(encoding="utf-8"))
+        self.assertIn("0.7.0", heads)
+        version = (ENGINE/"VERSION").read_text(encoding="utf-8").strip()
+        self.assertTrue(all(up._version(h) <= up._version(version) for h in heads), heads)
 
 
 class Guides(unittest.TestCase):
@@ -113,7 +135,7 @@ class SessionStart(unittest.TestCase):
         it.new_item(d, "track", "在做的线", stamp="20260901-100000")
         out = self.run_hook(d, "startup")
         self.assertIn("在做的线", out); self.assertIn("到期提醒", out)
-        self.assertTrue((d/".aip"/"OVERVIEW.md").exists())
+        self.assertFalse((d/".aip"/"OVERVIEW.md").exists())   # 看板只打印，不存文件
         compact = self.run_hook(d, "compact")
         self.assertIn("在做的线", compact); self.assertNotIn("到期提醒", compact)
 
@@ -154,18 +176,47 @@ class CheckoutNotes(unittest.TestCase):
         self.assertEqual(ss.checkout_notes(make_repo()), [])
 
 
-class ReferenceDigest(unittest.TestCase):
-    def test_template_tables_are_counted_and_placeholders_skipped(self):
-        text = (ENGINE/"templates"/"reference-template.md").read_text(encoding="utf-8")
-        self.assertEqual(ov.reference_sections(text), [])
-        filled = text + "\n## 可复用实现（补充）\n| 能力 | 钦定实现 |\n|---|---|\n| 重试 | utils/retry.py |\n| 分页 | utils/paging.py |\n- 另一个\n"
-        self.assertEqual(ov.reference_sections(filled), ["可复用实现（补充）（3）"])
+class Board(unittest.TestCase):
+    def test_board_lists_tracks_in_full_and_open_inbox_by_file_name(self):
+        d = make_repo()
+        t = it.new_item(d, "track", "在做的线", body="- 目标: 做完它\n", stamp="20260901-100000")
+        opened = it.new_item(d, "inbox", "没处理的问题", stamp="20260902-100000")
+        closed = it.new_item(d, "inbox", "处理完的问题", "closed", stamp="20260903-100000")
+        it.new_item(d, "knowledge", "某个坑", "active", meta={"category": "c", "scope": "s"},
+                    body="- 症状: x\n- 根因: y\n", stamp="20260904-100000")
+        out = ss.board(d)
+        self.assertIn(t.path.name, out); self.assertIn("做完它", out)
+        self.assertIn(opened.path.name, out); self.assertNotIn(closed.path.name, out)
+        self.assertNotIn("某个坑", out)          # 知识不上看板，按文件名查
 
-    def test_old_blank_placeholder_is_skipped(self):
-        self.assertEqual(ov.reference_sections("## 领域概念\n| 概念 | 指什么 |\n|---|---|\n| <暂无> | |\n## 铁律\n- <暂无>\n"), [])
+    def test_leftover_done_track_from_old_version_is_not_live(self):
+        d = make_repo()
+        (d/".aip"/"tracks").mkdir()
+        (d/".aip"/"tracks"/"20260901-100000_track_done_旧线.md").write_text(
+            "---\ntitle: 旧线\nstatus: done\n---\n", encoding="utf-8")
+        self.assertNotIn("旧线", ss.board(d))
 
-    def test_subheadings_still_count(self):
-        self.assertEqual(ov.reference_sections("# 参照\n## 领域概念\n### 订单\n说明\n"), ["领域概念（1）"])
+    def test_empty_repo(self):
+        out = ss.board(make_repo())
+        self.assertEqual(out.count("（没有）"), 2)
+
+    def test_inbox_is_capped_newest_first(self):
+        d = make_repo()
+        for n in range(ss.INBOX_LIMIT + 2):
+            it.new_item(d, "inbox", f"问题{n:02d}", stamp=f"202609{n + 1:02d}-100000")
+        out = ss.board(d)
+        self.assertLess(out.index("问题11"), out.index("问题10"))
+        self.assertNotIn("问题00", out); self.assertIn("还有 2 条", out)
+
+    def test_generated_board_from_old_version_is_removed_hand_written_kept(self):
+        d = make_repo()
+        board = d/".aip"/"OVERVIEW.md"
+        board.write_text(OLD_BOARD_HEADER + "\n旧内容\n", encoding="utf-8")
+        SessionStart().run_hook(d, "startup")
+        self.assertFalse(board.exists())
+        board.write_text("# 有人手写的看板\n", encoding="utf-8")
+        SessionStart().run_hook(d, "startup")
+        self.assertTrue(board.exists())
 
 if __name__ == "__main__":
     unittest.main()

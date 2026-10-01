@@ -1,21 +1,13 @@
-# AIP 项目适配配置 —— 引擎(协议/check)按这里声明的内容适配本项目。
-# 改这一份即完成"把通用 AIP 引擎绑定到本项目"，无需改协议或脚本。
+# AIP 项目配置。只放引擎和 AI 真会用到的几项；项目铁律、做事规矩写进 conventions.md。
 #
 # 本项目 = AIP 自身：零依赖的 Python CLI + 可分发插件包（Codex/Claude Code）。
 
-# 真理源：本项目的权威文档。AIP 把它们加进 must_read。
-# docs/protocol.md 是协议的英文真源；技能正文（skills/aip/SKILL.md + reference/）是 AI 实际读的版本，二者同次改。
-truth_sources:
-  - docs/protocol.md
-  - docs/architecture.md
-  - README.md
-
-# 机器检查：声明"通过"必须真跑绿的命令。aip check 据此把验收硬绑真实证据。
+# 验证命令：AI 声明「做完了」之前要真跑通的命令（在仓库根执行）。aip check 不跑它们。
 # 本项目纯标准库、无构建步、无 lint 配置；唯一会真跑的检查是单元测试。
-# 解释器名按本机定：写 python 或 python3 都行，只要它是 Python 3.9+（脚本用了 3.9+ 语法）。
+# 要 Python 3.9+：先用 python3，没有再用 python 并确认版本。
 gates:
   tests:
-    cmd: "python -m unittest discover -s tests -p \"test_*.py\""
+    cmd: "python3 -m unittest discover -s tests -p \"test_*.py\""
   build:
     # cmd: ""              # 纯 Python，无构建步
   lint_or_drift:
@@ -23,33 +15,10 @@ gates:
   e2e:
     # cmd: ""              # 无 e2e 场景
 
-# 反堆积机器兜底（可选）。本项目无对应工具链。
-anti_accretion:
-
-# 领域专家视角：本项目无前端/客户端等专家域，留空。
-lenses:
-
-# 索引工具：本项目未使用 codegraph/nexus，留空。
-indexes:
-
-# 项目铁律：实现时自动触发的硬约束。
-iron_rules:
-  - "未授权不提交：git add/commit/push 需用户明确指示"
-  - "新建文件 UTF-8 无 BOM；编辑既有文件保持原编码不变"
-  - "引擎只有一份：plugins/ai-implementation-protocol/skills/aip/ 下的 scripts/ 与 templates/；改动落这里，不改 ~/.claude/skills 或 ~/plugins 里的安装副本"
-  - "协议是真源：行为/规则变更同次更新 docs/protocol.md 与技能正文（SKILL.md / reference/）"
-  - "版本只有一处：skills/aip/VERSION；改版本同次改三份 plugin.json（.claude-plugin / .codex-plugin / .grok-plugin）的 version"
-  - "行为/架构变更同次更新 .aip/tracks/ 下对应的在建线（OVERVIEW.md 是生成的，不手改）"
-  - "所有编码任务宣布完成前，必须对照适用的 plan/需求、测试和其他约束完成验证闭环；无法闭环时至少执行相关 lint/build，并明确列出未验证项和风险"
-  - "重新执行 aip init 必须升级 AGENTS.md/CLAUDE.md 中带 AIP managed 标记的规则块；不得覆盖已有活文档或项目自有内容"
-  - "每条 plan/需求必须映射到实现位置和行为证据；不得删除、跳过或削弱测试来绕过约束"
-
-# 验证规范：自由文本指针。
-# verification_notes: "测试用标准库 unittest；跑 `python -m unittest discover -s tests -p \"test_*.py\"`（解释器名按本机，需 Python 3.9+）。编码任务交付还必须提供约束对照和验证结果。"
-
-# 方法层：本项目开发已在用 superpowers（docs/superpowers/ 下的 spec/plan 即其产物）。
-process_skills: "superpowers"
-
 # 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
 # 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
 review_last_full: "2026-10-01"
+
+# 这个仓库的 .aip/ 按哪一版 AIP 的模板整理过。升级 AIP 后，会话开始会对照 aip 技能
+# reference/upgrade.md 提醒还没做的调整；做完改成提醒里给的版本号。
+aip_version: "0.7.0"

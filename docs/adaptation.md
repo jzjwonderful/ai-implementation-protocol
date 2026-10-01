@@ -9,33 +9,32 @@ Adapt AIP to any software project without rewriting the protocol.
 The target project receives a single hidden `.aip/` directory containing:
 
 - item directories, one file per item: `knowledge/`, `decisions/`, `inbox/`, `tracks/`
-- whole documents: `reference.md`, `conventions.md`, `config.yaml`, and the generated, uncommitted board `OVERVIEW.md`
+- whole documents: `reference.md`, `conventions.md` (iron rules first), `config.yaml`
 - optional `.nexus-map/` linkage
 
-Task state lives in `tracks/` files, and the board is generated from them — there is no per-feature directory and no runtime pointer.
+Task state lives in `tracks/` files; the SessionStart hook prints them as the board, nothing is stored. There is no per-feature directory and no runtime pointer.
 
 ## Engine vs Config
 
 AIP is the project-agnostic **engine** (protocol + CLI + check). A project binds it by editing
-one file — `.aip/config.yaml` — declaring its truth sources, machine-check commands, applicable
-domain lenses, index tools, and iron rules. Porting AIP to a new project = fill that config; no
-protocol or script changes.
+two files: `.aip/config.yaml` for its verification commands, and `.aip/conventions.md` for its iron
+rules and conventions. Porting AIP to a new project = fill those; no protocol or script changes.
 
 ## Recommended Steps
 
 1. Run `aip init` (scaffolds `.aip/` and installs the git pre-commit hook; zero-config)
 2. Add a track (`aip_item.py new --type track`) when you start something; keep its goal, blocker, next step and read-first list there
-3. Fill `.aip/config.yaml` as you go — truth sources, machine-check commands, lenses, iron rules (captured when first needed, not asked upfront)
+3. Fill `.aip/config.yaml` (verification commands) and `.aip/conventions.md` (iron rules, conventions) as you go — captured when first needed, not asked upfront
 4. Keep `aip check` running via the hook (or add it to CI); run `aip doctor` any time to check install/environment health
 
 ## Install Targets
 
-- **All at once (recommended)**: `python scripts/install_all.py` — one engine copy under `~/plugins/` plus
+- **All at once (recommended)**: `python3 scripts/install_all.py` — one engine copy under `~/plugins/` plus
   skills for Claude Code, Codex, and Grok. Subset with `--targets claude,grok` (or `codex`, or `all`).
-- **Codex only**: `python scripts/install_codex_plugin.py` (skills to `~/.agents/skills` and
+- **Codex only**: `python3 scripts/install_codex_plugin.py` (skills to `~/.agents/skills` and
   `$CODEX_HOME/skills` / `~/.codex/skills`; existing AIP install files are replaced).
-- **Claude Code only**: `python scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
-- **Grok only**: `python scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
+- **Claude Code only**: `python3 scripts/install_claude_plugin.py` (skills to `~/.claude/skills/`).
+- **Grok only**: `python3 scripts/install_grok_plugin.py` (skills to `~/.grok/skills/`;
   optional `--user-plugin` → `~/.grok/plugins/`).
 - **Into one project**: add `--project <repo>` to `install_all.py`, `install_claude_plugin.py` or
   `install_codex_plugin.py`. The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/`
@@ -48,9 +47,9 @@ runtime drives the same tool-agnostic CLI from the installed `aip` skill's own `
 ### Enforcement hooks (make `aip check` automatic)
 
 ```bash
-python <skill>/scripts/install_hooks.py --repo-root <target>                  # git pre-commit gate
-python <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (board into context, also after compaction)
-python <skill>/scripts/install_hooks.py --repo-root <target> --claude-stop    # + non-blocking Claude Stop hook
+python3 <skill>/scripts/install_hooks.py --repo-root <target>                  # git pre-commit gate
+python3 <skill>/scripts/install_hooks.py --repo-root <target> --session-start  # + Claude SessionStart (prints the board, also after compaction)
+python3 <skill>/scripts/install_hooks.py --repo-root <target> --claude-stop    # + non-blocking Claude Stop hook
 ```
 
 `<skill>` is the installed `aip` skill directory (`~/.claude/skills/aip` for Claude Code). `aip init` already installs the pre-commit and SessionStart hooks.

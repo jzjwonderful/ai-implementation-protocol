@@ -4,7 +4,7 @@ from __future__ import annotations
 
 - git pre-commit（主检查，硬挡）：每次提交前跑 `aip check`，红了挡住提交。
 - Claude Code SessionStart 钩子（--session-start，aip init 默认装）：新会话、恢复会话、
-  以及上下文被压缩之后，把 OVERVIEW 打进上下文；压缩后多提醒一句"以看板为准"。
+  以及上下文被压缩之后，把看板（在建线、待处理问题）打进上下文；压缩后多提醒一句"以在建线为准"。
 - 可选 Claude Code Stop 钩子（--claude-stop，非阻塞）：每轮结束跑一次 check 把状态摆出来。
 
 git 钩子放 .git/hooks/pre-commit（即时生效、无框架依赖）。bypass 用 `git commit --no-verify`。
@@ -64,6 +64,9 @@ def install_pre_commit(repo_root: Path, engine_root: Path, force: bool) -> None:
     print(f"Installed pre-commit hook: {hook}")
 
 
+# 引擎脚本要求的最低 Python 版本
+MIN_PYTHON = (3, 9)
+
 # 历代 AIP 装过的 SessionStart 脚本；认出来的旧条目在重装时换掉，不留指向已删路径的死钩子。
 AIP_SESSION_SCRIPTS = ("aip_session_start.py", "aip_overview.py")
 
@@ -74,8 +77,12 @@ def session_start_cmd(repo_root: Path, engine_root: Path) -> str:
     except ValueError:
         py = Path(sys.executable).as_posix()
         return f'"{py}" "{engine_root.as_posix()}/scripts/aip_session_start.py" --repo-root .'
-    # 项目级安装：引擎在仓库里，写成相对项目根，settings.json 进版本库后换台机器也能用
-    return f'python "$CLAUDE_PROJECT_DIR/{rel}/scripts/aip_session_start.py" --repo-root "$CLAUDE_PROJECT_DIR"'
+    # 项目级安装：引擎在仓库里，写成相对项目根，settings.json 进版本库后换台机器也能用。
+    # 换了机器解释器名也不能写死：Linux 上 python 可能是 2.7，Windows 上 python3 可能是
+    # 应用商店的占位程序。所以挨个试，用第一个 3.9 以上的；-c 不读 stdin，钩子的输入留给脚本。
+    script = f'"$CLAUDE_PROJECT_DIR/{rel}/scripts/aip_session_start.py" --repo-root "$CLAUDE_PROJECT_DIR"'
+    return (f'for py in python3 python; do "$py" -c "import sys; sys.exit(sys.version_info < {MIN_PYTHON})" '
+            f'2>/dev/null && exec "$py" {script}; done; echo "AIP：没找到 Python 3.9 以上的解释器，看板没打印"')
 
 
 def install_claude_session_start(repo_root: Path, engine_root: Path) -> None:
@@ -146,7 +153,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".", type=Path, help="目标仓库根。默认当前目录。")
     parser.add_argument("--engine-root", default=ENGINE_ROOT, type=Path, help="AIP 引擎根。默认本仓库。")
     parser.add_argument("--claude-stop", action="store_true", help="额外装非阻塞的 Claude Code Stop 钩子。")
-    parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（新会话/恢复/压缩后把 OVERVIEW 打进上下文）。")
+    parser.add_argument("--session-start", action="store_true", help="装 Claude Code SessionStart 钩子（新会话/恢复/压缩后把看板打进上下文）。")
     parser.add_argument("--force", action="store_true", help="覆盖已存在的非 AIP pre-commit 钩子。")
     parser.add_argument("--no-pre-commit", action="store_true",
                         help="不碰 pre-commit（项目已有自己的提交前钩子，比如 pre-commit 框架时用）。")

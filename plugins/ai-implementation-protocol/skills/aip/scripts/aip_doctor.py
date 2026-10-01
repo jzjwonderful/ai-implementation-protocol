@@ -6,7 +6,7 @@ from __future__ import annotations
 1. 项目 .aip/ 健康（文档和条目目录齐全、条目格式、无旧机制残留、到期提醒汇总）
 2. 安装健康（~/.claude/skills 与 Codex 技能目录里的 aip 技能是否完整、装的版本 vs 引擎版本）
 3. hook 健康（pre-commit 是否在、是否 AIP 管理、指向的引擎还在不在）
-4. 引擎仓库健康（两份 plugin.json 的 version 与技能目录 VERSION 一致）
+4. 引擎仓库健康（三份 plugin.json 的 version 与技能目录 VERSION 一致）
 
 输出分级：ERROR（AIP 用不了）/ WARN（体验差或有漂移风险）/ INFO（可选建议），
 每条带修复命令；有 ERROR 时退出码 1，否则 0。
@@ -17,9 +17,10 @@ import os
 import re
 from collections import Counter
 from pathlib import Path
+from typing import Optional
 
 import aip_check
-from _aip_common import RETIRED_SKILL_NAMES, SKILL_NAMES, aip_root, force_utf8, read_text
+from _aip_common import RETIRED_SKILL_NAMES, SKILL_NAMES, aip_root, force_utf8, py_cmd, read_text
 from aip_upkeep import collect
 from install_hooks import PRE_COMMIT_MARK
 
@@ -27,7 +28,7 @@ from install_hooks import PRE_COMMIT_MARK
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "ai-implementation-protocol"
 
-Item = tuple[str, str, str | None]  # (级别, 说明, 修复命令)
+Item = tuple[str, str, Optional[str]]  # (级别, 说明, 修复命令)
 
 
 def _read_version(path: Path) -> str | None:
@@ -62,12 +63,12 @@ def check_project(repo: Path, engine: Path) -> list[Item]:
     out: list[Item] = []
     if not aip_root(repo).is_dir():
         out.append(("INFO", f"项目未初始化 AIP（无 {aip_root(repo)}）",
-                    f"python {engine}/scripts/aip_init.py --repo-root {repo}"))
+                    f"{py_cmd()} {engine}/scripts/aip_init.py --repo-root {repo}"))
         return out
     old = aip_check.check_old_layout(repo)
     if old:
-        return [("ERROR", v, f"python {engine}/scripts/aip_migrate.py --repo-root {repo}") for v in old]
-    init_fix = f"python {engine}/scripts/aip_init.py --repo-root {repo}"
+        return [("ERROR", v, f"{py_cmd()} {engine}/scripts/aip_migrate.py --repo-root {repo}") for v in old]
+    init_fix = f"{py_cmd()} {engine}/scripts/aip_init.py --repo-root {repo}"
     for v in aip_check.check_project_files(repo):
         out.append(("ERROR", v, init_fix))
     for v in aip_check.check_item_names(repo) + aip_check.check_items(repo):
@@ -85,13 +86,13 @@ def check_due(repo: Path, engine: Path) -> list[Item]:
         return []
     summary = "、".join(f"{k} {n}" for k, n in Counter(d.kind for d in dues).items())
     return [("WARN", f"有 {len(dues)} 项到期要处理（{summary}）",
-             f"python {engine}/scripts/aip_upkeep.py --repo-root {repo} --all 看完整清单")]
+             f"{py_cmd()} {engine}/scripts/aip_upkeep.py --repo-root {repo} --all 看完整清单")]
 
 
 def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> list[Item]:
     out: list[Item] = []
     # 安装器只在 AIP 仓库里，不随技能分发，所以这里不能写 engine 的路径。
-    reinstall = "在 AIP 仓库根跑 python scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
+    reinstall = f"在 AIP 仓库根跑 {py_cmd()} scripts/install_all.py（或分端 install_claude/codex/grok_plugin.py）"
     claude_skills = home / ".claude" / "skills"
     for skill in SKILL_NAMES:
         if not (claude_skills / skill / "SKILL.md").exists():
@@ -104,10 +105,10 @@ def check_install(home: Path, engine: Path, codex_home: Path | None = None) -> l
         if not any(path.exists() for path in paths):
             pretty = " 或 ".join(str(path) for path in paths)
             out.append(("INFO", f"Codex 技能未安装：{pretty}（不用 Codex 可忽略）",
-                        "在 AIP 仓库根跑 python scripts/install_codex_plugin.py"))
+                        f"在 AIP 仓库根跑 {py_cmd()} scripts/install_codex_plugin.py"))
         if not (home / ".grok" / "skills" / skill / "SKILL.md").exists():
             out.append(("INFO", f"Grok 技能未安装：~/.grok/skills/{skill}/SKILL.md（不用 Grok 可忽略）",
-                        "在 AIP 仓库根跑 python scripts/install_grok_plugin.py"))
+                        f"在 AIP 仓库根跑 {py_cmd()} scripts/install_grok_plugin.py"))
     for skill in RETIRED_SKILL_NAMES:
         leftovers = [claude_skills / skill, home / ".grok" / "skills" / skill,
                      *(p.parent for p in codex_skill_paths(home, skill, codex_home))]
@@ -134,7 +135,7 @@ def check_hooks(repo: Path, engine: Path) -> list[Item]:
     if not (repo / ".git").exists():
         out.append(("INFO", f"{repo} 不是 git 仓库，跳过 hook 检查", None))
         return out
-    install_fix = f"python {engine}/scripts/install_hooks.py --repo-root {repo}"
+    install_fix = f"{py_cmd()} {engine}/scripts/install_hooks.py --repo-root {repo}"
     hook = repo / ".git" / "hooks" / "pre-commit"
     if not hook.exists():
         out.append(("WARN", "未装 pre-commit 钩子，aip check 只能靠自觉", install_fix))

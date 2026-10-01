@@ -7,7 +7,7 @@ import _aip_common as c
 class CommonModel(unittest.TestCase):
     def test_project_files_and_item_layout(self):
         self.assertEqual(c.PROJECT_FILES, ["reference.md", "conventions.md", "config.yaml"])
-        self.assertEqual(c.GENERATED_FILES, ["OVERVIEW.md"])
+        self.assertEqual(c.OLD_BOARD_FILE, "OVERVIEW.md")
         self.assertEqual(c.OLD_LAYOUT_FILES, ["knowledge.md", "decisions.md", "inbox.md", "knowledge_index.md"])
     def test_forbidden_covers_residue_and_old_names(self):
         for name in ["current_task.json","task_board.yaml","handoff.md",

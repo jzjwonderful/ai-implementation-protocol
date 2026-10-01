@@ -3,8 +3,8 @@ import argparse
 from datetime import date
 from pathlib import Path
 from _aip_common import (
-    GENERATED_FILES, OLD_LAYOUT_FILES, PROJECT_FILES, aip_root, ensure_dir, force_utf8, load_template,
-    project_living_path, write_text,
+    OLD_LAYOUT_FILES, PROJECT_FILES, aip_root, ensure_dir, force_utf8, load_template,
+    project_living_path, read_text, remove_old_board, write_text,
 )
 from aip_discovery import upsert_managed_block
 from aip_item import TYPES, type_dir
@@ -27,8 +27,10 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
             continue  # 幂等：不覆盖
         text = load_template(engine_root, TEMPLATE_OF[name])
         if name == "config.yaml":
-            # 新建即从零开始，把今天记为上次整份 review，免得第一天就被提醒
-            text = text.replace('review_last_full: ""', f'review_last_full: "{date.today().isoformat()}"')
+            # 新建即从零开始：今天记为上次整份 review，按当前版本的模板建的也不用再做升级调整
+            version = read_text(engine_root / "VERSION").strip()
+            text = (text.replace('review_last_full: ""', f'review_last_full: "{date.today().isoformat()}"')
+                        .replace('aip_version: ""', f'aip_version: "{version}"'))
         write_text(dst, text)
         created.append(dst)
     for t in TYPES:
@@ -36,12 +38,7 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
         if not keep.exists():
             write_text(keep, "")
             created.append(keep)
-    ignore = root / ".gitignore"
-    lines = ignore.read_text(encoding="utf-8").splitlines() if ignore.exists() else []
-    missing = [n for n in GENERATED_FILES if n not in lines]
-    if missing:
-        write_text(ignore, "\n".join(lines + missing) + "\n")
-        created.append(ignore)
+    remove_old_board(repo)
     return created
 
 def main() -> int:
@@ -67,8 +64,6 @@ def main() -> int:
             # 项目已有非 AIP 的 pre-commit 钩子：不覆盖、不中断 init，提示人自行处理。
             print(f"（跳过 pre-commit 钩子：{e}）")
         install_hooks.install_claude_session_start(repo, engine)
-    import aip_overview
-    aip_overview.rebuild_overview(repo)
     print("AIP 已初始化（零配置）。工程信息将在用到时自动捕获，不在此追问。")
     return 0
 

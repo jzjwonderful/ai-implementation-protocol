@@ -6,6 +6,8 @@ from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
 import aip_upkeep as up, aip_item as it
 
+CURRENT = f'aip_version: "{(ENGINE/"VERSION").read_text(encoding="utf-8").strip()}"\n'
+
 TODAY = date(2026, 9, 27)
 
 
@@ -51,7 +53,7 @@ def make_repo(knowledge, reference: str = "# 参照\n", last_review: str = "2026
     a = d / ".aip"; a.mkdir()
     add(d, [knowledge] if isinstance(knowledge, tuple) else knowledge or [])
     (a / "reference.md").write_text(reference, encoding="utf-8")
-    (a / "config.yaml").write_text(f'review_last_full: "{last_review}"\n', encoding="utf-8")
+    (a / "config.yaml").write_text(f'review_last_full: "{last_review}"\n{CURRENT}', encoding="utf-8")
     return d
 
 
@@ -124,7 +126,7 @@ class GoneReferences(unittest.TestCase):
     def test_not_a_git_repo_falls_back_to_time(self):
         d = Path(tempfile.mkdtemp()); a = d / ".aip"; a.mkdir()
         add(d, [entry("K001坑", "2026-06-15", "`src/a.py`")])
-        (a / "config.yaml").write_text('review_last_full: "2026-09-20"\n', encoding="utf-8")
+        (a / "config.yaml").write_text(f'review_last_full: "2026-09-20"\n{CURRENT}', encoding="utf-8")
         self.assertTrue(any("没复核" in x and "K001坑" in x for x in up.reminders(d, TODAY)))
 
 

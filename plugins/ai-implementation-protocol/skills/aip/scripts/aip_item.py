@@ -11,6 +11,8 @@ from __future__ import annotations
 - 状态在文件名和文件头里各写一份：文件名方便按状态筛和排序，打开文件也能直接看到。
   改状态走本脚本，两处一起改；aip_check 查两处是否一致。
 - 并行分支各自新增条目是不同的文件，合并时不会冲突——这是不再按顺序发号的原因。
+- 在建线做完就删文件，不留 done：线只写往前看的内容，做完没有可留的，过程在 git 里。
+  收线放进这条线最后一个 MR：合入了线就没了，没合入主干上它还在，不用再单独提 MR 改状态。
 """
 
 import argparse
@@ -29,7 +31,7 @@ class ItemType:
     name: str
     folder: str
     statuses: tuple[str, ...]
-    finished: tuple[str, ...]           # 这些状态不再出现在看板的待办里
+    remove_on: tuple[str, ...] = ()     # 改成这些状态就是删掉文件
     required: tuple[str, ...] = ()      # 文件头必填（title、status 所有类型都要）
     body_required: tuple[str, ...] = ()  # 正文里必须写了内容的小节
 
@@ -37,11 +39,10 @@ class ItemType:
 TYPES: dict[str, ItemType] = {
     t.name: t for t in (
         ItemType("knowledge", "knowledge", ("active", "draft", "fixed", "superseded"),
-                 finished=("fixed", "superseded"),
                  required=("category", "scope", "last_reviewed"), body_required=("症状", "根因")),
-        ItemType("decision", "decisions", ("accepted", "superseded"), finished=("superseded",)),
-        ItemType("inbox", "inbox", ("open", "closed"), finished=("closed",)),
-        ItemType("track", "tracks", ("active", "blocked", "paused", "done"), finished=("done",)),
+        ItemType("decision", "decisions", ("accepted", "superseded")),
+        ItemType("inbox", "inbox", ("open", "closed")),
+        ItemType("track", "tracks", ("active", "blocked", "paused"), remove_on=("done",)),
     )
 }
 # 被取代的条目必须写明被谁取代
@@ -259,11 +260,15 @@ def new_item(repo: Path, type_name: str, title: str, status: str | None = None, 
 
 
 def set_status(repo: Path, ref: str, status: str, by: str | None = None) -> Item:
+    """改状态；改成该类的 remove_on 状态（线做完）就删掉文件，返回的条目路径已不存在。"""
     items = list_items(repo)
     item = find(items, ref)
     kind = TYPES[item.type]
+    if status in kind.remove_on:
+        item.path.unlink()
+        return item
     if status not in kind.statuses:
-        raise ValueError(f"{item.type} 的状态只能是 {' / '.join(kind.statuses)}")
+        raise ValueError(f"{item.type} 的状态只能是 {' / '.join(kind.statuses + kind.remove_on)}")
     if status == "superseded":
         if not by:
             raise ValueError("标 superseded 要用 --by 写明被哪一条取代（条目标识，或被某个机制取代时写一句话）")
@@ -281,6 +286,13 @@ def set_status(repo: Path, ref: str, status: str, by: str | None = None) -> Item
     if old != item.path:
         old.unlink()
     return item
+
+
+def search(items: list[Item], keyword: str) -> list[Item]:
+    """按关键词筛：查标题、简述、分类、适用范围（分类和适用范围不在文件名里，光看文件名查不到）。"""
+    k = keyword.lower()
+    return [i for i in items
+            if any(k in v.lower() for v in (i.title, i.slug, i.meta.get("category", ""), i.meta.get("scope", "")))]
 
 
 def mark_reviewed(repo: Path, ref: str, day: date | None = None) -> Item:
@@ -317,7 +329,7 @@ def main() -> int:
     p.add_argument("--category", help="知识条目的分类")
     p.add_argument("--scope", help="知识条目的适用范围")
 
-    p = sub.add_parser("status", help="改状态（文件名和文件头一起改）")
+    p = sub.add_parser("status", help="改状态（文件名和文件头一起改）；在建线改 done 就是删掉文件")
     p.add_argument("ref", help="完整的「时间戳_简述」、文件名或旧编号")
     p.add_argument("status")
     p.add_argument("--by", help="标 superseded 时写被哪一条取代")
@@ -328,6 +340,7 @@ def main() -> int:
     p = sub.add_parser("list", help="列条目")
     p.add_argument("--type", choices=list(TYPES))
     p.add_argument("--status", action="append", help="只列这些状态，可写多次")
+    p.add_argument("--grep", help="关键词：在标题、简述、分类、适用范围里找，不分大小写")
 
     p = sub.add_parser("show", help="打印一条的路径和内容")
     p.add_argument("ref")
@@ -340,14 +353,20 @@ def main() -> int:
                 print(f"aip item：标题超过 {SLUG_LIMIT} 字，用 --slug 起一个 8–{SLUG_LIMIT} 字、说清这条是什么的"
                       f"短名字（不要截半句）。自动截出来是「{slugify(a.title)}」，可以参考")
                 return 1
+            if a.type == "knowledge" and not (a.category and a.scope):
+                print("aip item：知识条目要写 --category（分类）和 --scope（适用范围），不写 aip_check 过不去")
+                return 1
             meta = {k: v for k, v in (("category", a.category), ("scope", a.scope)) if v}
             print(new_item(repo, a.type, a.title, a.status, a.slug, meta).path)
         elif a.cmd == "status":
-            print(set_status(repo, a.ref, a.status, a.by).path)
+            item = set_status(repo, a.ref, a.status, a.by)
+            print(item.path if item.path.exists() else f"已删除 {item.path}（线做完了，过程在 git 里）")
         elif a.cmd == "reviewed":
             print(mark_reviewed(repo, a.ref).path)
         elif a.cmd == "list":
             items = [i for i in list_items(repo, a.type) if not a.status or i.status in a.status]
+            if a.grep:
+                items = search(items, a.grep)
             _print_list(items)
         elif a.cmd == "show":
             item = find(list_items(repo), a.ref)

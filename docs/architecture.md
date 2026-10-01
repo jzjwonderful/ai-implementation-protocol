@@ -37,11 +37,10 @@ Key scripts:
 - `aip_check.py` — the blocking validation check
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
 - `aip_item.py` — create items, change status (file name and header together), list, show
-- `aip_overview.py` — generate the board (`.aip/OVERVIEW.md`, not committed) from the items
-- `aip_upkeep.py` — due reminders, sorted by urgency and capped
+- `aip_upkeep.py` — due reminders, sorted by urgency and capped (including "not yet tidied after an upgrade", from `config.yaml`'s `aip_version` and `reference/upgrade.md`)
 - `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
 - `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
-- `aip_session_start.py` — SessionStart hook entry: generates and prints the board, reports checkout state (behind upstream, uncommitted `.aip/` changes), with an extra reminder after context compaction
+- `aip_session_start.py` — SessionStart hook entry: prints the board straight from `tracks/` and `inbox/` (no file), reports checkout state (behind upstream, uncommitted `.aip/` changes), with an extra reminder after context compaction
 
 Installers stay at the repository root and only copy the package: `scripts/install_all.py` (all runtimes at
 once), `scripts/install_claude_plugin.py`, `scripts/install_codex_plugin.py`, `scripts/install_grok_plugin.py`

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 旧布局：knowledge.md（K-N）、decisions.md（ADR-N）、inbox.md（I-N）、OVERVIEW.md 手写看板、
 knowledge_index.md。迁完：knowledge/、decisions/、inbox/、tracks/ 下一条一个文件，
-OVERVIEW.md 改为现场生成、不进仓库，knowledge_index.md 不再需要。
+OVERVIEW.md 删掉（看板由会话开始钩子按目录打印），knowledge_index.md 不再需要。
+旧看板里标了做完的线不迁：做完的线不留文件。
 
 - 默认只预览，打印会生成哪些文件、有哪些要人看的地方；加 --apply 才写。
 - 旧编号（K-185、ADR-3、I-14）写进每条的 aliases，旧引用照样能用 aip_item.py show 查到；
@@ -284,6 +285,8 @@ def board_items(repo: Path) -> list[Item]:
     def flush() -> None:
         if cur:
             heading, line, lines = cur
+            if _track_status(heading) == "done":
+                return  # 做完的线不留文件
             b = Block("", _track_title(heading), line, lines)
             out.append(_item(repo, "track", times.stamp(b), _track_status(heading),
                              b.title, {}, "\n".join(lines).strip()))
@@ -512,7 +515,6 @@ def rewrite_docs(repo: Path, plan: Plan, write: bool) -> dict[str, int]:
 
 def old_name_mentions(repo: Path) -> list[str]:
     """.aip/ 以外还在引用旧文件名的地方（代码注释锚点、说明文件、脚本）。"""
-    # .aip/OVERVIEW.md 还在（改成现场生成），提到它不算旧文件名
     pattern = r"\.aip/(knowledge|decisions|inbox|knowledge_index)\.md"
     try:
         r = subprocess.run(["git", "grep", "-l", "-E", pattern, "--", ".", f":(exclude){AIP_DIR}/**"],
@@ -533,7 +535,6 @@ def aip_dirty(repo: Path) -> bool:
 
 def apply(repo: Path, plan: Plan, engine: Path) -> None:
     import aip_init
-    import aip_overview
     for i in plan.items:
         i.path.parent.mkdir(parents=True, exist_ok=True)
         i.path.write_text(render(i.meta, i.body), encoding="utf-8", newline="\n")
@@ -541,11 +542,10 @@ def apply(repo: Path, plan: Plan, engine: Path) -> None:
         p = project_living_path(repo, n)
         if p.exists():
             p.unlink()
-    # 看板改为现场生成：还在版本库里的话先移出（文件本身留着，由下面重新生成）
+    # 看板不再落盘：旧的手写看板在版本库里，连同版本库记录一起删
     subprocess.run(["git", "rm", "--cached", "-q", "--ignore-unmatch", f"{AIP_DIR}/OVERVIEW.md"],
                    cwd=repo, capture_output=True)
     aip_init.scaffold(repo, engine)
-    aip_overview.rebuild_overview(repo)
 
 
 def report(repo: Path, plan: Plan, applied: bool, rewrite: bool, docs: dict[str, int]) -> None:

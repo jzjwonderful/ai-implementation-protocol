@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-"""Claude Code SessionStart 钩子入口：生成并打印看板，外加检出状态、更新和到期提醒。
+"""Claude Code SessionStart 钩子入口：打印看板，外加检出状态、更新和到期提醒。
+
+看板直接从目录读：在建线全文、待处理旁路问题的文件名。不另存文件——存下来的看板
+没人刷新就会过期。知识、决策不列，用到时按文件名查。
 
 钩子从 stdin 收到 JSON，其中 source 是 startup / resume / clear / compact / fork。
 compact 表示上下文刚被压缩成摘要——这时 AI 的记忆最不可靠，所以除了打印看板，
@@ -14,10 +17,27 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _aip_common import AIP_DIR, OLD_LAYOUT_FILES, force_utf8, project_living_path, read_text
-from aip_overview import rebuild_overview
+from _aip_common import AIP_DIR, OLD_LAYOUT_FILES, force_utf8, project_living_path, read_text, remove_old_board
+from aip_item import TYPES, list_items
 from aip_update import update_notice
 from aip_upkeep import reminders
+
+
+INBOX_LIMIT = 10
+
+
+def board(repo: Path) -> str:
+    # 旧版本留下的 _done_ 文件不算在建（aip_check 会让删掉）
+    tracks = [t for t in list_items(repo, "track") if t.status in TYPES["track"].statuses]
+    lines = ["## 在建线（.aip/tracks/）"]
+    lines += [f"### {t.path.name}\n{t.body.strip()}" for t in tracks] or ["（没有）"]
+    inbox = [i for i in reversed(list_items(repo, "inbox")) if i.status == "open"]
+    lines.append(f"## 待处理的旁路问题（.aip/inbox/ 下 {len(inbox)} 条 open，新的在前）")
+    lines += [f"- {i.path.name}" for i in inbox[:INBOX_LIMIT]] or ["（没有）"]
+    if len(inbox) > INBOX_LIMIT:
+        lines.append(f"- ……还有 {len(inbox) - INBOX_LIMIT} 条：aip_item.py list --type inbox --status open")
+    lines.append("知识、决策按文件名查：ls .aip/knowledge | grep 关键词，或 aip_item.py list --grep 关键词")
+    return "\n".join(lines)
 
 
 def read_source() -> str:
@@ -29,7 +49,7 @@ def read_source() -> str:
 
 def banner(source: str) -> str:
     if source == "compact":
-        return ("=== AIP：上下文刚被压缩，摘要可能丢细节。下面的看板是当前状态的权威来源；"
+        return ("=== AIP：上下文刚被压缩，摘要可能丢细节。下面的在建线是当前状态的权威来源；"
                 "如果压缩前有进展还没写回在建线文件，先补写再继续。===")
     return "=== AIP 看板 ==="
 
@@ -77,8 +97,9 @@ def main() -> int:
         if old.exists():
             print(read_text(old))
         return 0
+    remove_old_board(repo)
     print(banner(source))
-    print(read_text(rebuild_overview(repo)))
+    print(board(repo))
     print("===================")
     # 压缩后正在干活，不拿检出状态、更新和复核提醒打断；新会话 / 恢复会话才提。
     if source == "compact":

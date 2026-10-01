@@ -31,7 +31,7 @@ Users install by cloning the repository and running the **all-in-one** installer
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 cd ai-implementation-protocol
-python scripts/install_all.py
+python3 scripts/install_all.py
 ```
 
 On Windows PowerShell:
@@ -59,7 +59,7 @@ Every installer copies the **whole** skill directory, so the `aip` skill's `scri
 ## Installing Into One Project
 
 ```bash
-python scripts/install_all.py --project /path/to/repo
+python3 scripts/install_all.py --project /path/to/repo
 ```
 
 The skills land in `<repo>/.claude/skills/` and `<repo>/.codex/skills/` and are committed with that
@@ -73,11 +73,11 @@ After pulling a newer version:
 
 ```bash
 git pull
-python scripts/install_all.py            # overwrites every installed runtime
+python3 scripts/install_all.py            # overwrites every installed runtime
 # or one runtime:
-# python scripts/install_claude_plugin.py
-# python scripts/install_codex_plugin.py
-# python scripts/install_grok_plugin.py
+# python3 scripts/install_claude_plugin.py
+# python3 scripts/install_codex_plugin.py
+# python3 scripts/install_grok_plugin.py
 ```
 
 ## Verification

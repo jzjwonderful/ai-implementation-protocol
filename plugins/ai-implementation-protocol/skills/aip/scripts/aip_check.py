@@ -2,10 +2,9 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 from pathlib import Path
 from _aip_common import (
-    FORBIDDEN_SLOT_FILENAMES, GENERATED_FILES, OLD_LAYOUT_FILES, PROJECT_FILES,
+    FORBIDDEN_SLOT_FILENAMES, OLD_LAYOUT_FILES, PROJECT_FILES,
     SCAN_PRUNE_DIRS, aip_root, force_utf8, project_living_path,
 )
 from aip_item import SUPERSEDABLE, TYPES, Item, item_files, parse_name, read_item, type_dir
@@ -33,6 +32,8 @@ def check_item_names(repo: Path) -> list[str]:
                 out.append(f"文件名不合格式（要 时间戳_类型_状态_简述.md，时间戳如 20260928-153012）: {rel}")
             elif parsed[1] != t.name:
                 out.append(f"文件名里的类型「{parsed[1]}」和所在目录 {t.folder}/ 不符: {rel}")
+            elif parsed[2] in t.remove_on:
+                out.append(f"做完的在建线不留文件，删掉（过程在 git 里）: {rel}")
             elif parsed[2] not in t.statuses:
                 out.append(f"状态「{parsed[2]}」不对，{t.name} 只能是 {' / '.join(t.statuses)}: {rel}")
     return out
@@ -78,17 +79,6 @@ def check_items(repo: Path) -> list[str]:
                 out.append(f"{rel} 引用了不存在的条目「{ref}」（要写完整的「时间戳_简述」）")
     return out
 
-def check_generated_untracked(repo: Path) -> list[str]:
-    try:
-        r = subprocess.run(["git", "ls-files", "--", *(f"{aip_root(repo).name}/{n}" for n in GENERATED_FILES)],
-                           cwd=repo, capture_output=True, text=True, encoding="utf-8", timeout=20)
-    except (OSError, subprocess.SubprocessError):
-        return []
-    if r.returncode != 0:
-        return []
-    return [f"现场生成的 {p} 进了仓库（并行分支合并会冲突）：git rm --cached {p}"
-            for p in r.stdout.splitlines() if p]
-
 def check_no_orphan_slots(repo: Path) -> list[str]:
     # 迁移守卫只扫 .aip/——旧机制的残留都落在这里。项目自带的同名文件
     # （如根目录 STATUS.md、src/report.md）不归 AIP 管，扫全仓会大量误报。
@@ -133,7 +123,7 @@ def run_all(repo: Path) -> list[str]:
     if old:  # 旧格式下其余检查全是噪音，先迁移
         return old + check_engine_versions(repo)
     return (check_project_files(repo) + check_item_names(repo) + check_items(repo)
-            + check_generated_untracked(repo) + check_no_orphan_slots(repo) + check_engine_versions(repo))
+            + check_no_orphan_slots(repo) + check_engine_versions(repo))
 
 def main() -> int:
     force_utf8()

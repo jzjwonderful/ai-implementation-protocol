@@ -144,6 +144,45 @@ class Status(unittest.TestCase):
         with self.assertRaises(ValueError):
             it.mark_reviewed(d, t.id)
 
+    def test_done_track_is_deleted(self):
+        d = repo()
+        t = it.new_item(d, "track", "某线", stamp="20261001-100000")
+        gone = it.set_status(d, t.id, "done")
+        self.assertFalse(gone.path.exists())
+        self.assertEqual(it.list_items(d), [])
+        with self.assertRaises(ValueError):
+            it.new_item(d, "track", "某线", status="done")       # 不能新建做完的线
+
+
+def cli(d: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(SCRIPTS/"aip_item.py"), "--repo-root", str(d), *args],
+                          capture_output=True, text=True, encoding="utf-8")
+
+
+class Cli(unittest.TestCase):
+    def test_knowledge_needs_category_and_scope(self):
+        d = repo()
+        r = cli(d, "new", "--type", "knowledge", "--title", "某坑")
+        self.assertEqual(r.returncode, 1); self.assertIn("--category", r.stdout)
+        self.assertFalse(it.list_items(d))
+        r = cli(d, "new", "--type", "knowledge", "--title", "某坑", "--category", "部署", "--scope", "安装器")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_list_grep_looks_at_title_category_and_scope(self):
+        d = repo()
+        it.new_item(d, "knowledge", "钩子路径失效", stamp="20261001-100000",
+                    meta={"category": "Deployment", "scope": "项目级安装"})
+        it.new_item(d, "knowledge", "别的坑", stamp="20261001-100001", meta={"category": "other", "scope": "x"})
+        for kw in ("钩子", "deploy", "项目级"):
+            out = cli(d, "list", "--grep", kw).stdout
+            self.assertIn("钩子路径失效", out, kw); self.assertNotIn("别的坑", out, kw)
+
+    def test_status_done_on_track_says_deleted(self):
+        d = repo()
+        t = it.new_item(d, "track", "某线", stamp="20261001-100000")
+        r = cli(d, "status", t.id, "done")
+        self.assertEqual(r.returncode, 0, r.stdout); self.assertIn("已删除", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

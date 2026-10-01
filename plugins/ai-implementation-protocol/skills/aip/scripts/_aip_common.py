@@ -24,8 +24,10 @@ AIP_DIR = ".aip"
 # 知识、决策、旁路问题、在建线是一条一个文件，放在各自目录下，见 aip_item.TYPES。
 PROJECT_FILES = ["reference.md", "conventions.md", "config.yaml"]
 
-# 现场生成、不进仓库的文件（init 写进 .aip/.gitignore）。进了仓库，并行分支每次合并都会冲突。
-GENERATED_FILES = ["OVERVIEW.md"]
+# 0.5.0–0.6.x 生成的看板文件。看板现在由会话开始钩子直接按目录打印、不落盘：
+# 存下来的文件没人刷新就会过期，AI 读到旧看板会以为没有在建线。
+OLD_BOARD_FILE = "OVERVIEW.md"
+OLD_BOARD_HEADER = "# 总览（自动生成，勿手改）"
 
 # 0.5.0 之前「一类一个大文件」的布局。还在就说明没迁移，check 报红并指向迁移脚本。
 OLD_LAYOUT_FILES = ["knowledge.md", "decisions.md", "inbox.md", "knowledge_index.md"]
@@ -92,6 +94,20 @@ def aip_root(target_repo: Path) -> Path:
 
 def project_living_path(target_repo: Path, name: str) -> Path:
     return aip_root(target_repo) / name
+
+
+def remove_old_board(target_repo: Path) -> bool:
+    """删掉以前生成的看板文件（只删认得出是生成的那种），返回删没删。"""
+    p = project_living_path(target_repo, OLD_BOARD_FILE)
+    if not p.is_file() or not read_text(p).startswith(OLD_BOARD_HEADER):
+        return False
+    p.unlink()
+    return True
+
+
+def py_cmd() -> str:
+    """给人看的命令里写哪个解释器名：就用正在跑的这个，它一定是 Python 3。"""
+    return Path(sys.executable).stem or "python3"
 
 
 def remove_retired_skills(skills_root: Path) -> list[Path]:

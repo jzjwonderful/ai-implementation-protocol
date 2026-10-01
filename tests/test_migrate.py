@@ -81,6 +81,9 @@ OVERVIEW = """# 总览
 ### ▶[active] 新布局（2026-10-01 开工）
 - 下一步：写迁移
 
+### [done] 上线完的线
+- 已上线
+
 ### 收口备忘（接手前看一眼）
 - 某条线做完了，还没部署
 
@@ -262,8 +265,8 @@ class Apply(unittest.TestCase):
         self.assertIn(f"依据 {by_alias(items, 'ADR-2').id}", spec)
         self.assertIn("no_such_rule", r.stdout)
         tracked = subprocess.run(["git", "ls-files", ".aip/OVERVIEW.md"], cwd=d, capture_output=True, text=True).stdout
-        self.assertEqual(tracked.strip(), "")                     # 看板移出版本库
-        self.assertIn("新布局", (d/".aip"/"OVERVIEW.md").read_text(encoding="utf-8"))
+        self.assertEqual(tracked.strip(), "")                     # 旧看板连版本库记录一起删
+        self.assertFalse((d/".aip"/"OVERVIEW.md").exists())
 
     def test_without_rewrite_flag_code_is_untouched(self):
         d = old_repo()

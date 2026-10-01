@@ -21,8 +21,28 @@ class SessionStartHook(unittest.TestCase):
     def test_project_engine_uses_portable_command(self):
         d = repo_with_settings([])
         ih.install_claude_session_start(d, d/".claude"/"skills"/"aip")
-        self.assertEqual(commands(d), [
-            'python "$CLAUDE_PROJECT_DIR/.claude/skills/aip/scripts/aip_session_start.py" --repo-root "$CLAUDE_PROJECT_DIR"'])
+        [cmd] = commands(d)
+        self.assertTrue(cmd.startswith("for py in python3 python;"), cmd)   # 先 python3 再 python
+        self.assertIn('"$CLAUDE_PROJECT_DIR/.claude/skills/aip/scripts/aip_session_start.py" '
+                      '--repo-root "$CLAUDE_PROJECT_DIR"', cmd)
+
+    @unittest.skipIf(sys.platform == "win32", "要 POSIX sh")
+    def test_portable_command_refuses_python2_and_runs_python3(self):
+        d = repo_with_settings([])
+        engine = d/".claude"/"skills"/"aip"
+        (engine/"scripts").mkdir(parents=True)
+        (engine/"scripts"/"aip_session_start.py").write_text("import sys; print('跑了', sys.version_info[0])\n",
+                                                             encoding="utf-8")
+        cmd = ih.session_start_cmd(d, engine)
+        bin_dir = Path(tempfile.mkdtemp())
+        fake2 = bin_dir/"python"
+        fake2.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8"); fake2.chmod(0o755)   # 版本检查不过，就像 Python 2
+        env = {"PATH": str(bin_dir), "CLAUDE_PROJECT_DIR": str(d)}
+        out = subprocess.run(["/bin/sh", "-c", cmd], env=env, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(out.returncode, 0); self.assertIn("没找到 Python 3.9", out.stdout)
+        (bin_dir/"python3").symlink_to(sys.executable)
+        out = subprocess.run(["/bin/sh", "-c", cmd], env=env, capture_output=True, text=True, encoding="utf-8")
+        self.assertIn("跑了 3", out.stdout); self.assertNotIn("没找到", out.stdout)
 
     def test_engine_outside_repo_keeps_absolute_command(self):
         d = repo_with_settings([])

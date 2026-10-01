@@ -29,7 +29,7 @@ Use AIP for:
 Use AIP for:
 
 - design-spec alignment
-- change-scope tracking on the board
+- change-scope tracking in the work line's track file
 - browser verification notes
 
 ## Common Pattern
@@ -37,6 +37,6 @@ Use AIP for:
 Across all examples, the same structure stays stable:
 
 - one hidden `.aip/` directory
-- one track file per work line (next step + read-first list), with a generated board
+- one track file per work line (next step + read-first list), deleted when the line is done; the session-start hook prints the live ones
 - knowledge and decisions as one file per item, never renumbered
 - one blocking `aip check`

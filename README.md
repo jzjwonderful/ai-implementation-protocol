@@ -23,27 +23,27 @@ One command installs the shared engine plus skills for **Claude Code, Codex, and
 ```bash
 git clone https://github.com/jzjwonderful/ai-implementation-protocol.git
 cd ai-implementation-protocol
-python scripts/install_all.py
+python3 scripts/install_all.py
 ```
 
 Update an existing install (re-running always overwrites):
 
 ```bash
 git pull
-python scripts/install_all.py
+python3 scripts/install_all.py
 ```
 
 Only some runtimes:
 
 ```bash
-python scripts/install_all.py --targets claude,grok
+python3 scripts/install_all.py --targets claude,grok
 # legal names: claude, codex, grok, or all
 ```
 
 Optional Grok user-plugin registration (`~/.grok/plugins/`):
 
 ```bash
-python scripts/install_all.py --user-plugin
+python3 scripts/install_all.py --user-plugin
 ```
 
 Engine package always lands at:
@@ -62,7 +62,7 @@ Skills land at:
 
 Codex also updates `~/.agents/plugins/marketplace.json`. `aip` routes `$aip` commands. Installing over an older version removes the `root-cause` and `aip-brainstorm` skills that AIP shipped before 0.6.0.
 
-> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules.
+> **Upgrading from an older AIP?** After updating, re-run `$aip init` (or `python3 ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target>`) once in each AIP-enabled repository. It scaffolds missing living docs and upgrades the marked AIP guide blocks in `AGENTS.md`/`CLAUDE.md`; it preserves existing living docs and project-owned content. Until you do, the repository may still use the older onboarding rules. When a version also needs an existing `.aip/` changed (0.7.0 does), the next session in that repository reminds the AI, which follows the skill's `reference/upgrade.md` after asking you — the steps include re-running init.
 
 Open a new session in each tool after installation. `$aip init` is the only command a human types — everything else is AI-triggered:
 
@@ -77,9 +77,9 @@ Per-runtime installers below are still available if you only want one tool.
 Instead of the user home, the skills can live inside a single repository and travel with it:
 
 ```bash
-python scripts/install_all.py --project /path/to/repo     # Claude Code + Codex
-python scripts/install_claude_plugin.py --project /path/to/repo   # → <repo>/.claude/skills/
-python scripts/install_codex_plugin.py --project /path/to/repo    # → <repo>/.codex/skills/
+python3 scripts/install_all.py --project /path/to/repo     # Claude Code + Codex
+python3 scripts/install_claude_plugin.py --project /path/to/repo   # → <repo>/.claude/skills/
+python3 scripts/install_codex_plugin.py --project /path/to/repo    # → <repo>/.codex/skills/
 ```
 
 Everyone who clones that repository then gets the same engine version, with no personal install. The
@@ -90,7 +90,7 @@ installer prints the follow-up steps: repoint that repository's hooks at the in-
 ## Install For Claude Code Only
 
 ```bash
-python scripts/install_claude_plugin.py
+python3 scripts/install_claude_plugin.py
 # update: re-run the same command (existing files are replaced)
 ```
 
@@ -99,7 +99,7 @@ Skill → `~/.claude/skills/aip/`, the whole directory, nothing under `~/plugins
 ## Install For Codex Only
 
 ```bash
-python scripts/install_codex_plugin.py
+python3 scripts/install_codex_plugin.py
 # update: re-run the same command (existing files are replaced)
 ```
 
@@ -108,9 +108,9 @@ Skills → `~/.agents/skills/`, and to `$CODEX_HOME/skills` (or `~/.codex/skills
 ## Install For Grok Only
 
 ```bash
-python scripts/install_grok_plugin.py
+python3 scripts/install_grok_plugin.py
 # update: re-run the same command (existing files are replaced)
-# optional user plugin: python scripts/install_grok_plugin.py --user-plugin
+# optional user plugin: python3 scripts/install_grok_plugin.py --user-plugin
 ```
 
 Skills → `~/.grok/skills/`. Optional `--user-plugin` also copies to `~/.grok/plugins/`.
@@ -125,7 +125,7 @@ Skills → `~/.grok/skills/`. Optional `--user-plugin` also copies to `~/.grok/p
 
 ## Core Ideas
 
-AIP keeps project state in **living docs** (cross-task, long-lived) plus local validation scripts. There are no per-feature work packages and no runtime pointer — task state lives in track files, and the board is generated from them.
+AIP keeps project state in **living docs** (cross-task, long-lived) plus local validation scripts. There are no per-feature work packages and no runtime pointer — task state lives in track files, which the SessionStart hook prints as the board (nothing is stored).
 
 All AIP outputs inside a target project live under a single hidden `.aip/` directory (like `.git`):
 
@@ -134,12 +134,10 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 ├── knowledge/                # verified root causes / gotchas, one file each
 ├── decisions/                # architecture decisions, one file each
 ├── inbox/                    # side issues (capture, don't chase), one file each
-├── tracks/                   # work lines, one file each
+├── tracks/                   # work lines, one file each; deleted when done
 ├── reference.md              # domain concepts, core invariants, reusable implementations
-├── conventions.md            # standing how-we-work rules
-├── config.yaml               # project adaptation (truth sources / gates / lenses)
-├── .gitignore                # keeps the generated board out of git
-└── OVERVIEW.md               # the board — generated from the items, not committed (read first)
+├── conventions.md            # iron rules and standing how-we-work rules
+└── config.yaml               # verification commands, last full review, aip_version
 ```
 
 Item files are named `<timestamp>_<type>_<status>_<short title>.md`, e.g.
@@ -167,18 +165,17 @@ There is exactly one copy of the engine (scripts + templates) in this repository
 Initialize a target repository (the only command a human runs; in Claude Code just type `/aip init`):
 
 ```bash
-python ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target-project>
+python3 ~/.claude/skills/aip/scripts/aip_init.py --repo-root <target-project>
 ```
 
 The remaining scripts are triggered by the AI at the right moment, per the installed `aip` skill:
 
 ```bash
-python ~/.claude/skills/aip/scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
-python ~/.claude/skills/aip/scripts/aip_item.py --repo-root <target-project> list  # items: new / status / reviewed / list / show
-python ~/.claude/skills/aip/scripts/aip_overview.py --repo-root <target-project>   # regenerate the board (.aip/OVERVIEW.md)
-python ~/.claude/skills/aip/scripts/aip_upkeep.py --repo-root <target-project> --all  # everything due for review
-python ~/.claude/skills/aip/scripts/aip_migrate.py --repo-root <target-project>    # pre-0.5.0 layout: preview, then --apply
-python ~/.claude/skills/aip/scripts/aip_doctor.py --repo-root <target-project>     # install/environment health check
+python3 ~/.claude/skills/aip/scripts/aip_check.py --repo-root <target-project>      # hygiene gate (also runs in the pre-commit hook)
+python3 ~/.claude/skills/aip/scripts/aip_item.py --repo-root <target-project> list  # items: new / status / reviewed / list / show
+python3 ~/.claude/skills/aip/scripts/aip_upkeep.py --repo-root <target-project> --all  # everything due for review
+python3 ~/.claude/skills/aip/scripts/aip_migrate.py --repo-root <target-project>    # pre-0.5.0 layout: preview, then --apply
+python3 ~/.claude/skills/aip/scripts/aip_doctor.py --repo-root <target-project>     # install/environment health check
 ```
 
 For Codex, replace `~/.claude/skills/aip` with `~/.agents/skills/aip` (or `$CODEX_HOME/skills/aip`).
@@ -210,7 +207,7 @@ If `.nexus-map/` does not exist, AIP still works.
 
 ## Current State
 
-The engine runs on the flat living-doc model (ADR-2 in `.aip/decisions/`): living docs under `.aip/`, a board for task lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.
+The engine runs on the flat living-doc model (ADR-2 in `.aip/decisions/`): living docs under `.aip/`, track files for work lines, and `aip check` as the one blocking machine gate. Since 0.3.0 (ADR-4) the engine lives inside the `aip` skill directory and is installed as one unit.
 
 Living docs are kept current in two ways (0.3.1, ADR-5). First, "check on use": whenever the AI reads a knowledge entry, convention, project skill or instruction file that no longer matches the code, it fixes it in the same commit. Second, reminders: at session start and in `aip check`, `aip_upkeep.py` lists knowledge whose cited code changed after its last review, cited files or code names that existed then and are gone now, entries without code references older than 90 days, draft entries, and an overdue full review (`review_last_full` in `config.yaml`, 30 days). Reminders never block a commit.
 
@@ -219,3 +216,5 @@ Installed skills update themselves (0.4.0, ADR-6): the session-start hook quietl
 Since 0.5.0 knowledge, decisions, side issues and work lines are one file per item (see decision `20261001-004400_条目改成一条一个文件` in `.aip/decisions/`). Numbered entries in one big file kept colliding when branches or clones added entries in parallel; files named by timestamp and short title don't. The board is generated and no longer committed, reminders are sorted and capped at five with a summary line, the session-start hook also reports a checkout behind its upstream or uncommitted `.aip/` changes, and `aip_migrate.py` converts the old layout.
 
 Since 0.6.0 the package ships only the `aip` skill (decision `20261001-070424_删除随包的头脑风暴和根因技能`): the `root-cause` and `aip-brainstorm` skills and `aip_brainstorm.py` were removed as rarely used. The step for recording a verified root cause as a knowledge item moved into the `aip` skill; installers, `/aip update` and the uninstaller delete old copies of the two removed skills.
+
+Since 0.7.0 (decisions `20261001-081613_看板按目录打印且线做完即删` and `20261001-081613_配置只留有用字段且按版本整理`) the board is no longer a file: the SessionStart hook prints live tracks and open side issues straight from the directories, since a stored board went stale whenever nothing regenerated it. A finished track is deleted, in the same MR as its last change, so no follow-up MR is needed after merging. `config.yaml` keeps only the fields something reads; iron rules moved to `conventions.md`. Each repo records `aip_version`, and the skill's `reference/upgrade.md` tells the AI how to tidy an existing `.aip/` after an upgrade — the session-start reminders point to it. The project-level SessionStart hook tries `python3`, then `python`, and refuses anything older than 3.9.

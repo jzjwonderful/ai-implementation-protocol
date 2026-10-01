@@ -246,6 +246,7 @@ def apply(repo: Path, engine: Path = ENGINE_ROOT) -> int:
     print(f"更新到 {info['branch']} {info['remote_commit'][:7]}" + (f"（版本 {new_ver}）" if new_ver else "") + "。开新会话生效。")
     if info.get("scope") == "project":
         print("项目级安装：把这些技能目录的变化提交进仓库，别人拉代码才能拿到新版。")
+    print("新版可能要求调整各仓库已有的 .aip/：开新会话后，会话开始的提醒会指出来，按 aip 技能 reference/upgrade.md 做。")
     return 0
 
 

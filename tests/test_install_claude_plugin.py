@@ -51,7 +51,7 @@ class ClaudeInstaller(unittest.TestCase):
         result = subprocess.run([sys.executable, str(init), "--repo-root", str(target), "--no-hooks"],
                                 text=True, encoding="utf-8", capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        self.assertTrue((target / ".aip" / "OVERVIEW.md").exists())
+        self.assertTrue((target / ".aip" / "config.yaml").exists())
         self.assertTrue((target / ".aip" / "knowledge").is_dir())
 
 
