@@ -3,6 +3,7 @@ title: 改引擎要改仓库里的技能目录，不是已安装的副本
 status: active
 category: process-lifecycle
 scope: 凡改 AIP 引擎本身（`plugins/ai-implementation-protocol/skills/` 下任何文件）。正确落点是仓库源；改完重跑安装器让副本更新。0.4.0 起 `/aip update`（`aip_update.py --apply`）从远端取新版也会整目录替换已装副本，副本里的手改同样会被冲掉
+paths: .claude/skills/aip/, .codex/skills/aip/
 last_reviewed: 2026-10-01
 aliases: K-002
 ---
