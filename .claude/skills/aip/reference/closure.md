@@ -9,7 +9,7 @@
 5. **范围内纠偏**：只整理本次碰过的条目及其直接关联；每处改动过 review 自检清单并在知会中列出，不静默改与本线无关的旧内容。
 6. **捕获回扫**（改了代码或文档结构的任务逐项给 yes/no）：
    - **knowledge**：验证出可复现的坑或根因？→ yes 按捕获纪律 `aip_item.py new --type knowledge`；no 一句说为什么没有
-   - **reference**：产出可复用实现或需要定锚的概念？→ yes 沉淀；no 一句说为什么没有
+   - **reference / reuse**：产出可复用实现（→ `aip_item.py new --type reuse`）或需要定锚的概念、某个模块的做法（→ 对应的主题文件）？→ yes 沉淀；no 一句说为什么没有
    - **conventions**：发现新规约或现有规约需要修正？→ yes 沉淀；no 一句说为什么没有
    - **inbox**：撞见尚未处理的旁路问题？→ yes `aip_item.py new --type inbox`；no 一句说为什么没有
    - **config**：有新的构建/测试命令需要记录？→ yes 更新 config.yaml；no 一句说为什么没有

@@ -26,8 +26,14 @@ def _check_cmd(engine_root: Path) -> str:
     return f'"{py}" "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
 
 
+def _lookup_cmd(engine_root: Path) -> str:
+    py = Path(sys.executable).as_posix()
+    return f'"{py}" "{engine_root.as_posix()}/scripts/aip_lookup.py" --repo-root . relevant --staged'
+
+
 def pre_commit_body(engine_root: Path) -> str:
-    # 提交前只查格式，不算到期提醒：提醒不挡提交，算它要跑 git 历史，白白拖慢每次提交
+    # 提交前只查格式，不算到期提醒：提醒不挡提交，算它要跑 git 历史，白白拖慢每次提交。
+    # 查过之后列出这次改动相关的主题和条目：开工时按任务说法挑文件会漏，这里按改动的文件兜一次，只列不挡。
     cmd = _check_cmd(engine_root) + " --no-reminders"
     return (
         "#!/bin/sh\n"
@@ -36,6 +42,7 @@ def pre_commit_body(engine_root: Path) -> str:
         '  echo "AIP check failed — fix the above, or bypass once with: git commit --no-verify" >&2\n'
         "  exit 1\n"
         "}\n"
+        f"{_lookup_cmd(engine_root)} || true\n"
     )
 
 

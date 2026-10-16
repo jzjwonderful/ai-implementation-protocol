@@ -141,8 +141,9 @@ All AIP outputs inside a target project live under a single hidden `.aip/` direc
 ├── decisions/                # architecture decisions, one file each
 ├── inbox/                    # side issues (capture, don't chase), one file each
 ├── tracks/                   # work lines, one file each; deleted when done
-├── reference.md              # domain concepts, core invariants, reusable implementations
-├── conventions.md            # iron rules and standing how-we-work rules
+├── reuse/                    # reusable implementations (capability → canonical pick), one file each
+├── conventions.md            # read every time: cross-cutting iron rules and invariants (capped)
+├── reference/<topic>.md      # read on demand: one topic per file, front matter says when to read it
 └── config.yaml               # verification commands, last full review, aip_version
 ```
 
@@ -224,3 +225,5 @@ Since 0.5.0 knowledge, decisions, side issues and work lines are one file per it
 Since 0.6.0 the package ships only the `aip` skill (decision `20261001-070424_删除随包的头脑风暴和根因技能`): the `root-cause` and `aip-brainstorm` skills and `aip_brainstorm.py` were removed as rarely used. The step for recording a verified root cause as a knowledge item moved into the `aip` skill; installers, `/aip update` and the uninstaller delete old copies of the two removed skills.
 
 Since 0.7.0 (decisions `20261001-081613_看板按目录打印且线做完即删` and `20261001-081613_配置只留有用字段且按版本整理`) the board is no longer a file: the SessionStart hook prints live tracks and open side issues straight from the directories, since a stored board went stale whenever nothing regenerated it. A finished track is deleted, in the same MR as its last change, so no follow-up MR is needed after merging. `config.yaml` keeps only the fields something reads; iron rules moved to `conventions.md`. Each repo records `aip_version`, and the skill's `reference/upgrade.md` tells the AI how to tidy an existing `.aip/` after an upgrade — the session-start reminders point to it. The project-level SessionStart hook tries `python3`, then `python`, and refuses anything older than 3.9.
+
+Since 0.8.0 (decision `20261016-102351_会膨胀的文件按主题拆分`) whatever keeps growing is split, to keep context small: `reference.md` became `reference/<topic>.md` files listed at session start by when to read them, its reusable-implementation table became `reuse/` items, and `conventions.md` keeps only cross-cutting rules. `aip_lookup.py relevant <files>` (also run by the pre-commit hook on staged files) lists the topics and items tied to the files being changed. Once a repo's `aip_version` reaches 0.8.0, `aip check` enforces size limits (`conventions.md` 8000 characters, other files 30000, lines 1000, tables 30 rows) and that `.aip/` references still resolve. Existing repos follow the 0.8.0 section of the skill's `reference/upgrade.md`.

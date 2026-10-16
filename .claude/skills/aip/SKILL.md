@@ -18,24 +18,27 @@ python3 <skill>/scripts/aip_check.py --repo-root .
 脚本要 Python 3.9 以上。下文命令里的 `python3` 只是示例，不要照抄：会话开始看板末尾会打出钩子探测到的解释器，本会话都用它；没有看板（比如 Codex）就自己探测一次——先 `python3 --version`，不行再 `python --version`，要 3.9 以上才用，只有 Python 2 就别跑，告诉用户装 Python 3。探测到的解释器本会话一直用。装完 AIP、钩子没反应或脚本报错时，跑 `aip_doctor.py --repo-root .` 查安装和钩子。
 
 ## 活文档（去哪找什么）
-**条目：一条一个文件。** 知识、决策、旁路问题、在建线各放一个目录，文件名 `<时间戳>_<类型>_<状态>_<简述>.md`，比如 `20260928-153012_knowledge_active_gbrain健康分是扣分制.md`：
+**条目：一条一个文件。** 知识、决策、旁路问题、在建线、可复用实现各放一个目录，文件名 `<时间戳>_<类型>_<状态>_<简述>.md`，比如 `20260928-153012_knowledge_active_gbrain健康分是扣分制.md`：
 - `.aip/knowledge/` — 验证过的技术坑/根因（状态 active / draft / fixed / superseded）。
 - `.aip/decisions/` — 架构/方向级决策，不是任务级需求（accepted / superseded）。
 - `.aip/inbox/` — 旁路问题收件箱（open / closed）。
 - `.aip/tracks/` — 在建线（active / blocked / paused），做完就删文件。
+- `.aip/reuse/` — 可复用实现（active / superseded）：标题写能力，正文写钦定实现和边界，文件头 `paths` 必填。
 
 时间戳是创建时间（精确到秒）。简述由你起：8–24 字、说清这条是什么的短名字（「会话里重启Kite会带走会话环境」），不是把标题截半句；标题超过 24 字时 `new` 必须给 `--slug`，不给会报错并附一个按分句截的参考。简述定了就不改（改了标识就变了）。条目的标识是「时间戳_简述」：引用别的条目、代码注释锚点一律写完整标识（`.aip/knowledge/20260928-153012_gbrain健康分是扣分制`），不只写时间戳，也不带状态（状态会变）。状态在文件名和文件头里各有一份，改状态必须走脚本，两处一起改。并行分支各自新增是不同的文件，不会撞号、合并不冲突。
 
 **整篇文档：**
-- `.aip/reference.md` — 领域概念/术语、核心不变量、可复用实现（裁决）。
-- `.aip/conventions.md` — 项目铁律和规约。动手前读。
-- `.aip/config.yaml` — 验证命令（`gates`）、上次整份 review 的日期、`aip_version`（这个仓库的 `.aip/` 按哪一版模板整理过）。零配置起步，用到再填。
+- `.aip/conventions.md` — 每次动手前读：只放不管改哪里都可能踩到的铁律、核心不变量、构建验收流程。
+- `.aip/reference/<主题>.md` — 按需读的主题资料（术语、环境变量、某个模块的做法……）。一个主题一个文件，文件名就是主题、不带时间戳；文件头写 `title`、`read_when`（什么时候该读）、`paths`（涉及哪些代码，可选），模板 `templates/topic-template.md`。
+- `.aip/config.yaml` — 验证命令（`gates`）、上次整份 review 的日期、`aip_version`（这个仓库的 `.aip/` 按哪一版模板整理过）、`size_check_paths`（可选）。零配置起步，用到再填。
 
-**看板不存文件。** 会话开始钩子直接从目录读，打印在建线全文和待处理旁路问题的文件名；存成文件没人刷新就会过期。没有钩子（如 Codex）就自己读 `tracks/` 下的文件、列 `inbox/` 下带 `_open_` 的文件名。知识、决策不上看板，用到时按文件名或 `aip_item.py list --grep` 找。
+**看板不存文件。** 会话开始钩子直接从目录读，打印在建线全文、待处理旁路问题的文件名、主题目录（主题 + 什么时候读）；存成文件没人刷新就会过期。没有钩子（如 Codex）就自己读 `tracks/` 下的文件、列 `inbox/` 下带 `_open_` 的文件名、跑 `aip_lookup.py index`。知识、决策、可复用实现不上看板，用到时按文件名或 `aip_item.py list --grep` 找。
+
+**按需读，不整篇全读。** 主题文件按「什么时候读」挑跟当前任务有关的读。改代码前跑 `aip_lookup.py --repo-root . relevant <要改的文件>`：按文件头 `paths` 和改动文件里的条目锚点列出相关的主题和条目（只按任务说法挑会漏）；提交前钩子会对暂存的改动再列一次，只列不挡。
 
 **条目脚本 `aip_item.py`**（`<skill>/scripts/` 下，都带 `--repo-root .`）：
 - 找：`list --type knowledge --status active [--grep 关键词]`（关键词查标题、简述、分类、适用范围）；`show <标识 / 文件名 / 迁移前的旧编号>`。先按文件名和 `list` 找相关的再打开读，不要通读整个目录。
-- 建：`new --type knowledge --title "一句话标题" --category .. --scope .. [--slug 简述（标题超过 24 字时必填）] [--status draft]`，知识条目必须给分类和适用范围；打印文件路径；正文按模板生成，之后直接编辑文件补内容。
+- 建：`new --type knowledge --title "一句话标题" --category .. --scope .. [--paths 涉及的代码] [--slug 简述（标题超过 24 字时必填）] [--status draft]`，知识条目必须给分类和适用范围，可复用实现必须给 `--paths`；打印文件路径；正文按模板生成，之后直接编辑文件补内容。
 - 改状态：`status <标识> <新状态> [--by <取代它的条目标识，或一句话>]`。别手动改文件名。在建线改 `done` 就是删掉文件。
 - 重验过：`reviewed <标识>`（知识条目「最后复核」改成今天）。
 
@@ -49,19 +52,20 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 1. **不说黑话**：文档/注释/会话用大白话，不用晦涩比喻和生造词；公认技术名词除外。
 2. **注释不引外部编号**：代码注释不引 plan/需求/任务/issue 编号或外部文档名（会漂移、改名即误导）；只说代码本身的意图和约束，能不写就不写。
 3. **编码交付要闭环验证**：凡会改代码的工作，动手前读懂项目的验证机制（相关 plan/需求、现有测试、构建/lint 命令、CI 配置）；动手后逐项对照并执行验证。验证结果与目标一致才能说"完成"。
+4. **会越写越大的内容拆开写**：一条条追加的记录（坑、决策、可复用实现、变更记录、状态注记）一条一个文件，文件名 `时间戳_类型_状态_简述.md`；整篇说明按主题拆成多个文件，文件名就是主题。上限（`.aip/` 下和 `size_check_paths` 列的文档，`aip_version` 到 0.8.0 起 `aip_check` 报红）：`conventions.md` 整篇 8000 字、每节 3000 字；其余单个文件 3 万字；单行 1000 字；表格 30 行。
 
 ## AI 自主行为（按时机触发）
 - **接手/新会话**：读看板上的在建线和它的「先读」，从「下一步」接着干，不回放历史。上下文被压缩后 SessionStart 钩子会把在建线重新打进来，以它为准。钩子报「检出落后远端」或「.aip/ 有没提交的改动」时，先告诉用户，同步或提交后再写 `.aip/`。
 - **开一条线**：`aip_item.py new --type track`，写目标、卡在哪、下一步、先读四项。长任务在阶段性节点就把进展写回这个文件，别等收尾——上下文随时可能被压缩。只写往前看的内容，过程和结论进 git 提交或知识条目；超过 12 行会被提醒压缩。
 - **收线跟着最后一个 MR 走**：线和代码在同一个分支里提交；做完时在这条线最后一个 MR 里 `aip_item.py status <线> done`（删掉文件），不等合入。合入了，主干上线就没了；MR 没合入，主干上它还在，不用回滚，也不用合入后再单独提 MR 收线。线剩下的事不在本仓库（别的仓库、本机操作）就收掉，剩下的投 inbox 或去那个仓库开线。
-- **造新前先查**：有 LSP 用 findReferences；否则 grep + 读候选 + 查 reference；大工程用 nexus-query/CodeGraph（若装）。命中就复用；确需造新且该成权威件的，记进 reference。
+- **造新前先查**：有 LSP 用 findReferences；否则 grep + 读候选 + `aip_item.py list --type reuse --grep 能力`；大工程用 nexus-query/CodeGraph（若装）。命中就复用；确需造新且该成权威件的，`aip_item.py new --type reuse` 记一条，写明为什么已有的不适用。
 - **改接口前先查引用**：LSP findReferences/incomingCalls，否则 grep；不盲改。
 - **用到即核**：读到的 `.aip/` 条目、项目规约、项目技能、说明文件（`CLAUDE.md` / `AGENTS.md`）和代码或现状对不上，当场改：knowledge 重验后 `aip_item.py reviewed`，不再成立的改 `fixed` 或 `superseded`；规约、技能、说明文件改正文；要人拍板的投 inbox。随本次工作同一次提交并知会。知道错了不改，比没写更糟。
-- **到期提醒**：会话开始和 `aip_check` 列出该处理的事（脚本 `aip_upkeep.py`，只提醒不挡提交），按轻重排好、只列前 5 项，其余给总数，完整清单用 `aip_upkeep.py --all`：AIP 升级后这个仓库的 `.aip/` 还没按新模板整理；说明文件里写的 AIP 脚本路径已失效；active 知识引用的文件或代码名字复核那天还在、现在没了；引用的代码在「最后复核」之后改过（reference 同样按上次整份 review 查）；逾期的整份 review；draft 条目；写太长的在建线；没写代码位置的条目满 90 天、写了但代码一直没动的满一年。每条只归一类。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
+- **到期提醒**：会话开始和 `aip_check` 列出该处理的事（脚本 `aip_upkeep.py`，只提醒不挡提交），按轻重排好、只列前 5 项，其余给总数，完整清单用 `aip_upkeep.py --all`：AIP 升级后这个仓库的 `.aip/` 还没按新模板整理；说明文件里写的 AIP 脚本路径已失效；active 知识引用的文件或代码名字复核那天还在、现在没了；引用的代码在「最后复核」之后改过（`conventions.md` 和主题文件按上次整份 review 查，可复用实现按建条目那天查）；逾期的整份 review；draft 条目；写太长的在建线；没写代码位置的条目满 90 天、写了但代码一直没动的满一年。每条只归一类。用到这些条目时顺手复核，或在当前任务收尾时处理；要延后就跟用户说一声。
 - **有更新先说**：会话开始会查一次 AIP 引擎有没有新版本（查不了就不出声）。打出「AIP 有更新」时，先告诉用户，用户同意再跑 `/aip update`，然后继续当前任务。
 - **撞见无关问题**：先在 knowledge/ 和 inbox/ 里按文件名检索，没有再 `aip_item.py new --type inbox`；不无脑新建。
 - **验证出根因**：记成知识条目。先在 knowledge/ 按文件名检索去重，像的就补进那一条或在 `related` 加关联，不像才新建：`aip_item.py new --type knowledge --title "一句话" --slug <简述> --category <分类> --scope <适用范围> --status <active|draft>`，再编辑生成的文件填症状、根因、证据。按捕获纪律定 draft/active。
-- **多代理/子代理**：只有**主代理**写 `.aip/`；子代理只汇报发现，不落盘。派活时把相关的 knowledge/reference 条目喂给子代理，别让它重新踩坑。
+- **多代理/子代理**：只有**主代理**写 `.aip/`；子代理只汇报发现，不落盘。派活时把相关的条目和主题文件喂给子代理，别让它重新踩坑。
 - **worktree / 分支并行**：每条线一个 `tracks/` 文件，各分支新增的条目都是新文件，合并不冲突。两边改了同一条的状态时 git 会报改名冲突，留一个、`aip_check` 查重复标识。合并后跑一次 `aip_check`。
 
 ## 捕获纪律（所有沉淀通用）
@@ -77,16 +81,11 @@ Claude Code 等工具有自己的跨会话记忆（个人级、存在本机、�
 ## 完成检查（一条线做完时）
 按 `reference/closure.md` 走：约束对照 → 验证闭环 → 跑 `aip_check` → 捕获回扫 → 删掉线（随最后一个 MR）。捕获回扫的逐项 yes/no 只对**改了代码或文档结构**的任务做；纯问答、一行注释这类小改动不必走完整回扫，但 `aip_check` 照跑。
 
-## `/aip init`（唯一人敲的命令，两阶段）
-阶段 A 跑脚本 `python3 <skill>/scripts/aip_init.py --repo-root .`（建骨架、装钩子、刷新引导块，幂等不覆盖）；阶段 B 由 AI 自己看项目填空白文件，不向用户提问。细节见 `reference/init.md`。
-
-## `/aip update`（更新已装的 AIP 技能）
-查：`python3 <skill>/scripts/aip_update.py --repo-root .`。更新：加 `--apply`，从远端浅克隆最新版、核对齐全后原地替换本机装的 aip 技能，顺手删掉以前随包分发、0.6.0 起不再提供的 root-cause、aip-brainstorm（项目级安装时 `.claude/skills` 和 `.codex/skills` 两份一起换），失败会换回原样；不需要本机有 AIP 仓库，也不走安装器。远端地址默认取安装时记下的（技能目录里的 `SOURCE.json`），项目 `config.yaml` 写了 `aip_remote` / `aip_remote_branch` 就用它们。项目级安装更新完要把技能目录的变化提交进仓库。
-
-**升级后整理**：新版可能要求调整仓库里已有的 `.aip/`（删字段、搬内容、删旧文件）。每个仓库在 `config.yaml` 的 `aip_version` 记着按哪一版整理过；会话开始发现 `reference/upgrade.md` 里有更新版本的调整没做，就会提醒。看到提醒先跟用户说，同意后按 `reference/upgrade.md` 从 `aip_version` 之后的版本逐节做，做完改 `aip_version`、跑 `aip_check`，一次提交。用户级安装一次更新影响本机所有仓库，各仓库在自己的会话里各整理一次。
-
-## `/aip migrate`（0.5.0 之前的旧布局迁成一条一个文件）
-旧布局是 `knowledge.md` / `decisions.md` / `inbox.md` 各一个大文件、看板手写。会话开始报「还是旧格式」、`aip_check` 报红时，先跟用户说，同意后按 `reference/migrate.md` 走：预览 → 执行 → 收尾（撞号、代码注释锚点、说明文件、旧看板遗留内容）→ 一次提交。
+## 命令（人敲的）
+- `/aip init`（唯一必须人敲的，两阶段）：阶段 A 跑 `python3 <skill>/scripts/aip_init.py --repo-root .`（建骨架、装钩子、刷新引导块，幂等不覆盖）；阶段 B 由 AI 自己看项目填空白文件，不向用户提问。细节见 `reference/init.md`。
+- `/aip update`：更新已装的 AIP 技能，见 `reference/update.md`。**升级后整理**：会话开始提醒「还没按新模板整理」时，先跟用户说，同意后按 `reference/upgrade.md` 从 `aip_version` 之后的版本逐节做。
+- `/aip migrate`：0.5.0 之前的旧布局（`knowledge.md` 等大文件）迁成一条一个文件。会话开始报「还是旧格式」、`aip_check` 报红时，先跟用户说，同意后按 `reference/migrate.md` 走。
+- `/aip review`：整份 `.aip/` 的 review，见上文。
 
 ## 不做
 - 不探查/记录本机装了哪些外部工具（平台每会话已给可用清单）。

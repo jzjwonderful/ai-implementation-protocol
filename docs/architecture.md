@@ -37,6 +37,7 @@ Key scripts:
 - `aip_check.py` — the blocking validation check
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
 - `aip_item.py` — create items, change status (file name and header together), list, show
+- `aip_lookup.py` — on-demand lookup: the topic index (`reference/<topic>.md` + when to read it) and `relevant <files>` (topics and items whose `paths` match, plus items anchored in those files; the pre-commit hook runs it on staged files)
 - `aip_upkeep.py` — due reminders, sorted by urgency and capped (including "not yet tidied after an upgrade", from `config.yaml`'s `aip_version` and `reference/upgrade.md`)
 - `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
 - `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)

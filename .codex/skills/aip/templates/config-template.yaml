@@ -19,6 +19,10 @@ review_last_full: ""
 # reference/upgrade.md 提醒还没做的调整；做完改成提醒里给的版本号。
 aip_version: ""
 
+# 除 .aip/ 外还要查体积的文档（可选）：逗号分隔的通配，相对仓库根，例 "docs/**/*.md, notes/*.md"。
+# 单个文件超过 3 万字、单行超过 1000 字、表格超过 30 行时 aip check 报红。
+size_check_paths: ""
+
 # /aip update 对比哪个远端（可选）。留空就用安装时记下的来源（aip 技能目录里的 SOURCE.json）。
 aip_remote: ""          # 例：https://github.com/<you>/ai-implementation-protocol.git
 aip_remote_branch: ""   # 例：master

@@ -9,7 +9,7 @@ Adapt AIP to any software project without rewriting the protocol.
 The target project receives a single hidden `.aip/` directory containing:
 
 - item directories, one file per item: `knowledge/`, `decisions/`, `inbox/`, `tracks/`
-- whole documents: `reference.md`, `conventions.md` (iron rules first), `config.yaml`
+- whole documents: `conventions.md` (cross-cutting iron rules, read every time), `reference/<topic>.md` (read on demand), `config.yaml`
 - optional `.nexus-map/` linkage
 
 Task state lives in `tracks/` files; the SessionStart hook prints them as the board, nothing is stored. There is no per-feature directory and no runtime pointer.

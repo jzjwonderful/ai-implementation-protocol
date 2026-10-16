@@ -1,0 +1,9 @@
+---
+title: 会越写越大的文件按主题拆分，必读内容封顶，按改动的文件反查相关条目
+status: accepted
+---
+
+- 背景: 痛点是上下文膨胀——AI 按规矩每次把整个文件读进上下文。tech-ai-kits 实测（125 个会话、2026-10-16 的 master）：`reference.md` 49KB、每次约 2.5–3 万 token，33 个会话读过，其中环境变量和可复用实现两节占六成多、和多数任务无关；近 60 天 44 个提交往它的表尾追加，是合并冲突热点；规格书末尾不断追加状态注记；会话开始钩子的输出只有 2.5 千字，不是问题。同时实测发现只按文件名挑着读会漏：很多坑的说法和任务说法对不上（例如「给 TAPD 加附件上传」搜不到「AI 子进程内容代发外部前必须限量」）；全部条目的文件名清单本身也有 1.2 万字，不能每次给。
+- 决策: (1) 追加型内容一条一个文件（`时间戳_类型_状态_简述.md`）：新增条目类型「可复用实现」（`.aip/reuse/`，`paths` 必填），取代 reference.md 里的表。(2) 整篇说明按主题拆成 `.aip/reference/<主题>.md`，文件名就是主题、不带时间戳；文件头 `title`、`read_when`（不超过 80 字）、`paths`；会话开始只打印主题目录。(3) `conventions.md` 是唯一必读，只放跨模块的铁律、不变量、构建验收流程。(4) 新增 `aip_lookup.py`：`index` 出主题目录，`relevant <文件>` 按 `paths` 和改动文件里的条目锚点列相关主题和条目；pre-commit 对暂存改动跑一遍，只列不挡。条目文件头可写 `paths`。(5) 上限按字符数、由 `aip_check` 报红（用户要求做成检查，不只提醒）：conventions.md 整篇 8000、每节 3000；其余单个 .md 3 万；单行 1000；表格 30 行；查 `.aip/` 下全部 .md 和 `config.yaml` 的 `size_check_paths`。另查引用：`.aip/` 条目锚点、`.aip/....md` 路径、`某.md「节」` 是否还在。技能正文 SKILL.md 不超过 8000 字（引擎仓库自查）。(6) 体积、主题、引用检查只在 `aip_version` ≥ 0.8.0 时生效。版本 0.8.0。
+- 理由: 按字符数不按行数：表格一行能有几 KB。只拆文件不写「什么时候读」，AI 为了稳妥会全读，反而更费；所以 `read_when` 必填。按改动的文件反查补「按说法猜不中」的漏，利用已有的代码注释锚点。检查按版本生效：没整理的仓库一查就红，连做拆分的那次提交都过不了 pre-commit。主题文件用一个目录不分 reference / conventions 两个：要区分的是「每次读」还是「按需读」，不是「是什么」还是「怎么干」。放弃的做法：会话开始给全量文件名清单（本身上万字）；必读预算算上 CLAUDE.md 里项目自己的内容（不归 AIP 管，只管托管块）；对 `.aip/` 以外的项目文档默认检查（结构由人定，改成 `size_check_paths` 可选开启）；引用检查扫全仓代码（慢，代码里的锚点交给 `relevant` 在改到时报）。
+- 影响: 新增 `aip_lookup.py`、`templates/topic-template.md`（由 reference-template 改）、`templates/item-reuse.md`、`reference/update.md`（SKILL.md 里 /aip update 的细节挪过去）；改 `_aip_common.py`、`aip_item.py`、`aip_check.py`、`aip_upkeep.py`、`aip_session_start.py`、`aip_init.py`、`aip_discovery.py`（托管块第 5 版）、`install_hooks.py`、conventions 和 config 模板、SKILL.md、`reference/` 下的 upgrade / init / closure / review-checklist；docs、README 同步。既有仓库按 `reference/upgrade.md` 的 0.8.0 一节整理。

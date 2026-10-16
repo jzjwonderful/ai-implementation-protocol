@@ -24,18 +24,17 @@ class Layout(unittest.TestCase):
 
     def test_missing_doc_and_dir(self):
         d = make_repo()
-        (d/".aip"/"reference.md").unlink()
+        (d/".aip"/"conventions.md").unlink()
         for p in (d/".aip"/"inbox").iterdir():
             p.unlink()
         (d/".aip"/"inbox").rmdir()
         viol = chk.run_all(d)
-        self.assertTrue(any("reference.md" in v for v in viol))
+        self.assertTrue(any("conventions.md" in v for v in viol))
         self.assertTrue(any("inbox/" in v for v in viol))
 
     def test_old_layout_points_to_migration_and_skips_the_rest(self):
         d = make_repo()
         (d/".aip"/"knowledge.md").write_text("# 旧\n", encoding="utf-8")
-        (d/".aip"/"reference.md").unlink()
         viol = chk.run_all(d)
         self.assertEqual(len(viol), 1)
         self.assertIn("aip_migrate.py", viol[0])

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 """Claude Code SessionStart 钩子入口：打印看板，外加检出状态、更新和到期提醒。
 
-看板直接从目录读：在建线全文、待处理旁路问题的文件名。不另存文件——存下来的看板
-没人刷新就会过期。知识、决策不列，用到时按文件名查。
+看板直接从目录读：在建线全文、待处理旁路问题的文件名、主题资料的目录（主题 + 什么时候读）。
+不另存文件——存下来的看板没人刷新就会过期。知识、决策、可复用实现不列（几百个文件名本身就
+上万字），用到时按文件名、关键词或改动的文件查。
 
 钩子从 stdin 收到 JSON，其中 source 是 startup / resume / clear / compact / fork。
 compact 表示上下文刚被压缩成摘要——这时 AI 的记忆最不可靠，所以除了打印看板，
@@ -17,8 +18,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _aip_common import AIP_DIR, OLD_LAYOUT_FILES, force_utf8, project_living_path, py_cmd, read_text, remove_old_board
+from _aip_common import (
+    AIP_DIR, OLD_LAYOUT_FILES, TOPIC_DIR, force_utf8, project_living_path, py_cmd, read_text, remove_old_board,
+)
 from aip_item import TYPES, list_items
+from aip_lookup import index_lines
 from aip_update import update_notice
 from aip_upkeep import reminders
 
@@ -36,7 +40,12 @@ def board(repo: Path) -> str:
     lines += [f"- {i.path.name}" for i in inbox[:INBOX_LIMIT]] or ["（没有）"]
     if len(inbox) > INBOX_LIMIT:
         lines.append(f"- ……还有 {len(inbox) - INBOX_LIMIT} 条：aip_item.py list --type inbox --status open")
-    lines.append("知识、决策按文件名查：ls .aip/knowledge | grep 关键词，或 aip_item.py list --grep 关键词")
+    topics = index_lines(repo)
+    if topics:
+        lines.append(f"## 主题资料（.aip/{TOPIC_DIR}/，按「什么时候读」挑跟当前任务有关的读，不要全读）")
+        lines += topics
+    lines.append("知识、决策、可复用实现按需查：aip_item.py list --grep 关键词；"
+                 "改代码前查相关的：aip_lookup.py relevant <要改的文件>")
     return "\n".join(lines)
 
 

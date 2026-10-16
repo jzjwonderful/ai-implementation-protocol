@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""条目：知识、决策、旁路问题、在建线，一条一个文件。
+"""条目：知识、决策、旁路问题、在建线、可复用实现，一条一个文件。
 
 文件名 `<时间戳>_<类型>_<状态>_<简述>.md`，比如
 `20260928-153012_knowledge_active_gbrain健康分是扣分制.md`。时间戳是创建时间，精确到秒；
@@ -11,6 +11,8 @@ from __future__ import annotations
 - 状态在文件名和文件头里各写一份：文件名方便按状态筛和排序，打开文件也能直接看到。
   改状态走本脚本，两处一起改；aip_check 查两处是否一致。
 - 并行分支各自新增条目是不同的文件，合并时不会冲突——这是不再按顺序发号的原因。
+- 文件头的 paths 写这条涉及哪些代码（路径或通配，逗号分隔）：改到这些文件时
+  aip_lookup.py relevant 会把它列出来，不靠 AI 开工时按任务字面猜中文件名。
 - 在建线做完就删文件，不留 done：线只写往前看的内容，做完没有可留的，过程在 git 里。
   收线放进这条线最后一个 MR：合入了线就没了，没合入主干上它还在，不用再单独提 MR 改状态。
 """
@@ -43,13 +45,18 @@ TYPES: dict[str, ItemType] = {
         ItemType("decision", "decisions", ("accepted", "superseded")),
         ItemType("inbox", "inbox", ("open", "closed")),
         ItemType("track", "tracks", ("active", "blocked", "paused"), remove_on=("done",)),
+        # 可复用实现：以前是 reference.md 里一张越写越长的表，每个分支都往表尾加一行、合并就冲突。
+        # paths 必填：改到这块代码时靠它被列出来。
+        ItemType("reuse", "reuse", ("active", "superseded"),
+                 required=("paths",), body_required=("钦定实现", "边界")),
     )
 }
 # 被取代的条目必须写明被谁取代
-SUPERSEDABLE = ("knowledge", "decision")
-DEFAULT_STATUS = {"knowledge": "draft", "decision": "accepted", "inbox": "open", "track": "active"}
-# 多值字段用逗号分隔：related 写别的条目的标识，aliases 是迁移前的旧编号
-HEAD_ORDER = ("title", "status", "category", "scope", "last_reviewed", "superseded_by",
+SUPERSEDABLE = ("knowledge", "decision", "reuse")
+DEFAULT_STATUS = {"knowledge": "draft", "decision": "accepted", "inbox": "open", "track": "active",
+                  "reuse": "active"}
+# 多值字段用逗号分隔：paths 写涉及的代码路径，related 写别的条目的标识，aliases 是迁移前的旧编号
+HEAD_ORDER = ("title", "status", "category", "scope", "paths", "last_reviewed", "superseded_by",
               "rule_id", "aliases", "related")
 
 STAMP_FORMAT = "%Y%m%d-%H%M%S"
@@ -289,10 +296,11 @@ def set_status(repo: Path, ref: str, status: str, by: str | None = None) -> Item
 
 
 def search(items: list[Item], keyword: str) -> list[Item]:
-    """按关键词筛：查标题、简述、分类、适用范围（分类和适用范围不在文件名里，光看文件名查不到）。"""
+    """按关键词筛：查标题、简述、分类、适用范围、涉及路径（这些多半不在文件名里，光看文件名查不到）。"""
     k = keyword.lower()
     return [i for i in items
-            if any(k in v.lower() for v in (i.title, i.slug, i.meta.get("category", ""), i.meta.get("scope", "")))]
+            if any(k in i.meta.get(f, "").lower() for f in ("category", "scope", "paths"))
+            or k in i.title.lower() or k in i.slug.lower()]
 
 
 def mark_reviewed(repo: Path, ref: str, day: date | None = None) -> Item:
@@ -316,7 +324,7 @@ def _print_list(items: list[Item]) -> None:
 
 def main() -> int:
     force_utf8()
-    ap = argparse.ArgumentParser(description="新建、改状态、查找 .aip/ 下的条目（知识 / 决策 / 旁路问题 / 在建线）。")
+    ap = argparse.ArgumentParser(description="新建、改状态、查找 .aip/ 下的条目（知识 / 决策 / 旁路问题 / 在建线 / 可复用实现）。")
     ap.add_argument("--repo-root", default=".")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -328,6 +336,7 @@ def main() -> int:
     p.add_argument("--status")
     p.add_argument("--category", help="知识条目的分类")
     p.add_argument("--scope", help="知识条目的适用范围")
+    p.add_argument("--paths", help="涉及哪些代码：路径或通配，逗号分隔（可复用实现必填）；改到这些文件时会被列出来")
 
     p = sub.add_parser("status", help="改状态（文件名和文件头一起改）；在建线改 done 就是删掉文件")
     p.add_argument("ref", help="完整的「时间戳_简述」、文件名或旧编号")
@@ -340,7 +349,7 @@ def main() -> int:
     p = sub.add_parser("list", help="列条目")
     p.add_argument("--type", choices=list(TYPES))
     p.add_argument("--status", action="append", help="只列这些状态，可写多次")
-    p.add_argument("--grep", help="关键词：在标题、简述、分类、适用范围里找，不分大小写")
+    p.add_argument("--grep", help="关键词：在标题、简述、分类、适用范围、涉及路径里找，不分大小写")
 
     p = sub.add_parser("show", help="打印一条的路径和内容")
     p.add_argument("ref")
@@ -356,7 +365,10 @@ def main() -> int:
             if a.type == "knowledge" and not (a.category and a.scope):
                 print("aip item：知识条目要写 --category（分类）和 --scope（适用范围），不写 aip_check 过不去")
                 return 1
-            meta = {k: v for k, v in (("category", a.category), ("scope", a.scope)) if v}
+            if a.type == "reuse" and not a.paths:
+                print("aip item：可复用实现要写 --paths（实现所在的文件），改到这块代码时靠它被列出来")
+                return 1
+            meta = {k: v for k, v in (("category", a.category), ("scope", a.scope), ("paths", a.paths)) if v}
             print(new_item(repo, a.type, a.title, a.status, a.slug, meta).path)
         elif a.cmd == "status":
             item = set_status(repo, a.ref, a.status, a.by)

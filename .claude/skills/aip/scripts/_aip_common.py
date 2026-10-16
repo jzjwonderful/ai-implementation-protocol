@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import fnmatch
 import json
+import re
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -21,8 +23,20 @@ def force_utf8() -> None:
 AIP_DIR = ".aip"
 
 # 项目级整篇文档（长期存在、整篇维护）。init 生成、check 校验存在。
-# 知识、决策、旁路问题、在建线是一条一个文件，放在各自目录下，见 aip_item.TYPES。
-PROJECT_FILES = ["reference.md", "conventions.md", "config.yaml"]
+# 知识、决策、旁路问题、在建线、可复用实现是一条一个文件，放在各自目录下，见 aip_item.TYPES。
+# conventions.md 每次动手前都要读，所以只放跨模块的铁律和不变量，体积有上限（aip_check 查）。
+PROJECT_FILES = ["conventions.md", "config.yaml"]
+
+# 按需读的主题资料：一个主题一个文件，文件名就是主题、不带时间戳（要让别人稳定引用）。
+# 文件头写 title、read_when（什么时候读）、paths（涉及哪些代码，可选）。
+# 会话开始只打印目录（主题 + 什么时候读），AI 挑跟当前任务有关的读，不整篇全读。
+TOPIC_DIR = "reference"
+# 0.8.0 之前的整篇参照，0.8.0 起拆进 TOPIC_DIR
+OLD_REFERENCE_FILE = "reference.md"
+
+# 这一版起有主题目录、体积检查和引用检查。仓库的 .aip/ 按这一版整理过（config.yaml 的
+# aip_version）才查：没拆的大文件一查就红，连做拆分的那次提交都过不了 pre-commit。
+SPLIT_LAYOUT_VERSION = (0, 8, 0)
 
 # 0.5.0–0.6.x 生成的看板文件。看板现在由会话开始钩子直接按目录打印、不落盘：
 # 存下来的文件没人刷新就会过期，AI 读到旧看板会以为没有在建线。
@@ -103,6 +117,41 @@ def remove_old_board(target_repo: Path) -> bool:
         return False
     p.unlink()
     return True
+
+
+AIP_VERSION_RE = re.compile(r"^aip_version:\s*[\"']?([^\"'#\s]*)", re.M)
+
+
+def version_tuple(text: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", text))
+
+
+def aip_version(target_repo: Path) -> tuple[int, ...]:
+    """这个仓库的 .aip/ 按哪一版模板整理过；没写（0.7.0 之前建的）是空元组。"""
+    cfg = project_living_path(target_repo, "config.yaml")
+    if not cfg.exists():
+        return ()
+    m = AIP_VERSION_RE.search(read_text(cfg))
+    return version_tuple(m.group(1)) if m else ()
+
+
+def split_layout(target_repo: Path) -> bool:
+    """.aip/ 已经按主题拆分整理过（0.8.0 及以后的模板）。"""
+    return aip_version(target_repo) >= SPLIT_LAYOUT_VERSION
+
+
+def resolve_path(p: str, files: list[str]) -> list[str]:
+    """条目里写的路径 → 仓库里对应的文件。
+
+    允许写部分路径（如 `routers/admin.py`），目录算它下面全部；带 * ? 的按通配匹配，* 可以跨目录。
+    """
+    p = p.strip().rstrip("/")
+    if any(c in p for c in "*?["):
+        return [f for f in files if fnmatch.fnmatchcase(f, p) or fnmatch.fnmatchcase(f, "*/" + p)]
+    exact = [f for f in files if f == p or f.startswith(p + "/")]
+    if exact:
+        return exact
+    return [f for f in files if f.endswith("/" + p) or ("/" + p + "/") in ("/" + f)]
 
 
 def py_cmd() -> str:

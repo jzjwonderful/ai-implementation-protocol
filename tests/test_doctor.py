@@ -19,10 +19,10 @@ class ProjectHealth(unittest.TestCase):
     def test_missing_doc_is_error_with_fix(self):
         d = Path(tempfile.mkdtemp())
         aip_init.scaffold(d, ENGINE)
-        (d/".aip"/"reference.md").unlink()
+        (d/".aip"/"conventions.md").unlink()
         items = doc.check_project(d, ENGINE)
         self.assertIn("ERROR", levels(items))
-        self.assertTrue(any("reference.md" in msg for _, msg, _ in items))
+        self.assertTrue(any("conventions.md" in msg for _, msg, _ in items))
 
     def test_old_layout_is_error_pointing_to_migration(self):
         d = Path(tempfile.mkdtemp()); (d/".aip").mkdir()

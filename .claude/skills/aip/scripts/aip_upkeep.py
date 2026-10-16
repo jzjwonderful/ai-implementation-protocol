@@ -18,7 +18,10 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from _aip_common import force_utf8, project_living_path, py_cmd, read_text
+from _aip_common import (
+    OLD_REFERENCE_FILE, TOPIC_DIR, aip_root, aip_version, force_utf8, project_living_path, py_cmd,
+    read_text, resolve_path, version_tuple,
+)
 from aip_discovery import BEGIN as GUIDE_BEGIN, END as GUIDE_END
 from aip_item import ENGINE_ROOT, Item, list_items
 
@@ -33,7 +36,6 @@ TRACK_LINE_LIMIT = 12
 
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})")
 REVIEW_KEY_RE = re.compile(r"^review_last_full:\s*[\"']?([^\"'#\s]*)", re.M)
-AIP_VERSION_RE = re.compile(r"^aip_version:\s*[\"']?([^\"'#\s]*)", re.M)
 # 升级说明里每个要调整既有仓库的版本是一个二级标题，如「## 0.7.0」
 UPGRADE_DOC = ENGINE_ROOT / "reference" / "upgrade.md"
 UPGRADE_HEAD_RE = re.compile(r"^## (\d+(?:\.\d+)*)\b", re.M)
@@ -131,14 +133,6 @@ def _git(repo: Path, args: list[str]) -> str | None:
 def tracked_files(repo: Path) -> list[str] | None:
     out = _git(repo, ["ls-files"])
     return None if out is None else [l for l in out.splitlines() if l]
-
-
-def resolve_path(p: str, files: list[str]) -> list[str]:
-    """条目里写的路径 → 仓库里对应的文件（允许写部分路径，如 `routers/admin.py`；目录算它下面全部）。"""
-    exact = [f for f in files if f == p or f.startswith(p + "/")]
-    if exact:
-        return exact
-    return [f for f in files if f.endswith("/" + p) or ("/" + p + "/") in ("/" + f)]
 
 
 def commits_since(repo: Path, since: date) -> list[tuple[date, set[str]]] | None:
@@ -254,6 +248,11 @@ class Due:
     text: str
 
 
+def _paths_text(item: Item) -> str:
+    # 文件头 paths 里写的也是条目涉及的代码；带通配的 refs 会跳过
+    return " ".join(f"`{p}`" for p in item.values("paths"))
+
+
 def knowledge_dues(repo: Path, today: date) -> list[Due]:
     """知识条目：每条只归到最要紧的一类——引用没了 > 代码改过 > 按时间到期；外加 draft。"""
     items = list_items(repo, "knowledge")
@@ -274,7 +273,7 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
 
     dated = [seen for _, seen in active if seen]
     history = commits_since(repo, min(dated)) if dated else []
-    cited_refs = {i.id: refs(i.meta.get("title", "") + "\n" + i.body) for i, _ in active}
+    cited_refs = {i.id: refs(i.meta.get("title", "") + "\n" + i.body + "\n" + _paths_text(i)) for i, _ in active}
     all_symbols = sorted({s for _, syms in cited_refs.values() for s in syms})
     symbols_now = symbols_in_code(repo, all_symbols)
     gone = gone_since(repo, {i.id: (seen, *cited_refs[i.id]) for i, seen in active if seen},
@@ -296,19 +295,40 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
     return out
 
 
+def doc_files(repo: Path) -> list[Path]:
+    """整篇维护的文档：conventions.md、主题文件，还没拆的旧 reference.md。"""
+    docs = [project_living_path(repo, n) for n in ("conventions.md", OLD_REFERENCE_FILE)]
+    topics = aip_root(repo) / TOPIC_DIR
+    docs += sorted(topics.glob("*.md")) if topics.is_dir() else []
+    return [d for d in docs if d.is_file()]
+
+
 def reference_dues(repo: Path) -> list[Due]:
-    """reference.md 里引用的文件和代码名字：上次整份 review 时还有、现在没了的。"""
-    ref = project_living_path(repo, "reference.md")
+    """整篇文档里引用的文件和代码名字：上次整份 review 时还有、现在没了的。"""
+    docs = doc_files(repo)
     _, last = last_full_review(repo)
-    files = tracked_files(repo) if ref.exists() and last else None
+    files = tracked_files(repo) if docs and last else None
     if files is None:
         return []
-    paths, symbols = refs(read_text(ref))
-    gone = gone_since(repo, {"reference": (last, paths, symbols)}, files,
-                      symbols_in_code(repo, symbols)).get("reference")
-    if not gone:
+    cited = {d.relative_to(repo).as_posix(): refs(read_text(d)) for d in docs}
+    symbols = sorted({s for _, syms in cited.values() for s in syms})
+    gone = gone_since(repo, {k: (last, paths, syms) for k, (paths, syms) in cited.items()}, files,
+                      symbols_in_code(repo, symbols))
+    return [Due(2, "整篇文档", f"{k} 引用的 {_names(v)} 在上次整份 review 后没了：改成现在的名字，或删掉这项")
+            for k, v in gone.items()]
+
+
+def reuse_dues(repo: Path) -> list[Due]:
+    """可复用实现：建条目那天还在、现在没了的实现（改名、搬家或删了），再推荐它就是误导。"""
+    items = [i for i in list_items(repo, "reuse") if i.status == "active"]
+    files = tracked_files(repo) if items else None
+    if files is None:
         return []
-    return [Due(2, "reference", f"reference.md 引用的 {_names(gone)} 在上次整份 review 后没了：改成现在的名字，或删掉这项")]
+    cited = {i.id: refs(i.title + "\n" + i.body + "\n" + _paths_text(i)) for i in items}
+    symbols = sorted({s for _, syms in cited.values() for s in syms})
+    gone = gone_since(repo, {i.id: (i.created, *cited[i.id]) for i in items}, files, symbols_in_code(repo, symbols))
+    return [Due(1, "引用没了", f"{k}：钦定实现 {_names(v)} 在仓库里找不到了。改成现在的位置，"
+                "或 `aip_item.py status` 改 superseded") for k, v in gone.items()]
 
 
 def full_review_dues(repo: Path, today: date) -> list[Due]:
@@ -350,21 +370,15 @@ def guide_dues(repo: Path) -> list[Due]:
     return out
 
 
-def _version(text: str) -> tuple[int, ...]:
-    return tuple(int(n) for n in re.findall(r"\d+", text))
-
-
 def pending_upgrades(repo: Path) -> list[str]:
     """升级说明里比这个仓库 .aip/ 整理时的版本（config.yaml 的 aip_version）新的那些版本。
 
     没写 aip_version 的是 0.7.0 之前建的仓库，所有调整都要做。
     """
-    cfg = project_living_path(repo, "config.yaml")
-    if not cfg.exists() or not UPGRADE_DOC.exists():
+    if not project_living_path(repo, "config.yaml").exists() or not UPGRADE_DOC.exists():
         return []
-    m = AIP_VERSION_RE.search(read_text(cfg))
-    done = _version(m.group(1)) if m else ()
-    return [v for v in UPGRADE_HEAD_RE.findall(read_text(UPGRADE_DOC)) if _version(v) > done]
+    done = aip_version(repo)
+    return [v for v in UPGRADE_HEAD_RE.findall(read_text(UPGRADE_DOC)) if version_tuple(v) > done]
 
 
 def upgrade_dues(repo: Path) -> list[Due]:
@@ -373,7 +387,7 @@ def upgrade_dues(repo: Path) -> list[Due]:
         return []
     return [Due(0, "升级整理", f"AIP 升级后这个仓库的 .aip/ 还没按新模板整理（{'、'.join(pending)} 的调整没做）："
                 "先跟用户说一声，再按 aip 技能 reference/upgrade.md 做，做完把 config.yaml 的 aip_version "
-                f"改成 {max(pending, key=_version)}")]
+                f"改成 {max(pending, key=version_tuple)}")]
 
 
 def track_dues(repo: Path) -> list[Due]:
@@ -388,7 +402,7 @@ def track_dues(repo: Path) -> list[Due]:
 
 def collect(repo: Path, today: date | None = None) -> list[Due]:
     today = today or date.today()
-    dues = (upgrade_dues(repo) + guide_dues(repo) + knowledge_dues(repo, today) + reference_dues(repo)
+    dues = (upgrade_dues(repo) + guide_dues(repo) + knowledge_dues(repo, today) + reuse_dues(repo) + reference_dues(repo)
             + full_review_dues(repo, today) + track_dues(repo))
     return sorted(dues, key=lambda d: d.priority)
 

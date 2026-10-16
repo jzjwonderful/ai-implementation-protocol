@@ -3,7 +3,7 @@ import argparse
 from datetime import date
 from pathlib import Path
 from _aip_common import (
-    OLD_LAYOUT_FILES, PROJECT_FILES, aip_root, ensure_dir, force_utf8, load_template,
+    OLD_LAYOUT_FILES, PROJECT_FILES, TOPIC_DIR, aip_root, ensure_dir, force_utf8, load_template,
     project_living_path, read_text, remove_old_board, write_text,
 )
 from aip_discovery import upsert_managed_block
@@ -11,7 +11,6 @@ from aip_item import TYPES, type_dir
 
 # 整篇文档名 → 模板名。零配置：不向用户索取工程信息。
 TEMPLATE_OF = {
-    "reference.md": "reference-template.md",
     "conventions.md": "conventions-template.md",
     "config.yaml": "config-template.yaml",
 }
@@ -33,8 +32,8 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
                         .replace('aip_version: ""', f'aip_version: "{version}"'))
         write_text(dst, text)
         created.append(dst)
-    for t in TYPES:
-        keep = type_dir(repo, t) / KEEP_FILE
+    # 主题文件不预建：有内容时 AI 按 templates/topic-template.md 写，空文件只会占目录
+    for keep in [type_dir(repo, t) / KEEP_FILE for t in TYPES] + [root / TOPIC_DIR / KEEP_FILE]:
         if not keep.exists():
             write_text(keep, "")
             created.append(keep)

@@ -95,15 +95,17 @@ class Upgrade(unittest.TestCase):
         self.assertIn("reference/upgrade.md", due[0]); self.assertIn("0.7.0", due[0])
 
     def test_only_versions_newer_than_aip_version_are_pending(self):
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), [])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0", "0.8.0"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), ["0.8.0"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.0"\n', tidied=False)), [])
         self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.10.0"\n', tidied=False)), [])
 
     def test_doc_headings_are_versions(self):
         heads = up.UPGRADE_HEAD_RE.findall(up.UPGRADE_DOC.read_text(encoding="utf-8"))
         self.assertIn("0.7.0", heads)
+        self.assertIn("0.8.0", heads)
         version = (ENGINE/"VERSION").read_text(encoding="utf-8").strip()
-        self.assertTrue(all(up._version(h) <= up._version(version) for h in heads), heads)
+        self.assertTrue(all(up.version_tuple(h) <= up.version_tuple(version) for h in heads), heads)
 
 
 class Guides(unittest.TestCase):
