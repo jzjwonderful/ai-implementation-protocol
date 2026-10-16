@@ -6,10 +6,13 @@ from __future__ import annotations
 `.aip/reference/<主题>.md`，会话开始只打印目录（主题 + 什么时候读），AI 挑相关的读。
 
 光靠 AI 开工时按任务字面挑文件会漏：很多坑和任务的说法对不上，改动却正好踩在上面。
-所以再按改动的文件反查一遍——主题和条目文件头里的 paths、条目正文里用反引号写的文件路径
-（和到期提醒认的一样）、改动文件里写的条目锚点（`.aip/knowledge/<时间戳_简述>`）——
-改代码前、提交前都能跑，只列出来，不挡任何事。提交前只看改动处附近的锚点：大文档改两行，
-不该把整篇里提到的条目全列出来。
+所以再按改动的文件反查一遍——主题和条目文件头里的 paths、条目正文里用反引号写的文件路径、
+改动文件里写的条目锚点（`.aip/knowledge/<时间戳_简述>`）——改代码前、提交前都能跑，只列出来，
+不挡任何事。提交前只看改动处附近的锚点：大文档改两行，不该把整篇里提到的条目全列出来。
+
+正文里的路径比文件头的松：决策的「影响」一栏会顺手点名一串文件，正文也常提目录、只写文件名。
+所以正文路径只认带目录的文件路径，只拿改动里的代码文件去比——改一句文档的措辞、改一条条目，
+不该列出十几条提过它的决策。文件头的 paths 是专门写给反查用的，照常比所有改动。
 """
 
 import argparse
@@ -20,7 +23,7 @@ from pathlib import Path
 
 from _aip_common import TOPIC_DIR, aip_root, force_utf8, read_text, resolve_path
 from aip_item import Item, find, list_items, split_front
-from aip_upkeep import refs
+from aip_upkeep import BACKTICK, _clean_path, is_code
 
 # 什么时候读写一句话就够；写长了目录本身又成了要整读的大文件
 READ_WHEN_LIMIT = 80
@@ -102,9 +105,14 @@ def anchors_in(repo: Path, rel: str, text: str | None = None) -> list[str]:
     return list(dict.fromkeys(m.group(2).removesuffix(".md") for m in ANCHOR.finditer(text)))
 
 
-def item_paths(item: Item) -> list[str]:
-    """条目涉及的代码：文件头 paths，加上正文里用反引号写的文件路径。"""
-    return item.values("paths") + refs(item.title + "\n" + item.body)[0]
+def body_paths(repo: Path, item: Item) -> list[str]:
+    """条目正文（含标题）里用反引号写的、带目录的文件路径；只写文件名的（`SKILL.md`）和目录不算。"""
+    out = []
+    for tok in BACKTICK.findall(item.title + "\n" + item.body):
+        p = _clean_path(tok)
+        if p and "/" in p and not tok.strip().endswith("/") and not (repo / p).is_dir():
+            out.append(p)
+    return list(dict.fromkeys(out))
 
 
 def relevant(repo: Path, changed: list[str], hunks: dict[str, str] | None = None) -> tuple[list[Hit], list[str]]:
@@ -124,10 +132,11 @@ def relevant(repo: Path, changed: list[str], hunks: dict[str, str] | None = None
         if files:
             add(_rel(repo, t.path), t.title, f"{t.read_when or '涉及'}：{', '.join(files[:3])}")
     items = list_items(repo)
+    code = [c for c in changed if is_code(c)]
     for i in items:
         if i.status in INACTIVE or i.type == "track":
             continue
-        files = _path_hits(item_paths(i), changed)
+        files = sorted(set(_path_hits(i.values("paths"), changed)) | set(_path_hits(body_paths(repo, i), code)))
         if files:
             add(_rel(repo, i.path), i.title, f"涉及 {', '.join(files[:3])}")
     broken = []

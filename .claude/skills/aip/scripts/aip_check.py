@@ -127,30 +127,36 @@ AIP_PATH_REF = re.compile(r"\.aip/[^\s`'\"<>()（）\[\]「」，。；、*]+?\.
 # 「conventions.md「铁律」」「.aip/reference/环境变量.md 的「代理」」这种写法
 SECTION_REF = re.compile(r"((?:\.aip/)?(?:[^\s`'\"<>()（）\[\]「」/，。；、]+/)?[^\s`'\"<>()（）\[\]「」/，。；、]+\.md)`?\s*(?:的|里的|中的)?「([^」]+)」")
 
-# 「本文「某节」」：拆分后最容易悄悄失效的文件内指针
-SELF_REF = re.compile(r"本文\s*(?:的|里的|中的)?「([^」]+)」")
+# 「本文「某节」」：拆分后最容易悄悄失效的文件内指针。「本文的「X」」常只是个说法（「和本文的「邀请加入」
+# 是两回事」），带「的」时要后面跟着「一节」「小节」这类字才算指针。
+SELF_REF = re.compile(r"本文(?:\s*「([^」]+)」|\s*(?:的|里的|中的)「([^」]+)」\s*(?:这|那)?一?(?:小节|章节|节|章))")
 
-def link_sources(repo: Path) -> list[Path]:
-    """查引用的文件：每次读的、按需读的、还在用的条目；0.8.1 起再加 .aip/ 下条目以外的文档（如 specs/）、
-    size_check_paths 列的文档、项目自己的技能。
+def link_sources(repo: Path) -> tuple[list[Path], list[Path]]:
+    """查引用的文件，分两类返回：(AI 照着走的, 记录类文档)。
 
+    照着走的：每次读的、按需读的、还在用的条目；0.8.1 起加项目自己的技能。里面的引用全查。
+    记录类：0.8.1 起加的 .aip/ 下条目以外的文档（如 specs/）、size_check_paths 列的文档。规格和设计记录里
+    「当时改了 .aip/reference.md」这种历史写法很常见，只提到一个路径不算错；只查条目锚点和「某文件「某节」」
+    这类让人跳过去读的指针。
     不查的：决策和作废的条目是历史记录；旁路问题本来就在记「哪里还指着旧东西」，提到旧路径不算错。
     """
     root = aip_root(repo)
     if not root.is_dir():
-        return []
-    out = [project_living_path(repo, MUST_READ_FILE)] + [t.path for t in list_topics(repo)]
-    out += [repo / n for n in ("CLAUDE.md", "AGENTS.md")]
+        return [], []
+    follow = [project_living_path(repo, MUST_READ_FILE)] + [t.path for t in list_topics(repo)]
+    follow += [repo / n for n in ("CLAUDE.md", "AGENTS.md")]
     for i in _valid_items(repo):
         if i.type not in ("decision", "inbox") and i.status not in ("superseded", "fixed"):
-            out.append(i.path)
+            follow.append(i.path)
+    records: list[Path] = []
     if aip_version(repo) >= WIDER_CHECK_VERSION:
+        follow += project_skill_files(repo, "**/*.md")
         folders = {t.folder for t in TYPES.values()}
-        out += [p for p in root.rglob("*.md") if p.relative_to(root).parts[0] not in folders]
+        records += [p for p in root.rglob("*.md") if p.relative_to(root).parts[0] not in folders]
         for pattern in size_check_paths(repo):
-            out += [p for p in repo.glob(pattern) if p.suffix == ".md"]
-        out += project_skill_files(repo, "**/*.md")
-    return sorted({p for p in out if p.is_file()})
+            records += [p for p in repo.glob(pattern) if p.suffix == ".md"]
+    follow_set = {p for p in follow if p.is_file()}
+    return sorted(follow_set), sorted({p for p in records if p.is_file()} - follow_set)
 
 def _headings(path: Path) -> list[str]:
     return [l.lstrip("#").strip() for l in read_text(path).splitlines() if l.startswith("#")]
@@ -161,20 +167,21 @@ def check_links(repo: Path) -> list[str]:
     root = aip_root(repo)
     ids = {i.id for i in _valid_items(repo)} | {i.path.stem for i in _valid_items(repo)}
     out = []
-    for src in link_sources(repo):
+    follow, records = link_sources(repo)
+    for src in follow + records:
         rel = src.relative_to(repo).as_posix()
         text = read_text(src)
         for m in ANCHOR.finditer(text):
             ref = m.group(2).removesuffix(".md")
             if ref not in ids:
                 out.append(f"{rel} 引用的条目「{m.group(0)}」不存在（要写完整的「时间戳_简述」）")
-        for ref in dict.fromkeys(AIP_PATH_REF.findall(text)):
+        for ref in dict.fromkeys(AIP_PATH_REF.findall(text)) if src in follow else ():
             if ANCHOR.match(ref):
                 continue
             if not (repo / ref).is_file():
                 out.append(f"{rel} 引用的 {ref} 不存在")
         own = _headings(src)
-        for heading in SELF_REF.findall(text):
+        for heading in (a or b for a, b in SELF_REF.findall(text)):
             if not any(heading in h for h in own):
                 out.append(f"{rel} 里写的「本文「{heading}」」找不到这一节（拆分或改标题后没跟着改）")
         for name, heading in SECTION_REF.findall(text):

@@ -19,12 +19,12 @@ from datetime import date
 from pathlib import Path
 
 from _aip_common import (
-    OLD_REFERENCE_FILE, TOPIC_DIR, aip_root, aip_version, force_utf8, project_living_path, py_cmd,
+    OLD_REFERENCE_FILE, SKILL_NAMES, TOPIC_DIR, aip_root, aip_version, force_utf8, project_living_path, py_cmd,
     read_text, resolve_path, version_tuple,
 )
 from aip_discovery import BEGIN as GUIDE_BEGIN, END as GUIDE_END
 from aip_item import ENGINE_ROOT, Item, list_items
-from aip_size import near_limits
+from aip_size import PROJECT_SKILL_ROOTS, near_limits
 
 KNOWLEDGE_STALE_DAYS = 90
 FULL_REVIEW_DAYS = 30
@@ -40,6 +40,8 @@ REVIEW_KEY_RE = re.compile(r"^review_last_full:\s*[\"']?([^\"'#\s]*)", re.M)
 # 升级说明里每个要调整既有仓库的版本是一个二级标题，如「## 0.7.0」
 UPGRADE_DOC = ENGINE_ROOT / "reference" / "upgrade.md"
 UPGRADE_HEAD_RE = re.compile(r"^## (\d+(?:\.\d+)*)\b", re.M)
+# 引擎仓库里技能的源；有它的仓库，装进来的 aip 拷贝只是源的副本
+ENGINE_SOURCE = "plugins/ai-implementation-protocol/skills/aip"
 
 
 def parse_day(value: str) -> date | None:
@@ -208,6 +210,17 @@ def is_code(path: str) -> bool:
     return not (path.endswith(".md") or path.startswith((".aip/", "docs/")))
 
 
+def engine_copies(repo: Path) -> tuple[str, ...]:
+    """引擎仓库里装进来的 aip 技能拷贝的目录前缀。
+
+    每次改引擎都要重装拷贝：把它们算成代码，引用了拷贝的知识条目每改一次引擎就被提醒一次，
+    而真正的改动已经在源那边算过了。别的仓库没有源，引擎升级就是它们的代码改了，照常算。
+    """
+    if not (repo / ENGINE_SOURCE).is_dir():
+        return ()
+    return tuple(f"{root}/{name}/" for root in PROJECT_SKILL_ROOTS for name in SKILL_NAMES)
+
+
 def gone_since(repo: Path, asks: dict[str, tuple[date, list[str], list[str]]],
                files_now: list[str], symbols_now: set[str] | None) -> dict[str, list[str]]:
     """每一问（复核日期, 文件路径, 代码名字）里：那天仓库里还有、现在没了的。
@@ -272,6 +285,7 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
                 out.append(Due(5, "到期", f"{i.id}：超过 {KNOWLEDGE_STALE_DAYS} 天没复核。{fix}"))
         return out
 
+    copies = engine_copies(repo)
     dated = [seen for _, seen in active if seen]
     history = commits_since(repo, min(dated)) if dated else []
     cited_refs = {i.id: refs(i.meta.get("title", "") + "\n" + i.body + "\n" + _paths_text(i)) for i, _ in active}
@@ -285,7 +299,8 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
             out.append(Due(5, "到期", f"{i.id}：最后复核不是日期，按到期处理。{fix}"))
         elif i.id in gone:
             out.append(Due(1, "引用没了", f"{i.id}：引用的 {_names(gone[i.id])} 在仓库里找不到了（改名、搬家或删了）。{fix}"))
-        elif cited := sorted({f for p in paths for f in resolve_path(p, files) if is_code(f)}):
+        elif cited := sorted({f for p in paths for f in resolve_path(p, files)
+                                if is_code(f) and not f.startswith(copies)}):
             touched = sorted({f for d, names in (history or []) if d > seen for f in names if f in cited})
             if touched:
                 out.append(Due(2, "代码改过", f"{i.id}：引用的 {_names(touched)} 在 {seen} 复核之后改过。{fix}"))
