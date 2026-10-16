@@ -81,11 +81,26 @@ def _write_source(aip_dir: Path, data: dict) -> Path:
     return path
 
 
+def main_worktree(path: Path) -> Path:
+    """装在某个 git worktree 里时记主工作区：worktree 用完就删，记它的路径以后就指空了。"""
+    path = path.resolve()
+    git = path / ".git"
+    if git.is_file():
+        for line in read_text(git).splitlines():
+            gitdir = line.partition("gitdir:")[2].strip()
+            if gitdir:
+                p = Path(gitdir)
+                p = p if p.is_absolute() else (path / p).resolve()
+                if p.parent.name == "worktrees":  # <主工作区>/.git/worktrees/<名字>
+                    return p.parent.parent.parent
+    return path
+
+
 def write_install_source(aip_dir: Path, source_repo: Path, scope: str, target: Path | None = None) -> Path:
     """安装器调用：在装好的 aip 技能目录里记下它从哪来、装在哪。"""
     data = describe_source(source_repo)
     data["scope"] = scope
-    data["target"] = str(target.resolve()) if target else ""
+    data["target"] = str(main_worktree(target)) if target else ""
     return _write_source(aip_dir, data)
 
 

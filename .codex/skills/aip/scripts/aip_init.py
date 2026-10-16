@@ -6,7 +6,7 @@ from _aip_common import (
     OLD_LAYOUT_FILES, PROJECT_FILES, TOPIC_DIR, aip_root, ensure_dir, force_utf8, load_template,
     project_living_path, read_text, remove_old_board, write_text,
 )
-from aip_discovery import upsert_managed_block
+from aip_discovery import BEGIN, upsert_managed_block
 from aip_item import TYPES, type_dir
 
 # 整篇文档名 → 模板名。零配置：不向用户索取工程信息。
@@ -34,11 +34,21 @@ def scaffold(repo: Path, engine_root: Path) -> list[Path]:
         created.append(dst)
     # 主题文件不预建：有内容时 AI 按 templates/topic-template.md 写，空文件只会占目录
     for keep in [type_dir(repo, t) / KEEP_FILE for t in TYPES] + [root / TOPIC_DIR / KEEP_FILE]:
-        if not keep.exists():
+        if not keep.exists() and not (keep.parent.is_dir() and any(keep.parent.iterdir())):
             write_text(keep, "")
             created.append(keep)
     remove_old_board(repo)
     return created
+
+def guide_files(repo: Path) -> list[str]:
+    """要写托管块的说明文件。CLAUDE.md 只是引用 AGENTS.md（写了 `@AGENTS.md`）时不写它：
+    托管块在 AGENTS.md 里，Claude Code 读 CLAUDE.md 时会一起读进来，再写一份就重复了。"""
+    claude = repo / "CLAUDE.md"
+    if claude.is_file():
+        text = read_text(claude)
+        if BEGIN not in text and any(l.strip() == "@AGENTS.md" for l in text.splitlines()):
+            return ["AGENTS.md"]
+    return ["CLAUDE.md", "AGENTS.md"]
 
 def main() -> int:
     force_utf8()
@@ -53,7 +63,7 @@ def main() -> int:
         print(f"这个仓库的 .aip/ 还是旧格式（{'、'.join(old)}）：先跑 {engine.as_posix()}/scripts/aip_migrate.py 迁移，再 init。")
         return 1
     scaffold(repo, engine)
-    for guide in ["CLAUDE.md", "AGENTS.md"]:
+    for guide in guide_files(repo):
         upsert_managed_block(repo / guide)
     if not a.no_hooks and (repo / ".git").exists():
         import install_hooks

@@ -37,6 +37,9 @@ OLD_REFERENCE_FILE = "reference.md"
 # 这一版起有主题目录、体积检查和引用检查。仓库的 .aip/ 按这一版整理过（config.yaml 的
 # aip_version）才查：没拆的大文件一查就红，连做拆分的那次提交都过不了 pre-commit。
 SPLIT_LAYOUT_VERSION = (0, 8, 0)
+# 这一版起体积和引用也查项目自己的技能、size_check_paths 列的文档、.aip/ 下条目以外的文档（如 specs/）。
+# 同样按 aip_version 才查：0.8.0 整理过的仓库里，这些地方原有的大文件和旧引用一查就红。
+WIDER_CHECK_VERSION = (0, 8, 1)
 
 # 0.5.0–0.6.x 生成的看板文件。看板现在由会话开始钩子直接按目录打印、不落盘：
 # 存下来的文件没人刷新就会过期，AI 读到旧看板会以为没有在建线。

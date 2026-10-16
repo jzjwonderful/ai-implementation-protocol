@@ -3,7 +3,7 @@ title: 引擎搬家后合并旧分支，危险的不是 git 冲突而是没冲�
 status: active
 category: build
 scope: 任何「一侧改布局、另一侧加功能」的合并。解完冲突要额外做两件事：全库搜老路径字符串，以及把装/跑的全链路真跑一遍（本次是 install_all → aip_init → aip_check → aip_doctor）
-last_reviewed: 2026-10-01
+last_reviewed: 2026-10-16
 aliases: K-004
 ---
 

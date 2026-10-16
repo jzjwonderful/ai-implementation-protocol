@@ -5,10 +5,11 @@ import re
 from pathlib import Path
 from _aip_common import (
     FORBIDDEN_SLOT_FILENAMES, OLD_LAYOUT_FILES, OLD_REFERENCE_FILE, PROJECT_FILES, SCAN_PRUNE_DIRS, TOPIC_DIR,
-    aip_root, force_utf8, project_living_path, py_cmd, read_text, split_layout,
+    WIDER_CHECK_VERSION, aip_root, aip_version, force_utf8, project_living_path, py_cmd, read_text, split_layout,
 )
 from aip_item import SUPERSEDABLE, TYPES, Item, item_files, parse_name, read_item, type_dir
 from aip_lookup import ANCHOR, READ_WHEN_LIMIT, list_topics, topic_dir
+from aip_size import MUST_READ_FILE, over_limits, project_skill_files, size_check_paths
 from aip_upkeep import parse_day, reminders
 
 STAMP_PREFIX = re.compile(r"^\d{8}-\d{6}_")
@@ -104,70 +105,8 @@ def check_no_orphan_slots(repo: Path) -> list[str]:
             out.append(f"发现旧机制残留/未迁移文件: {path.relative_to(repo)}")
     return out
 
-# ---------- 体积：每次都读的封顶，按需读的也不能大到读一次就占满上下文 ----------
-# 数值来自真实项目：整读 49KB 的 reference.md 一次要 2.5–3 万 token，大半和手上任务无关。
-# 按字符数算不按行数：表格一行能塞几 KB。
-MUST_READ_FILE = "conventions.md"
-MUST_READ_LIMIT = 8000          # 每次动手前都读的 conventions.md，整篇字符数上限
-SECTION_LIMIT = 3000            # conventions.md 单节（## 开头）字符数上限
-ON_DEMAND_LIMIT = 30000         # 按需读的单个文件字符数上限
-LINE_LIMIT = 1000               # 单行字符数：超了多半是表格格子或一条要点里塞了一整段话
-TABLE_ROW_LIMIT = 30            # 表格行数：超了说明是追加型内容，该一条一个文件
-SIZE_PATHS_RE = re.compile(r"^size_check_paths:\s*[\"']?([^\"'#\n]*)", re.M)
-
-def _sections(text: str) -> list[tuple[str, str]]:
-    out: list[tuple[str, str]] = []
-    for part in re.split(r"(?m)^(?=## )", text):
-        if part.startswith("## "):
-            out.append((part.splitlines()[0][3:].strip(), part))
-    return out
-
-def _longest_table(text: str) -> int:
-    best = run = 0
-    for line in text.splitlines():
-        if line.lstrip().startswith("|"):
-            run += 1
-            best = max(best, run)
-        else:
-            run = 0
-    return max(best - 2, 0)  # 表头和分隔行不算
-
-def size_targets(repo: Path) -> list[Path]:
-    """要查体积的文件：.aip/ 下全部 .md，加上 config.yaml 里 size_check_paths 列的（逗号分隔的通配）。"""
-    files = {p for p in aip_root(repo).rglob("*.md") if p.is_file()}
-    cfg = project_living_path(repo, "config.yaml")
-    m = SIZE_PATHS_RE.search(read_text(cfg)) if cfg.exists() else None
-    for pattern in (m.group(1).split(",") if m else []):
-        if pattern.strip():
-            files |= {p for p in repo.glob(pattern.strip()) if p.is_file() and p.suffix == ".md"}
-    return sorted(files)
-
 def check_sizes(repo: Path) -> list[str]:
-    if not split_layout(repo):
-        return []
-    out = []
-    must = project_living_path(repo, MUST_READ_FILE)
-    for path in size_targets(repo):
-        rel = path.relative_to(repo).as_posix()
-        text = read_text(path)
-        if path == must:
-            if len(text) > MUST_READ_LIMIT:
-                out.append(f"{rel} 有 {len(text)} 字（上限 {MUST_READ_LIMIT}）：它每次动手前都要读，只留跨模块的铁律和不变量，"
-                           f"只跟某块代码有关的挪到 .aip/{TOPIC_DIR}/ 的主题文件")
-            out += [f"{rel} 的「{name}」一节有 {len(body)} 字（上限 {SECTION_LIMIT}）：拆到主题文件"
-                    for name, body in _sections(text) if len(body) > SECTION_LIMIT]
-        elif len(text) > ON_DEMAND_LIMIT:
-            out.append(f"{rel} 有 {len(text)} 字（上限 {ON_DEMAND_LIMIT}）：按主题拆成几个文件；"
-                       "末尾不断追加的记录（状态注记、变更记录）挪成一条一个文件")
-        long_lines = [n for n, line in enumerate(text.splitlines(), 1) if len(line) > LINE_LIMIT]
-        if long_lines:
-            out.append(f"{rel} 第 {long_lines[0]} 行超过 {LINE_LIMIT} 字（共 {len(long_lines)} 行）：一行里塞了整段话"
-                       "（表格格子或一条要点），拆成多行、多个要点，或挪到单独的文件")
-        rows = _longest_table(text)
-        if rows > TABLE_ROW_LIMIT:
-            out.append(f"{rel} 有一张 {rows} 行的表（上限 {TABLE_ROW_LIMIT}）：往表尾追加的内容改成一条一个文件"
-                       "（可复用实现用 reuse 条目），或按主题拆成几张表")
-    return out
+    return over_limits(repo)
 
 def check_topics(repo: Path) -> list[str]:
     # 没写什么时候读，AI 判断不了相关不相关，只能全读一遍，拆分就白做了
@@ -188,15 +127,30 @@ AIP_PATH_REF = re.compile(r"\.aip/[^\s`'\"<>()（）\[\]「」，。；、*]+?\.
 # 「conventions.md「铁律」」「.aip/reference/环境变量.md 的「代理」」这种写法
 SECTION_REF = re.compile(r"((?:\.aip/)?(?:[^\s`'\"<>()（）\[\]「」/，。；、]+/)?[^\s`'\"<>()（）\[\]「」/，。；、]+\.md)`?\s*(?:的|里的|中的)?「([^」]+)」")
 
+# 「本文「某节」」：拆分后最容易悄悄失效的文件内指针
+SELF_REF = re.compile(r"本文\s*(?:的|里的|中的)?「([^」]+)」")
+
 def link_sources(repo: Path) -> list[Path]:
-    """查引用的文件：每次读的、按需读的、还在用的条目。决策和已作废的条目是历史记录，提到旧文件名不算错。"""
+    """查引用的文件：每次读的、按需读的、还在用的条目；0.8.1 起再加 .aip/ 下条目以外的文档（如 specs/）、
+    size_check_paths 列的文档、项目自己的技能。
+
+    不查的：决策和作废的条目是历史记录；旁路问题本来就在记「哪里还指着旧东西」，提到旧路径不算错。
+    """
     root = aip_root(repo)
+    if not root.is_dir():
+        return []
     out = [project_living_path(repo, MUST_READ_FILE)] + [t.path for t in list_topics(repo)]
     out += [repo / n for n in ("CLAUDE.md", "AGENTS.md")]
     for i in _valid_items(repo):
-        if i.type != "decision" and i.status not in ("superseded", "fixed", "closed"):
+        if i.type not in ("decision", "inbox") and i.status not in ("superseded", "fixed"):
             out.append(i.path)
-    return [p for p in out if p.is_file() and root.is_dir()]
+    if aip_version(repo) >= WIDER_CHECK_VERSION:
+        folders = {t.folder for t in TYPES.values()}
+        out += [p for p in root.rglob("*.md") if p.relative_to(root).parts[0] not in folders]
+        for pattern in size_check_paths(repo):
+            out += [p for p in repo.glob(pattern) if p.suffix == ".md"]
+        out += project_skill_files(repo, "**/*.md")
+    return sorted({p for p in out if p.is_file()})
 
 def _headings(path: Path) -> list[str]:
     return [l.lstrip("#").strip() for l in read_text(path).splitlines() if l.startswith("#")]
@@ -219,6 +173,10 @@ def check_links(repo: Path) -> list[str]:
                 continue
             if not (repo / ref).is_file():
                 out.append(f"{rel} 引用的 {ref} 不存在")
+        own = _headings(src)
+        for heading in SELF_REF.findall(text):
+            if not any(heading in h for h in own):
+                out.append(f"{rel} 里写的「本文「{heading}」」找不到这一节（拆分或改标题后没跟着改）")
         for name, heading in SECTION_REF.findall(text):
             target = repo / name if name.startswith(".aip/") else root / name
             if not target.is_file():
@@ -284,18 +242,6 @@ def check_engine_copies(repo: Path) -> list[str]:
                        f"改完引擎要重装：{py_cmd()} scripts/install_all.py --project .")
     return out
 
-# 技能正文每次调技能都整篇进上下文：正文只留流程，细节放 reference/ 按需读
-SKILL_BODY_LIMIT = 8000
-
-def check_engine_skill_size(repo: Path) -> list[str]:
-    skill = repo / ENGINE_PKG / "skills" / "aip" / "SKILL.md"
-    if not skill.is_file():
-        return []
-    n = len(read_text(skill))
-    if n <= SKILL_BODY_LIMIT:
-        return []
-    return [f"{ENGINE_PKG}/skills/aip/SKILL.md 有 {n} 字（上限 {SKILL_BODY_LIMIT}）：细节挪到技能的 reference/ 下按需读"]
-
 def run_all(repo: Path) -> list[str]:
     old = check_old_layout(repo)
     if old:  # 旧格式下其余检查全是噪音，先迁移
@@ -303,7 +249,7 @@ def run_all(repo: Path) -> list[str]:
     return (check_project_files(repo) + check_item_names(repo) + check_items(repo)
             + check_topics(repo) + check_sizes(repo) + check_links(repo)
             + check_no_orphan_slots(repo) + check_engine_versions(repo) + check_engine_copies(repo)
-            + check_engine_skill_size(repo))
+            )
 
 def main() -> int:
     force_utf8()

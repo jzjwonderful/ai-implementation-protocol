@@ -95,9 +95,10 @@ class Upgrade(unittest.TestCase):
         self.assertIn("reference/upgrade.md", due[0]); self.assertIn("0.7.0", due[0])
 
     def test_only_versions_newer_than_aip_version_are_pending(self):
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0", "0.8.0"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), ["0.8.0"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.0"\n', tidied=False)), [])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0", "0.8.0", "0.8.1"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), ["0.8.0", "0.8.1"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.0"\n', tidied=False)), ["0.8.1"])
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.1"\n', tidied=False)), [])
         self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.10.0"\n', tidied=False)), [])
 
     def test_doc_headings_are_versions(self):

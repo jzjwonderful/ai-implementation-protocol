@@ -7,11 +7,14 @@ from __future__ import annotations
   以及上下文被压缩之后，把看板（在建线、待处理问题）打进上下文；压缩后多提醒一句"以在建线为准"。
 - 可选 Claude Code Stop 钩子（--claude-stop，非阻塞）：每轮结束跑一次 check 把状态摆出来。
 
-git 钩子放 .git/hooks/pre-commit（即时生效、无框架依赖）。bypass 用 `git commit --no-verify`。
+git 钩子放 git 的钩子目录（`git rev-parse --git-path hooks`，即时生效、无框架依赖）。bypass 用 `git commit --no-verify`。
+同一仓库的各个 worktree 共用这一份钩子；项目级安装时钩子按当前检出的根目录找引擎，
+每个 worktree 跑的是它自己检出的那版引擎，而不是装钩子那个工作区的。
 """
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,36 +29,61 @@ def _check_cmd(engine_root: Path) -> str:
     return f'"{py}" "{engine_root.as_posix()}/scripts/aip_check.py" --repo-root .'
 
 
-def _lookup_cmd(engine_root: Path) -> str:
-    py = Path(sys.executable).as_posix()
-    return f'"{py}" "{engine_root.as_posix()}/scripts/aip_lookup.py" --repo-root . relevant --staged'
+def engine_expr(repo_root: Path | None, engine_root: Path) -> str:
+    """钩子里怎么写引擎位置：引擎在仓库里（项目级安装）就从当前检出的根目录算，否则写绝对路径。"""
+    if repo_root is not None:
+        try:
+            rel = engine_root.resolve().relative_to(repo_root.resolve()).as_posix()
+            return f"$(git rev-parse --show-toplevel)/{rel}"
+        except ValueError:
+            pass
+    return engine_root.as_posix()
 
 
-def pre_commit_body(engine_root: Path) -> str:
+def pre_commit_body(engine_root: Path, repo_root: Path | None = None) -> str:
     # 提交前只查格式，不算到期提醒：提醒不挡提交，算它要跑 git 历史，白白拖慢每次提交。
     # 查过之后列出这次改动相关的主题和条目：开工时按任务说法挑文件会漏，这里按改动的文件兜一次，只列不挡。
-    cmd = _check_cmd(engine_root) + " --no-reminders"
+    # 检出里没有引擎（比如切到了装 AIP 之前的分支）就跳过，不挡提交。
+    py = Path(sys.executable).as_posix()
     return (
         "#!/bin/sh\n"
         f"{PRE_COMMIT_MARK}\n"
-        f"{cmd} || {{\n"
+        f'ENGINE="{engine_expr(repo_root, engine_root)}"\n'
+        'if [ ! -f "$ENGINE/scripts/aip_check.py" ]; then\n'
+        '  echo "AIP: no engine at $ENGINE in this checkout, check skipped" >&2\n'
+        "  exit 0\n"
+        "fi\n"
+        f'"{py}" "$ENGINE/scripts/aip_check.py" --repo-root . --no-reminders || {{\n'
         '  echo "AIP check failed — fix the above, or bypass once with: git commit --no-verify" >&2\n'
         "  exit 1\n"
         "}\n"
-        f"{_lookup_cmd(engine_root)} || true\n"
+        f'"{py}" "$ENGINE/scripts/aip_lookup.py" --repo-root . relevant --staged || true\n'
     )
 
 
+def git_hooks_dir(repo_root: Path) -> Path:
+    """git 的钩子目录。worktree 里 .git 是个文件，不能直接拼 .git/hooks；core.hooksPath 也要认。"""
+    try:
+        r = subprocess.run(["git", "rev-parse", "--git-path", "hooks"], cwd=repo_root, capture_output=True,
+                           text=True, encoding="utf-8", timeout=10, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        r = None
+    if r is None or r.returncode != 0 or not r.stdout.strip():
+        raise SystemExit(f"Not a git repo: {repo_root}")
+    p = Path(r.stdout.strip())
+    return p if p.is_absolute() else repo_root / p
+
+
 def install_pre_commit(repo_root: Path, engine_root: Path, force: bool) -> None:
-    hooks_dir = repo_root / ".git" / "hooks"
     if not (repo_root / ".git").exists():
         raise SystemExit(f"Not a git repo (no .git): {repo_root}")
+    hooks_dir = git_hooks_dir(repo_root)
     hooks_dir.mkdir(parents=True, exist_ok=True)
     hook = hooks_dir / "pre-commit"
     if hook.exists():
         existing = hook.read_text(encoding="utf-8", errors="ignore")
         if PRE_COMMIT_MARK in existing:
-            hook.write_text(pre_commit_body(engine_root), encoding="utf-8", newline="\n")
+            hook.write_text(pre_commit_body(engine_root, repo_root), encoding="utf-8", newline="\n")
             print(f"Updated pre-commit hook: {hook}")
             return
         if not force:
@@ -63,7 +91,7 @@ def install_pre_commit(repo_root: Path, engine_root: Path, force: bool) -> None:
                 f"pre-commit hook exists and is not AIP-managed: {hook}\n"
                 "Re-run with --force to overwrite, or add the AIP check line manually."
             )
-    hook.write_text(pre_commit_body(engine_root), encoding="utf-8", newline="\n")
+    hook.write_text(pre_commit_body(engine_root, repo_root), encoding="utf-8", newline="\n")
     try:
         hook.chmod(0o755)
     except OSError:

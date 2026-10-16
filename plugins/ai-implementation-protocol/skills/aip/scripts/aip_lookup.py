@@ -6,8 +6,10 @@ from __future__ import annotations
 `.aip/reference/<主题>.md`，会话开始只打印目录（主题 + 什么时候读），AI 挑相关的读。
 
 光靠 AI 开工时按任务字面挑文件会漏：很多坑和任务的说法对不上，改动却正好踩在上面。
-所以再按改动的文件反查一遍——主题和条目文件头里的 paths、改动文件里写的条目锚点
-（`.aip/knowledge/<时间戳_简述>`）——改代码前、提交前都能跑，只列出来，不挡任何事。
+所以再按改动的文件反查一遍——主题和条目文件头里的 paths、条目正文里用反引号写的文件路径
+（和到期提醒认的一样）、改动文件里写的条目锚点（`.aip/knowledge/<时间戳_简述>`）——
+改代码前、提交前都能跑，只列出来，不挡任何事。提交前只看改动处附近的锚点：大文档改两行，
+不该把整篇里提到的条目全列出来。
 """
 
 import argparse
@@ -18,6 +20,7 @@ from pathlib import Path
 
 from _aip_common import TOPIC_DIR, aip_root, force_utf8, read_text, resolve_path
 from aip_item import Item, find, list_items, split_front
+from aip_upkeep import refs
 
 # 什么时候读写一句话就够；写长了目录本身又成了要整读的大文件
 READ_WHEN_LIMIT = 80
@@ -27,6 +30,8 @@ MAX_SCAN_BYTES = 2_000_000
 ANCHOR = re.compile(r"\.aip/(knowledge|decisions|inbox|reuse)/(\d{8}-\d{6}_[^\s`'\"<>()（）\[\]{}，。；、,;:：*\\]+)")
 # 这些状态的条目已经不算数，按 paths 反查时不列
 INACTIVE = {"superseded", "closed"}
+# 提交前看改动处前后多少行里的锚点
+HUNK_CONTEXT = 20
 
 
 @dataclass
@@ -84,20 +89,31 @@ def _path_hits(paths: list[str], changed: list[str]) -> list[str]:
     return sorted({f for p in paths for f in resolve_path(p, changed)})
 
 
-def anchors_in(repo: Path, rel: str) -> list[str]:
-    path = repo / rel
-    if not path.is_file() or path.stat().st_size > MAX_SCAN_BYTES:
-        return []
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return []
+def anchors_in(repo: Path, rel: str, text: str | None = None) -> list[str]:
+    """文件里写的条目锚点；给了 text（改动处附近的几段）就只在它里面找。"""
+    if text is None:
+        path = repo / rel
+        if not path.is_file() or path.stat().st_size > MAX_SCAN_BYTES:
+            return []
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return []
     return list(dict.fromkeys(m.group(2).removesuffix(".md") for m in ANCHOR.finditer(text)))
 
 
-def relevant(repo: Path, changed: list[str]) -> tuple[list[Hit], list[str]]:
-    """改这些文件该看的主题和条目，外加改动文件里指向不存在条目的锚点。"""
+def item_paths(item: Item) -> list[str]:
+    """条目涉及的代码：文件头 paths，加上正文里用反引号写的文件路径。"""
+    return item.values("paths") + refs(item.title + "\n" + item.body)[0]
+
+
+def relevant(repo: Path, changed: list[str], hunks: dict[str, str] | None = None) -> tuple[list[Hit], list[str]]:
+    """改这些文件该看的主题和条目，外加改动文件里指向不存在条目的锚点。
+
+    hunks：文件 → 改动处附近的文本（提交前用）；有的文件只在这段里找锚点。
+    """
     changed = [c.replace("\\", "/").removeprefix("./") for c in changed]
+    hunks = hunks or {}
     hits: dict[str, Hit] = {}
 
     def add(target: str, title: str, reason: str) -> None:
@@ -111,12 +127,12 @@ def relevant(repo: Path, changed: list[str]) -> tuple[list[Hit], list[str]]:
     for i in items:
         if i.status in INACTIVE or i.type == "track":
             continue
-        files = _path_hits(i.values("paths"), changed)
+        files = _path_hits(item_paths(i), changed)
         if files:
             add(_rel(repo, i.path), i.title, f"涉及 {', '.join(files[:3])}")
     broken = []
     for rel in changed:
-        for ref in anchors_in(repo, rel):
+        for ref in anchors_in(repo, rel, hunks.get(rel)):
             try:
                 item: Item = find(items, ref)
             except LookupError:
@@ -128,14 +144,37 @@ def relevant(repo: Path, changed: list[str]) -> tuple[list[Hit], list[str]]:
     return list(hits.values()), broken
 
 
-def staged_files(repo: Path) -> list[str]:
+def _git(repo: Path, args: list[str]) -> str:
     try:
-        r = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"], cwd=repo,
-                           capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=20, stdin=subprocess.DEVNULL)
+        # 中文文件名默认会被转成 "\346\226..." 这种八进制写法，对不上仓库里的路径
+        r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=repo, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=20, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.SubprocessError):
-        return []
-    return [l for l in r.stdout.splitlines() if l] if r.returncode == 0 else []
+        return ""
+    return r.stdout if r.returncode == 0 else ""
+
+
+def staged_files(repo: Path) -> list[str]:
+    return [l for l in _git(repo, ["diff", "--cached", "--name-only", "--diff-filter=ACMR"]).splitlines() if l]
+
+
+def staged_hunks(repo: Path, context: int = HUNK_CONTEXT) -> dict[str, str]:
+    """暂存区里每个文件改动处前后 context 行的文本。"""
+    out: dict[str, list[str]] = {}
+    current = None
+    in_header = False  # 文件头（diff --git 到第一个 @@）里的 +++ / --- 不是内容
+    diff = _git(repo, ["diff", "--cached", f"-U{context}", "--no-color", "--no-ext-diff", "--diff-filter=ACMR"])
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            in_header, current = True, None
+        elif in_header and line.startswith("+++ "):
+            current = line[4:].removeprefix("b/")
+            out.setdefault(current, [])
+        elif line.startswith("@@"):
+            in_header = False
+        elif not in_header and current and line[:1] in (" ", "+", "-"):
+            out[current].append(line[1:])
+    return {k: "\n".join(v) for k, v in out.items()}
 
 
 def main() -> int:
@@ -154,7 +193,7 @@ def main() -> int:
         print("\n".join(lines) if lines else f"（.aip/{TOPIC_DIR}/ 下还没有主题文件）")
         return 0
     changed = list(a.files) + (staged_files(repo) if a.staged else [])
-    hits, broken = relevant(repo, changed)
+    hits, broken = relevant(repo, changed, staged_hunks(repo) if a.staged else None)
     if hits:
         print("AIP：这些改动相关的主题和条目（确认没踩到再继续）：")
         for h in hits:

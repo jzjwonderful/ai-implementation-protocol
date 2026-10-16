@@ -8,7 +8,7 @@
 python3 <skill>/scripts/aip_init.py --repo-root .
 ```
 
-建 `.aip/` 骨架（conventions / config 两份文档，`reference/` 主题目录，knowledge / decisions / inbox / tracks / reuse 五个条目目录；新建的 config.yaml 把 `aip_version` 记成当前版本）、升级 `AGENTS.md`/`CLAUDE.md` 中的 AIP 托管引导块、装 git pre-commit 钩子和 Claude Code SessionStart 钩子、删掉以前版本生成的 `OVERVIEW.md`。幂等：已有活文档和用户内容一律不覆盖；只有带 AIP managed 标记的区域会按新版本刷新。`.aip/` 还是旧布局（knowledge.md 等大文件）时 init 不动手，先按 `/aip migrate` 迁移。
+建 `.aip/` 骨架（conventions / config 两份文档，`reference/` 主题目录，knowledge / decisions / inbox / tracks / reuse 五个条目目录；新建的 config.yaml 把 `aip_version` 记成当前版本）、升级 `AGENTS.md`/`CLAUDE.md` 中的 AIP 托管引导块（`CLAUDE.md` 只有一行 `@AGENTS.md` 时只写 `AGENTS.md`）、装 git pre-commit 钩子和 Claude Code SessionStart 钩子、删掉以前版本生成的 `OVERVIEW.md`。幂等：已有活文档和用户内容一律不覆盖；只有带 AIP managed 标记的区域会按新版本刷新。`.aip/` 还是旧布局（knowledge.md 等大文件）时 init 不动手，先按 `/aip migrate` 迁移。
 
 SessionStart 钩子在新会话、恢复会话、以及上下文被压缩之后按目录打印看板（在建线全文、待处理旁路问题的文件名、主题目录）；压缩后会多提醒一句"以在建线为准"。项目级安装时钩子命令先找 `python3`、再找 `python`，只用 3.9 以上的，找不到就打一句提示、不执行。压缩前的钩子输出到不了模型，所以补救放在压缩后。
 

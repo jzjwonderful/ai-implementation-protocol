@@ -5,7 +5,7 @@ from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
 import aip_check as chk, aip_init, aip_item as it, aip_lookup as lk, aip_upkeep as up, install_hooks
-import aip_discovery as disc
+import aip_discovery as disc, aip_size as size, aip_update
 
 
 def make_repo(version: str | None = None) -> Path:
@@ -83,7 +83,7 @@ class Sizes(unittest.TestCase):
         viol = chk.check_sizes(d)
         self.assertTrue(any("大主题.md 有" in v and "30000" in v for v in viol), viol)
         self.assertTrue(any("长行.md 第" in v and "1000" in v for v in viol), viol)
-        self.assertTrue(any("长表.md 有一张 31 行的表" in v for v in viol), viol)
+        self.assertTrue(any("长表.md 最长的一张表有 31 行" in v for v in viol), viol)
 
     def test_table_at_limit_passes(self):
         d = make_repo()
@@ -107,7 +107,7 @@ class Sizes(unittest.TestCase):
         self.assertTrue(any("docs/big.md" in v for v in chk.check_sizes(d)))
 
     def test_this_repo_skill_body_is_under_limit(self):
-        self.assertEqual(chk.check_engine_skill_size(ROOT), [])
+        self.assertEqual([m.over_text() for m in size.measures(ROOT) if m.rel.endswith("SKILL.md") and m.over], [])
 
     def test_managed_block_stays_short(self):
         # 托管块每次会话都进上下文

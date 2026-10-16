@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 from pathlib import Path
 
 import _install_source
@@ -86,14 +87,21 @@ def project_notes(project: Path, aip_dir: Path) -> list[str]:
         "\n     把 aip_check.py 接进现有钩子。",
         "  2. 在这个仓库开新会话，用 /aip init（已初始化过的仓库跑一次也是幂等的）。",
     ]
-    gitignore = project / ".gitignore"
     tracked_hint = "  3. 技能目录会进版本库（随仓库分发给所有人）。不想进就加进 .gitignore。"
-    if gitignore.is_file():
-        text = gitignore.read_text(encoding="utf-8", errors="ignore")
-        if ".claude/skills" in text:
-            tracked_hint = "  3. 注意：本仓库 .gitignore 里排除了 .claude/skills，这份副本不会随仓库分发。"
+    if _ignored(project, aip_dir / "SKILL.md"):
+        tracked_hint = "  3. 注意：本仓库的 .gitignore 排除了这份副本（.claude/skills），它不会随仓库分发。"
     notes.append(tracked_hint)
     return notes
+
+
+def _ignored(project: Path, path: Path) -> bool:
+    """按 git 自己的规则判断（只看文本里有没有这个路径，会把注释里提到的也当成排除）。"""
+    try:
+        r = subprocess.run(["git", "check-ignore", "-q", str(path)], cwd=project, capture_output=True,
+                           timeout=10, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return r.returncode == 0
 
 
 def main(argv: list[str] | None = None) -> int:

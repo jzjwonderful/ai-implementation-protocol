@@ -24,6 +24,7 @@ from _aip_common import (
 )
 from aip_discovery import BEGIN as GUIDE_BEGIN, END as GUIDE_END
 from aip_item import ENGINE_ROOT, Item, list_items
+from aip_size import near_limits
 
 KNOWLEDGE_STALE_DAYS = 90
 FULL_REVIEW_DAYS = 30
@@ -123,7 +124,7 @@ def refs(block: str) -> tuple[list[str], list[str]]:
 
 def _git(repo: Path, args: list[str]) -> str | None:
     try:
-        r = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True,
+        r = subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=repo, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=20, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.SubprocessError):
         return None
@@ -400,10 +401,15 @@ def track_dues(repo: Path) -> list[Due]:
     return out
 
 
+def size_dues(repo: Path) -> list[Due]:
+    """快到体积上限的文件（超了是 aip_check 报红，这里只提前说一声）。"""
+    return [Due(6, "接近上限", text) for text in near_limits(repo)]
+
+
 def collect(repo: Path, today: date | None = None) -> list[Due]:
     today = today or date.today()
     dues = (upgrade_dues(repo) + guide_dues(repo) + knowledge_dues(repo, today) + reuse_dues(repo) + reference_dues(repo)
-            + full_review_dues(repo, today) + track_dues(repo))
+            + full_review_dues(repo, today) + track_dues(repo) + size_dues(repo))
     return sorted(dues, key=lambda d: d.priority)
 
 
