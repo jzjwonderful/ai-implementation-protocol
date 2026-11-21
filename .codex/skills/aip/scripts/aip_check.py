@@ -224,7 +224,9 @@ def check_engine_versions(repo: Path) -> list[str]:
 # 引擎仓库自己也按项目级装了一份（拷贝，不用链接：Windows 上 git 链接要额外设置）。
 # 改了引擎源忘了重装，本仓库会话里用的就是旧引擎，所以逐个文件比内容。
 # SOURCE.json 是安装记录、缓存是运行产物，不算。
-ENGINE_COPIES = [".claude/skills/aip", ".codex/skills/aip"]
+# 装进本仓库的引擎副本。Codex 文档里仓库技能在 .agents/skills（从当前目录找到仓库根）；
+# .codex/skills 是早先的写法，某些版本还认，仓库里还有就一起保持同步。
+ENGINE_COPIES = [".claude/skills/aip", ".agents/skills/aip", ".codex/skills/aip"]
 COPY_SKIP_NAMES = {"SOURCE.json"}
 
 def _skill_files(root: Path) -> dict[str, Path]:

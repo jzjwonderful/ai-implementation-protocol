@@ -43,7 +43,8 @@ TYPES: dict[str, ItemType] = {
         ItemType("knowledge", "knowledge", ("active", "draft", "fixed", "superseded"),
                  required=("category", "scope", "last_reviewed"), body_required=("症状", "根因")),
         ItemType("decision", "decisions", ("accepted", "superseded")),
-        ItemType("inbox", "inbox", ("open", "closed")),
+        # wontfix = 看过了决定不做：留着占 open 会把收件箱变成没人看的池子（真实项目 83 条 open）
+        ItemType("inbox", "inbox", ("open", "closed", "wontfix")),
         ItemType("track", "tracks", ("active", "blocked", "paused"), remove_on=("done",)),
         # 可复用实现：以前是 reference.md 里一张越写越长的表，每个分支都往表尾加一行、合并就冲突。
         # paths 必填：改到这块代码时靠它被列出来。

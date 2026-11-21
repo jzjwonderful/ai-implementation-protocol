@@ -204,7 +204,7 @@ class Sizes(unittest.TestCase):
         d = make_repo()
         topic(d, "快满", ("x" * 99 + "\n") * 280)
         self.assertEqual(chk.check_sizes(d), [])
-        self.assertTrue(any("快满.md" in x and "快到上限" in x for x in up.reminders(d, date(2026, 10, 16), limit=None)))
+        self.assertTrue(any("快满.md" in x and "快到" in x for x in up.reminders(d, date(2026, 10, 16), limit=None)))
 
     def test_project_skill_body_limit_from_081(self):
         for version, red in (("0.8.0", False), (None, True)):

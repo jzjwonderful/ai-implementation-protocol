@@ -95,11 +95,14 @@ class Upgrade(unittest.TestCase):
         self.assertIn("reference/upgrade.md", due[0]); self.assertIn("0.7.0", due[0])
 
     def test_only_versions_newer_than_aip_version_are_pending(self):
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), ["0.7.0", "0.8.0", "0.8.1"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.7.0"\n', tidied=False)), ["0.8.0", "0.8.1"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.0"\n', tidied=False)), ["0.8.1"])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.8.1"\n', tidied=False)), [])
-        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.10.0"\n', tidied=False)), [])
+        # 要调整既有仓库的版本在 reference/upgrade.md 里一个二级标题一个，别在这儿写死
+        sections = up.UPGRADE_HEAD_RE.findall((ENGINE/"reference"/"upgrade.md").read_text(encoding="utf-8"))
+        self.assertIn("0.7.0", sections)
+        for n, cut in enumerate(sections):
+            self.assertEqual(up.pending_upgrades(make_repo(f'aip_version: "{cut}"\n', tidied=False)),
+                             sections[n + 1:], cut)
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "0.6.0"\n', tidied=False)), sections)
+        self.assertEqual(up.pending_upgrades(make_repo('aip_version: "99.0.0"\n', tidied=False)), [])
 
     def test_doc_headings_are_versions(self):
         heads = up.UPGRADE_HEAD_RE.findall(up.UPGRADE_DOC.read_text(encoding="utf-8"))

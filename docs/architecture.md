@@ -40,7 +40,10 @@ Key scripts:
 - `aip_lookup.py` — on-demand lookup: the topic index (`reference/<topic>.md` + when to read it) and `relevant <files>` (topics and items whose `paths` match, items whose body cites a changed code file by its path, plus items anchored in those files; ranked, capped at 12 lines with `--all` for everything, and active knowledge whose cited code changed after `last_reviewed` carries an inline "re-verify" note; the pre-commit hook runs it on staged files)
 - `aip_upkeep.py` — due reminders, sorted by urgency and capped (including "not yet tidied after an upgrade", from `config.yaml`'s `aip_version` and `reference/upgrade.md`)
 - `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
-- `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)
+- `install_hooks.py` — install the git pre-commit hook and the Claude Code SessionStart / PreCompact / PostToolUse / SubagentStart hooks (+ optional Stop hook)
+- `aip_precompact.py` — PreCompact hook entry: prints what the compaction summary must keep, plus the live tracks (its stdout is the summary instruction, capped at 10000 characters)
+- `aip_after_edit.py` — PostToolUse hook entry (Edit / Write): runs `relevant` on the file just edited and returns it as `additionalContext`, once per file per session
+- `aip_subagent.py` — SubagentStart hook entry: hands a subagent the live tracks, the topic index and the two rules (never write `.aip/`, read conventions first)
 - `aip_session_start.py` — SessionStart hook entry: prints the board straight from `tracks/` and `inbox/` (no file), reports checkout state (behind upstream, uncommitted `.aip/` changes), with an extra reminder after context compaction
 
 Installers stay at the repository root and only copy the package: `scripts/install_all.py` (all runtimes at

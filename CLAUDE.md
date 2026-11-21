@@ -1,8 +1,8 @@
 <!-- BEGIN AIP (managed) -->
-<!-- AIP managed version: 5 -->
+<!-- AIP managed version: 6 -->
 ## AI Implementation Protocol
-**会话开始时必须先调用 `aip` 技能，再做任何其他事（包括回答问题）。**
-调完技能后看在建线和待处理问题：会话开始钩子会打印出来；没打印就自己读 `.aip/tracks/` 下的文件、列 `.aip/inbox/` 下文件名带 `_open_` 的。
+本仓库的项目状态在 `.aip/` 活文档里。**要写 `.aip/`、跑 AIP 脚本、开线或收线、做 review，或者接着上次的在建线干活之前，先调 `aip` 技能，按它的流程走**；只回答问题、不碰代码和 `.aip/` 时不必调。
+会话开始先看在建线和待处理问题：会话开始钩子会打印出来；没打印就自己读 `.aip/tracks/` 下的文件、列 `.aip/inbox/` 下文件名带 `_open_` 的。上下文被压缩后以 `.aip/tracks/` 里的在建线为准，还没写回文件的进展先补写再继续。
 条目一条一个文件，文件名是 `时间戳_类型_状态_简述.md`：`.aip/knowledge/` 验证过的坑和根因、`decisions/` 架构决策、`inbox/` 旁路问题、`tracks/` 在建线（做完就删）、`reuse/` 可复用实现。先按文件名或 `aip_item.py list --grep` 找相关的，再打开读，不要通读整个目录；新建、改状态走 `aip_item.py`，引用别的条目写完整的「时间戳_简述」。
 动手前读 `.aip/conventions.md`（只有跨模块的铁律）；`.aip/reference/` 下的主题文件按看板上的「什么时候读」挑相关的读；改代码前跑 `aip_lookup.py relevant <要改的文件>` 看相关的主题和条目。
 会越写越大的内容拆开写：一条条追加的记录一条一个文件，整篇说明按主题拆成多个文件。

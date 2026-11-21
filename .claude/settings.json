@@ -9,6 +9,38 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for py in python3 python; do \"$py\" -c \"import sys; sys.exit(sys.version_info < (3, 9))\" 2>/dev/null && exec \"$py\" \"$CLAUDE_PROJECT_DIR/plugins/ai-implementation-protocol/skills/aip/scripts/aip_precompact.py\" --repo-root \"$CLAUDE_PROJECT_DIR\"; done; echo \"AIP：没找到 Python 3.9 以上的解释器，压缩指示没给出\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for py in python3 python; do \"$py\" -c \"import sys; sys.exit(sys.version_info < (3, 9))\" 2>/dev/null && exec \"$py\" \"$CLAUDE_PROJECT_DIR/plugins/ai-implementation-protocol/skills/aip/scripts/aip_after_edit.py\" --repo-root \"$CLAUDE_PROJECT_DIR\"; done; echo \"AIP：没找到 Python 3.9 以上的解释器，\""
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for py in python3 python; do \"$py\" -c \"import sys; sys.exit(sys.version_info < (3, 9))\" 2>/dev/null && exec \"$py\" \"$CLAUDE_PROJECT_DIR/plugins/ai-implementation-protocol/skills/aip/scripts/aip_subagent.py\" --repo-root \"$CLAUDE_PROJECT_DIR\"; done; echo \"AIP：没找到 Python 3.9 以上的解释器，\""
+          }
+        ],
+        "matcher": "*"
+      }
     ]
   }
 }

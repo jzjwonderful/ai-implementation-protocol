@@ -27,6 +27,8 @@ from aip_item import ENGINE_ROOT, Item, list_items
 from aip_size import PROJECT_SKILL_ROOTS, near_limits
 
 KNOWLEDGE_STALE_DAYS = 90
+# 旁路问题 open 这么久还没动，就该转成线、处理掉或明确不做
+INBOX_STALE_DAYS = 90
 FULL_REVIEW_DAYS = 30
 LONG_CEILING_DAYS = 365
 # 会话开始只列这么多项，其余给总数
@@ -313,6 +315,19 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
     return out
 
 
+def inbox_dues(repo: Path, today: date) -> list[Due]:
+    """open 太久的旁路问题：收件箱只进不出，就会变成没人看的池子（真实项目一次 83 条 open）。"""
+    out = []
+    for i in list_items(repo, "inbox"):
+        if i.status != "open":
+            continue
+        days = (today - i.created).days
+        if days > INBOX_STALE_DAYS:
+            out.append(Due(5, "旁路问题搁太久", f"{i.id}：open 了 {days} 天没动。要做就 `aip_item.py new --type track` "
+                           "转成线，已经解决改 closed，决定不做改 wontfix"))
+    return out
+
+
 def doc_files(repo: Path) -> list[Path]:
     """整篇维护的文档：conventions.md、主题文件，还没拆的旧 reference.md。"""
     docs = [project_living_path(repo, n) for n in ("conventions.md", OLD_REFERENCE_FILE)]
@@ -426,7 +441,7 @@ def size_dues(repo: Path) -> list[Due]:
 def collect(repo: Path, today: date | None = None) -> list[Due]:
     today = today or date.today()
     dues = (upgrade_dues(repo) + guide_dues(repo) + knowledge_dues(repo, today) + reuse_dues(repo) + reference_dues(repo)
-            + full_review_dues(repo, today) + track_dues(repo) + size_dues(repo))
+            + full_review_dues(repo, today) + track_dues(repo) + inbox_dues(repo, today) + size_dues(repo))
     return sorted(dues, key=lambda d: d.priority)
 
 

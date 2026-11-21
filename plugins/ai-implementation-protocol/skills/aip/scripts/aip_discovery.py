@@ -7,15 +7,17 @@ END = "<!-- END AIP (managed) -->"
 # 只是写进托管块的版本戳，给人/doctor 看装的是第几版；不参与"要不要升级"的判断。
 # upsert 每次都把标记区整块重写，块内容一变就必刷新——不靠版本号比对，
 # 省得"改了内容却忘 bump 版本号"导致该升级的没升级。
-MANAGED_VERSION = "5"
+MANAGED_VERSION = "6"
 
 # 托管块每次会话都进上下文，只写入口和规矩，细节留给技能正文和 reference/
 BLOCK_BODY = (
     f"<!-- AIP managed version: {MANAGED_VERSION} -->\n"
     "## AI Implementation Protocol\n"
-    "**会话开始时必须先调用 `aip` 技能，再做任何其他事（包括回答问题）。**\n"
-    "调完技能后看在建线和待处理问题：会话开始钩子会打印出来；没打印就自己读 `.aip/tracks/` 下的文件、"
-    "列 `.aip/inbox/` 下文件名带 `_open_` 的。\n"
+    "本仓库的项目状态在 `.aip/` 活文档里。**要写 `.aip/`、跑 AIP 脚本、开线或收线、做 review，"
+    "或者接着上次的在建线干活之前，先调 `aip` 技能，按它的流程走**；只回答问题、不碰代码和 `.aip/` 时不必调。\n"
+    "会话开始先看在建线和待处理问题：会话开始钩子会打印出来；没打印就自己读 `.aip/tracks/` 下的文件、"
+    "列 `.aip/inbox/` 下文件名带 `_open_` 的。上下文被压缩后以 `.aip/tracks/` 里的在建线为准，"
+    "还没写回文件的进展先补写再继续。\n"
     "条目一条一个文件，文件名是 `时间戳_类型_状态_简述.md`：`.aip/knowledge/` 验证过的坑和根因、`decisions/` 架构决策、"
     "`inbox/` 旁路问题、`tracks/` 在建线（做完就删）、`reuse/` 可复用实现。先按文件名或 `aip_item.py list --grep` 找相关的，"
     "再打开读，不要通读整个目录；新建、改状态走 `aip_item.py`，引用别的条目写完整的「时间戳_简述」。\n"

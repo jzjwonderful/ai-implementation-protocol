@@ -17,11 +17,11 @@ gates:
 
 # 上次整份 .aip/ review 的日期（做法见 aip 技能 reference/review-checklist.md）。
 # 超过 30 天，会话开始和 aip check 会提醒；做完 review 把它改成当天。
-review_last_full: "2026-10-01"
+review_last_full: "2026-11-21"
 
 # 这个仓库的 .aip/ 按哪一版 AIP 的模板整理过。升级 AIP 后，会话开始会对照 aip 技能
 # reference/upgrade.md 提醒还没做的调整；做完改成提醒里给的版本号。
-aip_version: "0.8.1"
+aip_version: "0.9.0"
 
 # 除 .aip/ 外还要查体积的文档（可选）：逗号分隔的通配，相对仓库根，例 "docs/**/*.md, notes/*.md"。
 # 单个文件超过 3 万字、单行超过 1000 字、表格超过 30 行时 aip check 报红。

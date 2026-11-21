@@ -1,0 +1,10 @@
+{
+  "remote": "https://github.com/jzjwonderful/ai-implementation-protocol",
+  "branch": "master",
+  "commit": "43267123cfdad7b6a9e240a2d18d995508676870",
+  "dirty": true,
+  "source_path": "/home/user/ai-implementation-protocol",
+  "scope": "project",
+  "target": "/home/user/ai-implementation-protocol",
+  "version": "0.9.0"
+}

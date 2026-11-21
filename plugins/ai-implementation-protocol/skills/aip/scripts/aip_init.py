@@ -73,6 +73,9 @@ def main() -> int:
             # 项目已有非 AIP 的 pre-commit 钩子：不覆盖、不中断 init，提示人自行处理。
             print(f"（跳过 pre-commit 钩子：{e}）")
         install_hooks.install_claude_session_start(repo, engine)
+        install_hooks.install_claude_pre_compact(repo, engine)
+        install_hooks.install_claude_after_edit(repo, engine)
+        install_hooks.install_claude_subagent(repo, engine)
     print("AIP 已初始化（零配置）。工程信息将在用到时自动捕获，不在此追问。")
     return 0
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 第二次因「目标已存在」失败。
 
 `--project <仓库>` 改成项目级安装：技能落进那个仓库（Claude 走 .claude/skills/，
-Codex 走 .codex/skills/），随仓库走，不碰 ~/plugins 也不写市场条目。
+Codex 走 .agents/skills/，仓库里已有 .codex/skills/ 就一起更新），随仓库走，不碰 ~/plugins 也不写市场条目。
 Grok 没有约定俗成的项目级技能目录，所以项目级安装不含 Grok。
 """
 

@@ -60,3 +60,13 @@
 4. **reuse 条目回看一遍**：其实是操作步骤、不是代码的，改成知识条目（`aip_item.py new --type knowledge`），再删掉这条 reuse。
 5. `aip_version` 改成 `0.8.1`，跑 `aip_check`，红了按提示改掉，一个提交。
 
+
+## 0.9.0
+
+加了三枚 Claude Code 钩子、换了入口的要求、旁路问题多了一个状态。调整很轻，但要跑一次 init。
+
+1. **刷新钩子和托管块**：跑 `python3 <skill>/scripts/aip_init.py --repo-root .`。会装上 PreCompact（压缩前把「摘要里必须留下什么」和在建线交给写摘要那一轮）、PostToolUse（Edit / Write 之后对刚改的文件跑一次反查，一个会话每个文件只提一次）、SubagentStart（给子代理交底）三枚钩子，并把 `CLAUDE.md` / `AGENTS.md` 里的托管块刷到第 6 版：不再要求「会话开始必须先调技能再做任何事」，改成「要写 `.aip/`、跑脚本、开线收线、做 review 或接着在建线干活之前再调」。托管块以外手写的「每次会话先调 aip 技能」这类句子，跟着改掉或删掉。
+2. **Codex 的仓库技能换位置**：项目级安装现在装 `<仓库>/.agents/skills/aip`（Codex 文档里仓库技能的位置，从当前目录一路找到仓库根）。跑 `python3 scripts/install_all.py --project .`（或 `/aip update`）装上；旧的 `.codex/skills/aip` 还在的话会一起更新，留着不影响，删掉也行。说明文件里写着 `.codex/skills/aip/scripts/...` 的命令，改成 `.agents/skills/aip/scripts/...`。
+3. **旁路问题结案**：`inbox/` 多了 `wontfix`（看过了决定不做）。把那些「其实不打算做、却一直挂着 open」的改掉：`aip_item.py status <标识> wontfix`。open 超过 90 天没动的，会话开始会提醒你转成线、closed 或 wontfix。
+4. **长需求/设计文档**：放 `.aip/specs/<名字>.md`，文件头写 `title`、`read_when` 和现在的状态（在做 / 已实现 / 被哪条取代）；在建线的「先读」指到具体章节。超过 3 万字按章节拆开（体积消息现在会把字数换成 token 估给你看）。
+5. `aip_version` 改成 `0.9.0`，跑 `aip_check`，红了按提示改掉，一个提交。

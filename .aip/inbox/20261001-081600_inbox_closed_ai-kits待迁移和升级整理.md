@@ -1,9 +1,9 @@
 ---
 title: ai-kits 的 .aip/ 还没迁到一条一个文件，也没按 0.7.0 整理
-status: open
+status: closed
 ---
 
 - 发现于: 收掉在建线 20261001-004054_条目改成单文件和迁移工具 时，它剩下的事不在本仓库
 - 影响范围: ai-kits 仓库的 .aip/（还是 0.5.0 之前的旧布局）
 - 症状 / 证据: 在临时克隆上试迁过：268 条，216 条要 AI 起简述，旧编号撞号 I-14、I-25，165 处代码锚点能自动改写，7 处认不出。要等它的工作树都合完、没有并行开发时再迁
-- 去向: 在 ai-kits 里按 aip 技能 reference/migrate.md 迁移，接着按 reference/upgrade.md 做 0.7.0 整理；做完把本条标 closed
+- 去向: 已经做完（2026-11-21 复核：tech-ai-kits 的 `.aip/` 已是一条一个文件——knowledge 246、decisions 59、inbox 115、reuse 28、reference 16 个主题——`config.yaml` 的 `aip_version` 是 0.8.1，远过了 0.7.0 整理）。它现在欠的是 0.8.2 / 0.8.3 / 0.9.0 的整理，那是它自己仓库的事，不在这里跟

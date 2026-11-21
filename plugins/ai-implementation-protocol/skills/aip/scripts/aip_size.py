@@ -24,6 +24,9 @@ LINE_LIMIT = 1000               # 单行字符数：超了多半是表格格子�
 TABLE_ROW_LIMIT = 30            # 表格行数：超了说明是追加型内容，该一条一个文件
 SKILL_LIMIT = 8000              # 技能正文 SKILL.md：每次调技能都整篇进上下文
 NEAR_RATIO = 0.9                # 到了上限的这个比例就提醒一句
+# 中文一个字大约这么多 token（用 claude CLI 回报的 input_tokens 实测：0.77–0.80）。
+# 字数本身看不出代价，所以整篇超限/接近超限时顺手把 token 估出来。
+TOKENS_PER_CHAR = 0.8
 
 # 项目级技能的目录（Claude Code / Codex / 通用约定）
 PROJECT_SKILL_ROOTS = (".claude/skills", ".codex/skills", ".agents/skills")
@@ -54,12 +57,17 @@ class Measure:
     def near(self) -> bool:
         return self.warn_near and not self.over and self.value >= self.limit * NEAR_RATIO
 
+    @property
+    def tokens(self) -> str:
+        """整篇的字数顺手换成 token：真正花掉的是 token，不是字。"""
+        return f"≈{round(self.value * TOKENS_PER_CHAR / 100) * 100} token，" if self.what == "有" else ""
+
     def over_text(self) -> str:
-        return (f"{self.rel} {self.what} {self.value} {self.unit}（上限 {self.limit}，超了 {self.value - self.limit}）："
-                f"{self.fix}")
+        return (f"{self.rel} {self.what} {self.value} {self.unit}（{self.tokens}上限 {self.limit}，"
+                f"超了 {self.value - self.limit}）：{self.fix}")
 
     def near_text(self) -> str:
-        return (f"{self.rel} {self.what} {self.value} {self.unit}，快到上限 {self.limit} 了："
+        return (f"{self.rel} {self.what} {self.value} {self.unit}（{self.tokens}上限 {self.limit}），快到了："
                 f"再往里加之前先想好怎么拆（{self.fix}）")
 
 

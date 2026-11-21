@@ -129,8 +129,21 @@ def upsert_marketplace_entry(marketplace: dict[str, Any], plugin_path: str) -> N
     plugins.append(entry)
 
 
+def project_skill_roots(project: Path) -> list[Path]:
+    """项目级安装往哪写。
+
+    Codex 的文档说仓库里的技能在 `.agents/skills`（从当前目录一路找到仓库根），所以那是正位；
+    `.codex/skills` 是早先的写法，部分 CLI 版本还认，仓库里已经有就一起更新，免得留下旧副本。
+    """
+    roots = [project / ".agents" / "skills"]
+    legacy = project / ".codex" / "skills"
+    if legacy.is_dir():
+        roots.append(legacy)
+    return roots
+
+
 def install_into_project(repo_root: Path, project: Path) -> int:
-    """项目级安装：技能落 <project>/.codex/skills/，随仓库走。
+    """项目级安装：技能落 <project>/.agents/skills/（有 .codex/skills 就一起更新），随仓库走。
 
     不拷插件包、也不写市场条目——那两样是个人级安装才有的东西，放进别人的仓库没有意义。
     """
@@ -138,9 +151,9 @@ def install_into_project(repo_root: Path, project: Path) -> int:
     if not project.is_dir():
         raise SystemExit(f"Project not found: {project}")
     source_plugin = repo_root / "plugins" / PLUGIN_NAME
-    installed = install_skills(source_plugin, [project / ".codex" / "skills"])
+    installed = install_skills(source_plugin, project_skill_roots(project))
     _install_source.record(installed, "project", project, repo_root)
-    aip_dir = project / ".codex" / "skills" / "aip"
+    aip_dir = project / ".agents" / "skills" / "aip"
     if not (aip_dir / "scripts" / "aip_init.py").exists() or not installed:
         raise SystemExit(f"Install incomplete under {project}")
     for path in installed:
@@ -188,7 +201,8 @@ def main() -> int:
         "--project",
         default=None,
         type=Path,
-        help="Install into this project instead of the user home: <project>/.codex/skills/. "
+        help="Install into this project instead of the user home: <project>/.agents/skills/ "
+             "(and <project>/.codex/skills/ when that directory already exists). "
              "The skills then travel with that repository; no package copy, no marketplace entry.",
     )
     args = parser.parse_args()

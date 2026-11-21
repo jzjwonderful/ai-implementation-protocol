@@ -122,13 +122,23 @@ class InstallIntoProject(unittest.TestCase):
         self.assertTrue((aip / "templates" / "item-knowledge.md").exists())
 
     def test_codex_installs_under_project_without_marketplace(self):
+        # 0.9.0：仓库里的 Codex 技能装在 .agents/skills（官方文档的位置），老的 .codex/skills 不新建
         project = self._project()
         mod = _load("install_codex_plugin")
         self.assertEqual(mod.install_into_project(ROOT, project), 0)
-        self.assertTrue((project / ".codex" / "skills" / "aip" / "scripts" / "aip_init.py").exists())
+        self.assertTrue((project / ".agents" / "skills" / "aip" / "scripts" / "aip_init.py").exists())
+        self.assertFalse((project / ".codex").exists())
         # 项目级不写市场条目、不拷插件包
-        self.assertFalse((project / ".agents").exists())
+        self.assertFalse((project / ".agents" / "plugins").exists())
         self.assertFalse((project / "plugins").exists())
+
+    def test_codex_project_install_keeps_an_existing_codex_skills_copy(self):
+        project = self._project()
+        (project / ".codex" / "skills").mkdir(parents=True)
+        mod = _load("install_codex_plugin")
+        self.assertEqual(mod.install_into_project(ROOT, project), 0)
+        for root in (".agents", ".codex"):
+            self.assertTrue((project / root / "skills" / "aip" / "SKILL.md").exists(), root)
 
     def test_project_install_overwrites(self):
         project = self._project()
@@ -154,7 +164,7 @@ class InstallIntoProject(unittest.TestCase):
         mod = _load("install_all")
         self.assertEqual(mod.main(["--repo-root", str(ROOT), "--project", str(project)]), 0)
         self.assertTrue((project / ".claude" / "skills" / "aip" / "SKILL.md").exists())
-        self.assertTrue((project / ".codex" / "skills" / "aip" / "SKILL.md").exists())
+        self.assertTrue((project / ".agents" / "skills" / "aip" / "SKILL.md").exists())
 
     def test_install_all_project_rejects_grok(self):
         mod = _load("install_all")
