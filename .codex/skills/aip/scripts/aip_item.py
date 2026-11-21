@@ -295,12 +295,45 @@ def set_status(repo: Path, ref: str, status: str, by: str | None = None) -> Item
     return item
 
 
-def search(items: list[Item], keyword: str) -> list[Item]:
-    """按关键词筛：查标题、简述、分类、适用范围、涉及路径（这些多半不在文件名里，光看文件名查不到）。"""
+# 文件头里除状态以外都算（标题、分类、适用范围、涉及路径、旧编号、关联……）：状态有 --status 筛
+SKIP_HEAD_FIELDS = ("status",)
+# 正文命中一次最多列这么多条（文件头命中照常全列）
+BODY_HIT_LIMIT = 15
+# 命中那句截这么长
+SNIPPET_LIMIT = 60
+
+
+def _snippet(body: str, keyword: str) -> str:
+    """正文里命中的那一句，截短到看得清是什么。"""
     k = keyword.lower()
-    return [i for i in items
-            if any(k in i.meta.get(f, "").lower() for f in ("category", "scope", "paths"))
-            or k in i.title.lower() or k in i.slug.lower()]
+    for line in body.splitlines():
+        at = line.lower().find(k)
+        if at < 0:
+            continue
+        text = line.strip().lstrip("-*# ").strip()
+        at = max(text.lower().find(k), 0)
+        start = max(at - SNIPPET_LIMIT // 3, 0)
+        out = text[start:start + SNIPPET_LIMIT]
+        return ("…" if start else "") + out + ("…" if start + SNIPPET_LIMIT < len(text) else "")
+    return ""
+
+
+def search(items: list[Item], keyword: str) -> tuple[list[Item], list[tuple[Item, str]]]:
+    """按关键词筛，返回（文件头命中, 只在正文里命中的 + 命中那句）。
+
+    只查文件头召回太低：真实项目 227 条知识、按词频抽 15 个关键词实测，文件头命中 156 条，
+    正文里提到同一个词的 511 条——AI 按自己的说法查东西只能看见三成候选，剩下的全凭运气。
+    正文命中噪音大（提到不等于相关），所以分开列、带上命中那句，让 AI 自己判断要不要打开。
+    """
+    k = keyword.lower()
+    head, body = [], []
+    for i in items:
+        if (any(k in v.lower() for f, v in i.meta.items() if f not in SKIP_HEAD_FIELDS)
+                or k in i.title.lower() or k in i.slug.lower()):
+            head.append(i)
+        elif k in i.body.lower():
+            body.append((i, _snippet(i.body, keyword)))
+    return head, body
 
 
 def mark_reviewed(repo: Path, ref: str, day: date | None = None) -> Item:
@@ -314,11 +347,24 @@ def mark_reviewed(repo: Path, ref: str, day: date | None = None) -> Item:
 
 # ---------- 命令行 ----------
 
-def _print_list(items: list[Item]) -> None:
+def _line(i: Item) -> str:
+    extra = f"  复核 {i.meta.get('last_reviewed', '?')}" if i.type == "knowledge" else ""
+    return f"{i.id}  [{i.type}/{i.status}]  {i.title}{extra}"
+
+
+def _print_list(items: list[Item], body: list[tuple[Item, str]] | None = None,
+                keyword: str = "", show_all: bool = False) -> None:
     for i in items:
-        extra = f"  复核 {i.meta.get('last_reviewed', '?')}" if i.type == "knowledge" else ""
-        print(f"{i.id}  [{i.type}/{i.status}]  {i.title}{extra}")
-    if not items:
+        print(_line(i))
+    body = body or []
+    if body:
+        shown = body if show_all else body[:BODY_HIT_LIMIT]
+        print(f"—— 下面这些只在正文里提到「{keyword}」（可能相关，也可能只是顺带提了一句）——")
+        for i, snippet in shown:
+            print(f"{_line(i)}  → {snippet}")
+        if len(body) > len(shown):
+            print(f"……还有 {len(body) - len(shown)} 条正文命中（全列：加 --all）")
+    if not items and not body:
         print("（没有符合条件的条目）")
 
 
@@ -349,7 +395,9 @@ def main() -> int:
     p = sub.add_parser("list", help="列条目")
     p.add_argument("--type", choices=list(TYPES))
     p.add_argument("--status", action="append", help="只列这些状态，可写多次")
-    p.add_argument("--grep", help="关键词：在标题、简述、分类、适用范围、涉及路径里找，不分大小写")
+    p.add_argument("--grep", help="关键词：先在文件头里找（标题、简述、分类、适用范围、涉及路径、旧编号……），"
+                                  "再找正文里提到的（分开列，带上命中那句），不分大小写")
+    p.add_argument("--all", action="store_true", help=f"正文命中全列出来，不只列前 {BODY_HIT_LIMIT} 条")
 
     p = sub.add_parser("show", help="打印一条的路径和内容")
     p.add_argument("ref")
@@ -377,9 +425,10 @@ def main() -> int:
             print(mark_reviewed(repo, a.ref).path)
         elif a.cmd == "list":
             items = [i for i in list_items(repo, a.type) if not a.status or i.status in a.status]
+            body: list[tuple[Item, str]] = []
             if a.grep:
-                items = search(items, a.grep)
-            _print_list(items)
+                items, body = search(items, a.grep)
+            _print_list(items, body, a.grep or "", a.all)
         elif a.cmd == "show":
             item = find(list_items(repo), a.ref)
             print(item.path)

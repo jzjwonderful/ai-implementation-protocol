@@ -268,7 +268,10 @@ def _paths_text(item: Item) -> str:
 
 
 def knowledge_dues(repo: Path, today: date) -> list[Due]:
-    """知识条目：每条只归到最要紧的一类——引用没了 > 代码改过 > 按时间到期；外加 draft。"""
+    """知识条目：每条只归到最要紧的一类——引用没了 > 按时间到期；外加 draft。
+
+    「引用的代码改过了」不在这里报（见 knowledge_dues 里的注释），由 aip_lookup.py relevant 就地提示。
+    """
     items = list_items(repo, "knowledge")
     out: list[Due] = []
     active: list[tuple[Item, date | None]] = []
@@ -286,8 +289,6 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
         return out
 
     copies = engine_copies(repo)
-    dated = [seen for _, seen in active if seen]
-    history = commits_since(repo, min(dated)) if dated else []
     cited_refs = {i.id: refs(i.meta.get("title", "") + "\n" + i.body + "\n" + _paths_text(i)) for i, _ in active}
     all_symbols = sorted({s for _, syms in cited_refs.values() for s in syms})
     symbols_now = symbols_in_code(repo, all_symbols)
@@ -301,11 +302,12 @@ def knowledge_dues(repo: Path, today: date) -> list[Due]:
             out.append(Due(1, "引用没了", f"{i.id}：引用的 {_names(gone[i.id])} 在仓库里找不到了（改名、搬家或删了）。{fix}"))
         elif cited := sorted({f for p in paths for f in resolve_path(p, files)
                                 if is_code(f) and not f.startswith(copies)}):
-            touched = sorted({f for d, names in (history or []) if d > seen for f in names if f in cited})
-            if touched:
-                out.append(Due(2, "代码改过", f"{i.id}：引用的 {_names(touched)} 在 {seen} 复核之后改过。{fix}"))
-            elif (today - seen).days > LONG_CEILING_DAYS:
-                out.append(Due(6, "一年没复核", f"{i.id}：引用的代码一年没动过，按年兜底复核。{fix}"))
+            # 「代码改过」不进这份全局清单：活跃仓库里每次提交都能让几十条条目同时到期，
+            # 清单一长就没人看（真实项目实测 210 项里 191 项是这一类）。改到这些文件时由
+            # aip_lookup.py relevant 就地提示，正好落在「用到即核」上；这里只留按年兜底。
+            if (today - seen).days > LONG_CEILING_DAYS:
+                out.append(Due(6, "一年没复核", f"{i.id}：写了代码位置但一年没复核，按年兜底"
+                               f"（代码改没改由反查就地提示）。{fix}"))
         elif (today - seen).days > KNOWLEDGE_STALE_DAYS:
             out.append(Due(5, "到期", f"{i.id}：{(today - seen).days} 天没复核（没写代码位置，只能按时间提醒）。{fix}"))
     return out

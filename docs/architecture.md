@@ -36,8 +36,8 @@ Key scripts:
 - `aip_init.py` — scaffold `.aip/` (zero-config)
 - `aip_check.py` — the blocking validation check
 - `aip_doctor.py` — non-blocking install/environment health check (advisory)
-- `aip_item.py` — create items, change status (file name and header together), list, show
-- `aip_lookup.py` — on-demand lookup: the topic index (`reference/<topic>.md` + when to read it) and `relevant <files>` (topics and items whose `paths` match, items whose body cites a changed code file by its path, plus items anchored in those files; the pre-commit hook runs it on staged files)
+- `aip_item.py` — create items, change status (file name and header together), list, show; `list --grep` searches headers first and then bodies (body hits listed separately with the matched line)
+- `aip_lookup.py` — on-demand lookup: the topic index (`reference/<topic>.md` + when to read it) and `relevant <files>` (topics and items whose `paths` match, items whose body cites a changed code file by its path, plus items anchored in those files; ranked, capped at 12 lines with `--all` for everything, and active knowledge whose cited code changed after `last_reviewed` carries an inline "re-verify" note; the pre-commit hook runs it on staged files)
 - `aip_upkeep.py` — due reminders, sorted by urgency and capped (including "not yet tidied after an upgrade", from `config.yaml`'s `aip_version` and `reference/upgrade.md`)
 - `aip_migrate.py` — convert the pre-0.5.0 layout (single `knowledge.md` etc.) to one file per item
 - `install_hooks.py` — install the git pre-commit hook, the Claude Code SessionStart hook (+ optional Stop hook)

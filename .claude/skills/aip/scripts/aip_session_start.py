@@ -8,8 +8,9 @@ from __future__ import annotations
 
 钩子从 stdin 收到 JSON，其中 source 是 startup / resume / clear / compact / fork。
 compact 表示上下文刚被压缩成摘要——这时 AI 的记忆最不可靠，所以除了打印看板，
-还要明说"以看板为准、没写回的进展先补"。压缩前的钩子（PreCompact）输出到不了模型，
-所以补救只能放在压缩之后这一刻。
+还要明说"以看板为准、没写回的进展先补"。另外 Claude Code 的 PreCompact 钩子（压缩之前跑）
+的标准输出会被当成"写摘要的指示"（上限 1 万字符），能让摘要留住在建线；AIP 还没装这枚钩子，
+现在只在压缩之后补救。
 """
 
 import argparse

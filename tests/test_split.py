@@ -207,7 +207,7 @@ class Reuse(unittest.TestCase):
     def test_grep_finds_by_paths(self):
         d = make_repo()
         reuse(d, paths="src/net/http.py")
-        self.assertEqual(len(it.search(it.list_items(d), "net/http")), 1)
+        self.assertEqual(len(it.search(it.list_items(d), "net/http")[0]), 1)
 
 
 class Relevant(unittest.TestCase):

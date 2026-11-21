@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 from _engine import ROOT, ENGINE, SCRIPTS
 sys.path.insert(0, str(SCRIPTS))
-import aip_upkeep as up, aip_item as it
+import aip_lookup as lk, aip_upkeep as up, aip_item as it
 
 CURRENT = f'aip_version: "{(ENGINE/"VERSION").read_text(encoding="utf-8").strip()}"\n'
 
@@ -62,11 +62,14 @@ class ChangeDriven(unittest.TestCase):
         d = make_repo(entry("K001坑", "2026-06-15", "`src/a.py` 里的 `FooBar`"))
         self.assertEqual(up.reminders(d, TODAY), [])
 
-    def test_code_changed_after_review_is_flagged(self):
+    def test_code_changed_after_review_goes_to_lookup_not_the_global_list(self):
+        # 0.8.3：全局清单里不再报「代码改过」（活跃仓库一次能报出上百条，没人看得完），
+        # 改到这个文件时由 aip_lookup.py relevant 就地提示。
         d = make_repo(entry("K001坑", "2026-06-15", "`src/a.py` 里的 `FooBar`"))
         commit(d, "2026-07-01", {"src/a.py": "def FooBar():\n    return 1\n"})
-        due = up.reminders(d, TODAY)
-        self.assertTrue(any("改过" in x and "K001坑" in x and "src/a.py" in x for x in due), due)
+        self.assertEqual([x for x in up.reminders(d, TODAY) if "改过" in x], [])
+        hits = lk.relevant(d, ["src/a.py"])[0]
+        self.assertTrue(any("K001坑" in h.target and "改过" in h.reason for h in hits), hits)
 
     def test_change_on_review_day_does_not_count(self):
         d = make_repo(entry("K001坑", "2026-07-01", "`src/a.py`"))
@@ -76,7 +79,8 @@ class ChangeDriven(unittest.TestCase):
     def test_partial_path_and_line_suffix_resolve(self):
         d = make_repo(entry("K001坑", "2026-06-15", "`a.py:12` 与 `src/a.py::FooBar`"))
         commit(d, "2026-07-01", {"src/a.py": "def FooBar():\n    return 2\n"})
-        self.assertTrue(any("K001坑" in x for x in up.reminders(d, TODAY)))
+        hits = lk.relevant(d, ["src/a.py"])[0]
+        self.assertTrue(any("K001坑" in h.target and "改过" in h.reason for h in hits), hits)
 
     def test_doc_only_change_is_not_a_code_change(self):
         d = make_repo(entry("K001坑", "2026-06-15", "规则写在 `docs/guide.md`，代码在 `src/b.py`"))

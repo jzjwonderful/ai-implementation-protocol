@@ -64,7 +64,9 @@ class EngineCopies(unittest.TestCase):
             files[f"{up.ENGINE_SOURCE}/scripts/aip_check.py"] = "x = 1\n"
         ug.commit(d, "2026-06-02", files)
         ug.commit(d, "2026-07-01", {".claude/skills/aip/scripts/aip_check.py": "x = 2\n"})
-        return [x for x in up.reminders(d, ug.TODAY) if "改过" in x]
+        # 0.8.3：「代码改过」的提示挪到了反查，这条规矩在那边查
+        return [h.reason for h in lk.relevant(d, [".claude/skills/aip/scripts/aip_check.py"])[0]
+                if "改过" in h.reason]
 
     def test_copy_in_engine_repo_is_not_code(self):
         self.assertEqual(self.repo(with_source=True), [])
